@@ -9,9 +9,8 @@ def test2(verbose=True):
     leftpath = '/Users/paulogier/80-PythonProjects/02-test_suricate/data/left_test.csv'
     rightpath = '/Users/paulogier/80-PythonProjects/02-test_suricate/data/right_test.csv'
 
-    # df_train = pd.read_csv(trainingpath, index_col=0, nrows=500)
-    left_data = pd.read_csv(leftpath, index_col=0, nrows=200)
-    right_data = pd.read_csv(rightpath, index_col=0, nrows=200)
+    left_data = pd.read_csv(leftpath, index_col=0, nrows=100)
+    right_data = pd.read_csv(rightpath, index_col=0, nrows=100)
     assert isinstance(left_data, pd.DataFrame)
     if verbose is True:
         print('\n length of left_data {}'.format(left_data.shape[0]))
@@ -23,15 +22,11 @@ def test2(verbose=True):
 def test3():
     # test implementation of transformer
     left_data, right_data = test2(verbose=False)
-    df = left_data
+
     from sklearn.base import TransformerMixin
-    from wookie.connectors.models import Cartesian
+    from wookie.connectors import Cartesian
     import itertools
-    # con = BaseConnector(df)
-    # assert isinstance(con, TransformerMixin)
-    # # df2 = con.fit(df).transform(df)
-    # df2 = con.transform(df)
-    # df2 = con.fit_transform(df)
+
     con = Cartesian(reference=right_data)
     assert isinstance(con, TransformerMixin)
     df2 = con.fit(left_data).transform(left_data)

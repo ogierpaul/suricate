@@ -3,13 +3,13 @@ import itertools
 
 import pandas as pd
 
-from wookie.comparators.utils import exact_score
-from wookie.estimators.models import RandomForestClassifier
+from wookie.estimators import RandomForestClassifier
+from wookie.utils import exact_score
 
 
 def test1():
     # test import of comparator module
-    from wookie.comparators.utils import navalue_score
+    from wookie.utils import navalue_score
     assert isinstance(navalue_score, float)
     pass
 
@@ -25,7 +25,7 @@ def test2(verbose=True):
         print('\n columns used {}'.format(df_train.columns.tolist()))
     usecols = ['_'.join(c) for c in itertools.product(['street'], ['left', 'right'])]
     df2 = df_train.loc[:, usecols]
-    from wookie.comparators.models import BaseComparator, FuzzyWuzzyComparator
+    from wookie.comparators import BaseComparator, FuzzyWuzzyComparator
     bc = BaseComparator(compfunc=exact_score, left=usecols[0], right=usecols[1], outputCol='out_col')
     df2 = bc.transform(df2)
     fc = FuzzyWuzzyComparator(left=usecols[0], right=usecols[1], outputCol='out_col', comparator='fuzzy')
@@ -46,5 +46,5 @@ def test2(verbose=True):
     classifier = RandomForestClassifier()
     classifier.fit(X.loc[:, outputCols], X['y_true'])
     score = classifier.score(X.loc[:, outputCols], X['y_true'])
-    print(score)
+    print('classifier score', score)
     pass
