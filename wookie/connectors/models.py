@@ -1,6 +1,7 @@
-from sklearn.base import TransformerMixin
 import pandas as pd
-from comparators.utils import exact_score
+from sklearn.base import TransformerMixin
+
+from wookie.comparators.utils import exact_score
 
 
 def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'):

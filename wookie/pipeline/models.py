@@ -1,6 +1,7 @@
-from sklearn.base import TransformerMixin
-from comparators.models import FuzzyWuzzyComparator
 import pandas as pd
+from sklearn.base import TransformerMixin
+
+from wookie.comparators.models import FuzzyWuzzyComparator
 
 
 # TODO: implement the ScoreDict-Scoreplan routine here

@@ -1,14 +1,6 @@
-import pytest
 import pandas as pd
 
-
 ## FOR THE CONNECTOR MODULE
-
-def test1():
-    # test import of connector module
-    from connectors import dummyvariable
-    assert isinstance(dummyvariable, str)
-    pass
 
 
 def test2(verbose=True):
@@ -33,7 +25,7 @@ def test3():
     left_data, right_data = test2(verbose=False)
     df = left_data
     from sklearn.base import TransformerMixin
-    from connectors import BaseConnector, Cartesian
+    from wookie.connectors.models import Cartesian
     import itertools
     # con = BaseConnector(df)
     # assert isinstance(con, TransformerMixin)

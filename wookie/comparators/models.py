@@ -1,6 +1,6 @@
 from sklearn.base import TransformerMixin
-import pandas as pd
-from comparators.utils import exact_score, fuzzy_score, token_score
+
+from wookie.comparators.utils import exact_score, fuzzy_score, token_score
 
 
 class BaseComparator(TransformerMixin):

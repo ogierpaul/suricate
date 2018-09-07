@@ -1,15 +1,15 @@
-import pytest
-import pandas as pd
-from comparators.utils import exact_score
-from estimators.models import RandomForestClassifier
 ## FOR THE COMPARATOR MODULE
 import itertools
-from sklearn.pipeline import make_union
+
+import pandas as pd
+
+from wookie.comparators.utils import exact_score
+from wookie.estimators.models import RandomForestClassifier
 
 
 def test1():
     # test import of comparator module
-    from comparators.utils import navalue_score
+    from wookie.comparators.utils import navalue_score
     assert isinstance(navalue_score, float)
     pass
 
@@ -25,7 +25,7 @@ def test2(verbose=True):
         print('\n columns used {}'.format(df_train.columns.tolist()))
     usecols = ['_'.join(c) for c in itertools.product(['street'], ['left', 'right'])]
     df2 = df_train.loc[:, usecols]
-    from comparators.models import BaseComparator, FuzzyWuzzyComparator
+    from wookie.comparators.models import BaseComparator, FuzzyWuzzyComparator
     bc = BaseComparator(compfunc=exact_score, left=usecols[0], right=usecols[1], outputCol='out_col')
     df2 = bc.transform(df2)
     fc = FuzzyWuzzyComparator(left=usecols[0], right=usecols[1], outputCol='out_col', comparator='fuzzy')
