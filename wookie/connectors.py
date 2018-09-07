@@ -1,13 +1,10 @@
 import pandas as pd
 from sklearn.base import TransformerMixin
-
-dummy_variable = 'foo'
-
-from wookie.utils import exact_score
+from wookie.scoreutils import exact_score
 
 
 def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'):
-    '''
+    """
 
     Args:
         left_df (pd.DataFrame): table 1
@@ -36,11 +33,11 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
         2	1	        bar	    0	        foz
         3	1	        bar	    1	        baz
 
-    '''
+    """
     import pandas as pd
 
     def rename_with_suffix(df, suffix):
-        '''
+        """
         rename the columns with a suffix, including the index
         Args:
             df (pd.DataFrame):
@@ -60,7 +57,7 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
                 index_right	a_right
             0	0	        foo
             1	1	        bar
-        '''
+        """
         if suffix is None:
             return df
         assert isinstance(suffix, str)
@@ -95,14 +92,14 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
 
 
 class BaseConnector(TransformerMixin):
-    '''
+    """
     Class inherited from TransformerMixin
     Attributes:
         attributesCol (list): list of column names desribing the data
         relevanceCols (list): list of column names describing how relevant the data is to the query
-        left_index (str)
-        right_index (str)
-    '''
+        left_index (str): suffix to identify columns from the left dataset
+        right_index (str): suffix to identify columns from the right dataset
+    """
 
     def __init__(self, *args, **kwargs):
         TransformerMixin.__init__(self)
@@ -113,7 +110,7 @@ class BaseConnector(TransformerMixin):
         pass
 
     def transform(self, X, *_):
-        '''
+        """
 
         Args:
             X (pd.DataFrame): array containing the query
@@ -121,7 +118,7 @@ class BaseConnector(TransformerMixin):
 
         Returns:
 
-        '''
+        """
         assert isinstance(X, pd.DataFrame)
         result = X
         return result
@@ -131,31 +128,63 @@ class BaseConnector(TransformerMixin):
 
 
 class Cartesian(BaseConnector):
-    '''
+    """
     create a connector showing a cartesian join
     Attributes:
         reference (pd.DataFrame): reference data
-    '''
+        attributesCols (list):
+        relevancesCols (list): ['relevance_score']
+        relevance_func : callable
+        relevance_threshold (float)
+    """
 
-    def __init__(self, reference=None, *args, **kwargs):
-        '''
-
+    def __init__(self, reference=None, relevance_func=None, relevance_threshold=0.0, *args, **kwargs):
+        """
+        start the comparator with the reference datafrane
         Args:
-            reference (pd.DataFrame):
-            *args:
-            **kwargs:
-        '''
+            reference (pd.DataFrame): reference data
+            relevance_func: function used to compare the attribues col
+            relevance_threshold (float): threshold on which to prune. None if no pruning.
+            *args: N/A
+            **kwargs: N/A
+        """
         BaseConnector.__init__(self, *args, **kwargs)
         assert isinstance(reference, pd.DataFrame)
+        if relevance_func is None:
+            relevance_func = exact_score
+        assert (callable(relevance_func))
         self.reference = reference
         self.attributesCols = self.reference.columns.tolist()
         self.relevanceCols = ['relevance_score']
+        self.relevance_func = relevance_func
+        self.relevance_threshold = relevance_threshold
 
-    def transform(self, X, *_):
+    def transform(self, X, *args, **kwargs):
+        """
+
+        Args:
+            X (pd.DataFrame): data frame containing the queries
+            *args: N/A
+            **kwargs: N/A
+
+        Returns:
+            pd.DataFrame
+
+        Examples:
+
+        """
         product = cartesian_join(X, self.reference)
-        product[self.relevanceCols[0]] = product.apply(lambda row: self.relevance_score(row), axis=1)
-        product = product[product[self.relevanceCols[0]].apply(self.pruning) == True]
-        return product
+        score = product.apply(lambda row: self.relevance_score(row), axis=1)
+        score.name = self.relevanceCols[0]
+        product = pd.concat([product, score], axis=1)
+        if self.relevance_threshold is None:
+            return product
+        else:
+            # I put a [0] because I have only one relevancecols
+            # TODO: mark it for several cols
+            product = product[product[self.relevanceCols[0]].apply(lambda r: self.pruning(r))]
+            return product
+
 
     def fit(self, X, *_):
         self.attributesCols = list(
@@ -170,15 +199,36 @@ class Cartesian(BaseConnector):
         return self
 
     def relevance_score(self, row):
-        score = sum(
-            [
-                exact_score(row[c + '_left'], row[c + '_right']) for c in self.attributesCols
-            ]
-        ) / len(self.attributesCols)
+        """
+        calculate the relevance score for this particular row
+        Args:
+            row (pd.Series):
+
+        Returns:
+            dict
+        """
+        score = dict(
+            zip(
+                self.attributesCols,
+                map(
+                    lambda c: self.relevance_func(row[c + '_left'], row[c + '_right']),
+                    self.attributesCols
+                )
+            )
+        )
         return score
 
     def pruning(self, relevance):
-        if relevance > 0:
-            return True
-        else:
-            return False
+        """
+        Returns boolean on whether or not to consider for future matches
+        Args:
+            relevance (dict):
+
+        Returns:
+
+        """
+        assert isinstance(relevance, dict)
+        a = sum(relevance.values())
+        b = len(relevance)
+        c = a / b > self.relevance_threshold
+        return c

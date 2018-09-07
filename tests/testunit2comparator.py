@@ -4,12 +4,12 @@ import itertools
 import pandas as pd
 
 from wookie.estimators import RandomForestClassifier
-from wookie.utils import exact_score
+from wookie.scoreutils import exact_score
 
 
 def test1():
     # test import of comparator module
-    from wookie.utils import navalue_score
+    from wookie.scoreutils import navalue_score
     assert isinstance(navalue_score, float)
     pass
 
