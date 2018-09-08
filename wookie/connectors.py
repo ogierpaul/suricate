@@ -136,6 +136,19 @@ class Cartesian(BaseConnector):
         relevancesCols (list): ['relevance_score']
         relevance_func : callable
         relevance_threshold (float)
+    Examples:
+        from wookie.connectors import Cartesian
+        df1 = pd.DataFrame({'name': ['foo', 'bath']})
+        df2 = pd.DataFrame({'name':['foo', 'bar', 'baz']})
+        con = Cartesian(reference=df2, relevance_threshold=None)
+        con.fit_transform(df1)
+           index_left name_left  index_right name_right relevance_score
+0           0       foo            0        foo   {'name': 1.0}
+1           0       foo            1        bar   {'name': 0.0}
+2           0       foo            2        baz   {'name': 0.0}
+3           1      bath            0        foo   {'name': 0.0}
+4           1      bath            1        bar   {'name': 0.0}
+5           1      bath            2        baz   {'name': 0.0}
     """
 
     def __init__(self, reference=None, relevance_func=None, relevance_threshold=0.0, *args, **kwargs):
@@ -171,6 +184,18 @@ class Cartesian(BaseConnector):
             pd.DataFrame
 
         Examples:
+        from wookie.connectors import Cartesian
+        df1 = pd.DataFrame({'name': ['foo', 'bath']})
+        df2 = pd.DataFrame({'name':['foo', 'bar', 'baz']})
+        con = Cartesian(reference=df2, relevance_threshold=None)
+        con.fit_transform(df1)
+           index_left name_left  index_right name_right relevance_score
+0           0       foo            0        foo   {'name': 1.0}
+1           0       foo            1        bar   {'name': 0.0}
+2           0       foo            2        baz   {'name': 0.0}
+3           1      bath            0        foo   {'name': 0.0}
+4           1      bath            1        bar   {'name': 0.0}
+5           1      bath            2        baz   {'name': 0.0}
 
         """
         product = cartesian_join(X, self.reference)
