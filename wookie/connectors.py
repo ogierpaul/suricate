@@ -1,6 +1,6 @@
 import pandas as pd
-from sklearn.base import TransformerMixin
 
+from wookie.base import BaseConnector
 from wookie.scoreutils import exact_score
 
 
@@ -89,43 +89,6 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
     del df1new, df2new, tempcolname
 
     return dfnew
-
-
-class BaseConnector(TransformerMixin):
-    """
-    Class inherited from TransformerMixin
-    Attributes:
-        attributesCols (list): list of column names desribing the data
-        relevanceCol (str): name of column describing how relevant the data is to the query
-        left_index (str): suffix to identify columns from the left dataset
-        right_index (str): suffix to identify columns from the right dataset
-    """
-
-    def __init__(self, *args, **kwargs):
-        TransformerMixin.__init__(self)
-        self.attributesCols = []
-        self.relevanceCol = []
-        self.left_index = 'left_index'
-        self.right_index = 'right_index'
-        pass
-
-    def transform(self, X, *_):
-        """
-
-        Args:
-            X (pd.DataFrame): array containing the query
-            *_:
-
-        Returns:
-            pd.DataFrame
-        """
-        assert isinstance(X, pd.DataFrame)
-        X['relevance_score'] = None
-        result = X
-        return result
-
-    def fit(self, *_):
-        return self
 
 
 class Cartesian(BaseConnector):

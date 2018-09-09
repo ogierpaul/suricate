@@ -3,7 +3,7 @@ from unittest import TestCase
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from wookie.connectors import BaseConnector
+from wookie.base import BaseConnector
 
 
 class TestBaseConnector(TestCase):

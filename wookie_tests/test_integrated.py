@@ -1,13 +1,14 @@
 from unittest import TestCase
 
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import make_pipeline
 
-n_jobs = 2
 from wookie.comparators import PipeComparator
 from wookie.connectors import Cartesian
 from wookie_tests.db_builder import create_training_database, create_gid_database
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.pipeline import make_pipeline
+
+n_jobs = 2
 
 
 class TestIntegrated(TestCase):

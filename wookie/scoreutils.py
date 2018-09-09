@@ -46,6 +46,7 @@ def token_score(left, right):
     return s
 
 
+# DEPRACATED
 class ScorePlan(dict):
     def _unpack(self):
         outputcols = []
