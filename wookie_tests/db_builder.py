@@ -46,9 +46,11 @@ def create_training_database(nrows=500):
         nrows (int):
 
     Returns:
-        pd.DataFrame
+        pd.DataFrame, pd.Series
     """
     trainingpath = '/Users/paulogier/80-PythonProjects/02-test_suricate/data/trainingdata75.csv'
 
     df_train = pd.read_csv(trainingpath, nrows=nrows)
-    return df_train
+    y_train = df_train['y_true']
+    x_train = df_train[list(filter(lambda c: c != 'y_true', df_train.columns))]
+    return x_train, y_train

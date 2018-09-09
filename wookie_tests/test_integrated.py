@@ -1,11 +1,13 @@
 from unittest import TestCase
 
-import numpy as np
 import pandas as pd
 
+n_jobs = 2
 from wookie.comparators import PipeComparator
 from wookie.connectors import Cartesian
 from wookie_tests.db_builder import create_training_database, create_gid_database
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import make_pipeline
 
 
 class TestIntegrated(TestCase):
@@ -13,8 +15,9 @@ class TestIntegrated(TestCase):
         print("\n******\n")
         # Load data
         left_data, right_data = create_gid_database()
-        training_data = create_training_database()
-        assert isinstance(training_data, pd.DataFrame)
+        x_train, y_train = create_training_database()
+        assert isinstance(x_train, pd.DataFrame)
+        assert isinstance(y_train, pd.Series)
 
         # Connect data
         con = Cartesian(reference=right_data, relevance_threshold=0.5)
@@ -31,10 +34,18 @@ class TestIntegrated(TestCase):
             'street': ['fuzzy'],
             'city': ['fuzzy']
         }
-        pipe = PipeComparator(
+
+        scoring_pipe = PipeComparator(
             scoreplan=scoreplan
         )
-        x_score = pipe.fit_transform(x_cart, n_jobs=2)
-        assert isinstance(x_score, np.ndarray)
+        rf = RandomForestClassifier(n_jobs=n_jobs, n_estimators=50, max_depth=10)
+
+        pipe = make_pipeline(*[scoring_pipe, rf])
+        pipe.fit(x_train, y_train)
+        y_pred = pipe.predict(x_cart)
+
+        show_results = x_cart.loc[y_pred.astype(bool)]
+        print("\n", show_results)
+
         print("\n******")
         pass
