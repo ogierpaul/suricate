@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.base import TransformerMixin
+
 from wookie.scoreutils import exact_score
 
 
@@ -34,7 +35,6 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
         3	1	        bar	    1	        baz
 
     """
-    import pandas as pd
 
     def rename_with_suffix(df, suffix):
         """
@@ -62,18 +62,18 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
             return df
         assert isinstance(suffix, str)
         assert isinstance(df, pd.DataFrame)
-        dfnew = df.copy()
-        dfnew.index.name = 'index'
-        dfnew.reset_index(drop=False, inplace=True)
-        cols = dfnew.columns
+        df_new = df.copy()
+        df_new.index.name = 'index'
+        df_new.reset_index(drop=False, inplace=True)
+        cols = df_new.columns
         mydict = dict(
             zip(
                 cols,
                 map(lambda c: c + suffix, cols)
             )
         )
-        dfnew.rename(columns=mydict, inplace=True)
-        return dfnew
+        df_new.rename(columns=mydict, inplace=True)
+        return df_new
 
     # hack to create a column name unknown to both df1 and df2
     tempcolname = 'f1b3'
@@ -95,8 +95,8 @@ class BaseConnector(TransformerMixin):
     """
     Class inherited from TransformerMixin
     Attributes:
-        attributesCol (list): list of column names desribing the data
-        relevanceCols (list): list of column names describing how relevant the data is to the query
+        attributesCols (list): list of column names desribing the data
+        relevanceCol (str): name of column describing how relevant the data is to the query
         left_index (str): suffix to identify columns from the left dataset
         right_index (str): suffix to identify columns from the right dataset
     """
@@ -104,7 +104,7 @@ class BaseConnector(TransformerMixin):
     def __init__(self, *args, **kwargs):
         TransformerMixin.__init__(self)
         self.attributesCols = []
-        self.relevanceCols = []
+        self.relevanceCol = []
         self.left_index = 'left_index'
         self.right_index = 'right_index'
         pass
@@ -120,6 +120,7 @@ class BaseConnector(TransformerMixin):
             pd.DataFrame
         """
         assert isinstance(X, pd.DataFrame)
+        X['relevance_score'] = None
         result = X
         return result
 
@@ -156,7 +157,7 @@ class Cartesian(BaseConnector):
         start the comparator with the reference datafrane
         Args:
             reference (pd.DataFrame): reference data
-            relevance_func: function used to compare the attribues col
+            relevance_func: function used to compare the attributes col
             relevance_threshold (float): threshold on which to prune. None if no pruning.
             *args: N/A
             **kwargs: N/A
@@ -168,12 +169,13 @@ class Cartesian(BaseConnector):
         assert (callable(relevance_func))
         self.reference = reference
         self.attributesCols = self.reference.columns.tolist()
-        self.relevanceCols = ['relevance_score']
+        self.relevanceCol = 'relevance_score'
         self.relevance_func = relevance_func
         self.relevance_threshold = relevance_threshold
 
     def transform(self, X, *args, **kwargs):
         """
+        Calculate the combination between the input data and the reference data
 
         Args:
             X (pd.DataFrame): data frame containing the queries
@@ -190,28 +192,34 @@ class Cartesian(BaseConnector):
         con = Cartesian(reference=df2, relevance_threshold=None)
         con.fit_transform(df1)
            index_left name_left  index_right name_right relevance_score
-0           0       foo            0        foo   {'name': 1.0}
-1           0       foo            1        bar   {'name': 0.0}
-2           0       foo            2        baz   {'name': 0.0}
-3           1      bath            0        foo   {'name': 0.0}
-4           1      bath            1        bar   {'name': 0.0}
-5           1      bath            2        baz   {'name': 0.0}
+0           0       foo            0        foo         {'name': 1.0}
+1           0       foo            1        bar         {'name': 0.0}
+2           0       foo            2        baz         {'name': 0.0}
+3           1      bath            0        foo         {'name': 0.0}
+4           1      bath            1        bar         {'name': 0.0}
+5           1      bath            2        baz         {'name': 0.0}
 
         """
         product = cartesian_join(X, self.reference)
-        score = product.apply(lambda row: self.relevance_score(row), axis=1)
-        score.name = self.relevanceCols[0]
-        product = pd.concat([product, score], axis=1)
+        product[self.relevanceCol] = product.apply(lambda row: self.relevance_score(row), axis=1)
         if self.relevance_threshold is None:
             return product
         else:
             # I put a [0] because I have only one relevancecols
             # TODO: mark it for several cols
-            product = product[product[self.relevanceCols[0]].apply(lambda r: self.pruning(r))]
+            product = product[product[self.relevanceCol].apply(lambda r: self.pruning(r))]
             return product
 
-
     def fit(self, X, *_):
+        """
+        update the self.attributesCol attribute with the list of columns names that are common to both reference and input data
+        Args:
+            X (pd.DataFrame):
+            *_:
+
+        Returns:
+            None
+        """
         self.attributesCols = list(
             set(
                 X.columns.tolist()

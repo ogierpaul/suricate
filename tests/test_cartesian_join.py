@@ -1,12 +1,9 @@
 from unittest import TestCase
+
 import pandas as pd
 
 
 class TestCartesian_join(TestCase):
-    def test_import_cartesian_join(self):
-        # test import
-        from wookie.connectors import cartesian_join
-        pass
 
     def test_function(self):
         from wookie.connectors import cartesian_join

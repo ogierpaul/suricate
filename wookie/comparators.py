@@ -1,14 +1,15 @@
-from sklearn.base import TransformerMixin
-import pandas as pd
 import numpy as np
-from wookie.scoreutils import exact_score, fuzzy_score, token_score
+import pandas as pd
+from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_union
+
+from wookie.scoreutils import exact_score, fuzzy_score, token_score
 
 
 class BaseComparator(TransformerMixin):
     def __init__(self, left='left', right='right', compfunc=None, *args, **kwargs):
         """
-
+        base class for all transformers
         Args:
             left (str):
             right (str):
@@ -39,8 +40,10 @@ class BaseComparator(TransformerMixin):
                 ),
                 axis=1
             ).values.reshape(-1, 1)
+            return y
+        else:
+            raise ValueError('compfunc is not defined')
 
-        return y
 
     def fit(self, *_):
         return self
@@ -55,7 +58,7 @@ class FuzzyWuzzyComparator(BaseComparator, TransformerMixin):
         elif comparator == 'token':
             compfunc = token_score
         else:
-            raise ValueError('compfunc value not understood: {}'.format(comparator), \
+            raise ValueError('compfunc value not understood: {}'.format(comparator),
                              "must be one of those: ['exact', 'fuzzy', 'token']")
         BaseComparator.__init__(self, compfunc=compfunc, *args, **kwargs)
         pass
@@ -63,11 +66,11 @@ class FuzzyWuzzyComparator(BaseComparator, TransformerMixin):
 
 class PipeComparator(TransformerMixin):
     def __init__(self, scoreplan):
-        '''
+        """
 
         Args:
             scoreplan (dict):
-        '''
+        """
         TransformerMixin.__init__(self)
         self.scoreplan = scoreplan
 
@@ -75,7 +78,7 @@ class PipeComparator(TransformerMixin):
         return self
 
     def transform(self, X, n_jobs=1, *args, **kwargs):
-        '''
+        """
 
         Args:
             X (pd.DataFrame):
@@ -85,7 +88,7 @@ class PipeComparator(TransformerMixin):
 
         Returns:
             np.ndarray
-        '''
+        """
         stages = []
         for k in self.scoreplan.keys():
             left = '_'.join([k, 'left'])

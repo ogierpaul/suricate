@@ -1,10 +1,8 @@
 ## FOR THE COMPARATOR MODULE
 import itertools
-import pytest
-import pandas as pd
 
-from wookie.estimators import RandomForestClassifier
-from wookie.scoreutils import exact_score
+import pandas as pd
+import pytest
 
 
 @pytest.mark.skip(reason="Test fine")
@@ -19,7 +17,7 @@ def test2(verbose=True):
         print('\n columns used {}'.format(df_train.columns.tolist()))
     usecols = ['_'.join(c) for c in itertools.product(
         ['street', 'name'], ['left', 'right'])]
-    from wookie.comparators import BaseComparator, FuzzyWuzzyComparator
+    from wookie.comparators import FuzzyWuzzyComparator
     left_col = usecols[0]
     right_col = usecols[1]
     fc = FuzzyWuzzyComparator(left=left_col, right=right_col, comparator='fuzzy')

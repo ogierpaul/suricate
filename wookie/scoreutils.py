@@ -2,10 +2,13 @@ import pandas as pd
 from fuzzywuzzy.fuzz import ratio, token_set_ratio
 
 navalue_score = 0.5
-
+# TODO
+_scorename = {'TODO': 'all'}
+# TODO
+_rmv_end_str = lambda r, b: str(r)
 
 def valid_inputs(left, right):
-    '''
+    """
     takes two inputs and return True if none of them is null, or False otherwise
     Args:
         left: first object (scalar)
@@ -13,7 +16,7 @@ def valid_inputs(left, right):
 
     Returns:
         bool
-    '''
+    """
     if any(pd.isnull([left, right])):
         return False
     else:
