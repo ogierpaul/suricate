@@ -3,8 +3,8 @@ from unittest import TestCase
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from tests.db_builder import create_foo_database
 from wookie.connectors import Cartesian, BaseConnector
+from wookie_tests.db_builder import create_foo_database
 
 
 class TestCartesian(TestCase):
