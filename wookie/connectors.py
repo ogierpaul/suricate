@@ -117,7 +117,7 @@ class BaseConnector(TransformerMixin):
             *_:
 
         Returns:
-
+            pd.DataFrame
         """
         assert isinstance(X, pd.DataFrame)
         result = X
@@ -151,7 +151,7 @@ class Cartesian(BaseConnector):
 5           1      bath            2        baz   {'name': 0.0}
     """
 
-    def __init__(self, reference=None, relevance_func=None, relevance_threshold=0.0, *args, **kwargs):
+    def __init__(self, reference=None, relevance_func=None, relevance_threshold=None, *args, **kwargs):
         """
         start the comparator with the reference datafrane
         Args:

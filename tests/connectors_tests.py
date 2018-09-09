@@ -2,23 +2,7 @@ import pandas as pd
 import pytest
 
 
-## FOR THE CONNECTOR MODULE
-@pytest.mark.skip()
-def import_of_module_connectors():
-    from wookie import connectors
-    pass
-
-
-def cartesian_join():
-    from wookie.connectors import cartesian_join
-    df1 = pd.DataFrame({'name': ['foo', 'bath']})
-    df2 = pd.DataFrame({'name': ['foo', 'bar', 'baz']})
-    df = cartesian_join(df1, df2)
-    assert df.shape[0] == df1.shape[0] * df2.shape[0]
-    assert df.shape[1] == df1.shape[1] + df2.shape[1] + 2
-
-
-def test2(verbose=True):
+def load_data(verbose=True):
     # test loading of training and testing data
     # trainingpath = '/Users/paulogier/80-PythonProjects/02-test_suricate/data/trainingdata75.csv'
     leftpath = '/Users/paulogier/80-PythonProjects/02-test_suricate/data/left_test.csv'
@@ -44,7 +28,7 @@ def test3():
     df1 = pd.DataFrame({'name': ['foo', 'bath']})
     df2 = pd.DataFrame({'name': ['foo', 'bar', 'baz']})
 
-    con = Cartesian(reference=df2, relevance_threshold=0.0)
+    con = Cartesian(reference=df2)
     assert isinstance(con, TransformerMixin)
     x_end = con.fit(df1).transform(df1)
     print(x_end)
