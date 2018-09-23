@@ -1,8 +1,10 @@
 from unittest import TestCase
 
 import pandas as pd
+import pytest
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Imputer
 
 from wookie.comparators import PipeComparator
 from wookie.connectors import Cartesian
@@ -12,6 +14,7 @@ n_jobs = 2
 
 
 class TestIntegrated(TestCase):
+    @pytest.mark.skip('too heavy for moment')
     def test_load_connect_data(self):
         print("\n******\n")
         # Load data
@@ -39,9 +42,11 @@ class TestIntegrated(TestCase):
         scoring_pipe = PipeComparator(
             scoreplan=scoreplan
         )
+        # take car of missing values
+        imp = Imputer(strategy="most_frequent")
         rf = RandomForestClassifier(n_jobs=n_jobs, n_estimators=50, max_depth=10)
 
-        pipe = make_pipeline(*[scoring_pipe, rf])
+        pipe = make_pipeline(*[scoring_pipe, imp, rf])
         pipe.fit(x_train, y_train)
         y_pred = pipe.predict(x_cart)
 

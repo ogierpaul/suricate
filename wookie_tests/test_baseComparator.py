@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from wookie.base import BaseComparator
-from wookie.scoreutils import exact_score
+from wookie.comparators import exact_score, BaseComparator
 
 
 class TestBaseComparator(TestCase):
