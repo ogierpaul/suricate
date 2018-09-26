@@ -2,7 +2,7 @@ import unicodedata
 
 import numpy as np
 import pandas as pd
-from fuzzywuzzy.fuzz import ratio
+from fuzzywuzzy.fuzz import partial_token_set_ratio as fuzzyscore
 
 navalues = [
     '#', None, np.nan, 'None', '-', 'nan', 'n.a.',
@@ -377,27 +377,19 @@ def concatenate_names(m):
         'KNIGHT FRANK (SA) PTY LTD (ex-batman, kapis code 3000)
     """
     # Remove na values
-    r = pd.Series(m, index=range(len(m)))
-    r.dropna(inplace=True)
-    if r.shape[0] == 0:
+    # Remove na values
+    var1 = ' '.join(filter(lambda c: not pd.isnull(c), m)).split(' ')
+    if len(var1) == 0:
         return None
-    elif r.shape[0] == 1:
-        return r[0]
-    else:
-        s = r[0]
-        for ix in range(1, len(r)):
-            # Compare fuzzy matching score with already concatenated string
-            s1 = lowerascii(s)
-            r1 = lowerascii(r[ix])
-            if r1 is not None or len(r1) > 1:
-                score = ratio(s1, r1) / 100
-                if pd.isnull(score) or score < 0.8:
-                    # if score is less than 0.8 add it in brackets
-                    if len(s) == len(r[0]):
-                        s = s + ' (' + r[ix] + ')'
-                    else:
-                        s = s.rstrip(')') + ', ' + r[ix] + ')'
-        return s
+    res = var1[0]
+    for ix in range(1, len(var1)):
+        # Compare fuzzy matching score with already concatenated string
+        rnew = var1[ix]
+        score = fuzzyscore(res, rnew) / 100
+        if pd.isnull(score) or score < 0.9:
+            # if score is less than 0.8 add it in brackets
+            res = ' '.join([res, rnew])
+    return res
 
 
 def preparedf(data):
