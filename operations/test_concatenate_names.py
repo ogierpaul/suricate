@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from p11pipeline.preprocessing import concatenate_names
+from wookie.companypreparation import concatenate_names
 
 
 class TestConcatenate_names(TestCase):

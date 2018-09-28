@@ -363,7 +363,7 @@ def concatenate_names(m):
     """
     This small function concatenate the different company names found across the names columns of SAP (name1, name2..)
     It takes the name found in the first column. If the name in the second column adds information to the first,
-    it concatenates (by adding it in brackets). And it continues like this for the other columns
+    it concatenates. And it continues like this for the other columns
     Args:
         m (list): list of strings
     Returns:
@@ -374,7 +374,7 @@ def concatenate_names(m):
     name3='ex-batman'
     name4='kapis code 3000'
     concatenate_names([name1,name2,name3,name4]):
-        'KNIGHT FRANK (SA) PTY LTD (ex-batman, kapis code 3000)
+        'KNIGHT FRANK (SA) PTY LTD ex-batman kapis code 3000
     """
     # Remove na values
     # Remove na values
@@ -387,12 +387,72 @@ def concatenate_names(m):
         rnew = var1[ix]
         score = fuzzyscore(res, rnew) / 100
         if pd.isnull(score) or score < 0.9:
-            # if score is less than 0.8 add it in brackets
+            # if score is less than threshold add it
             res = ' '.join([res, rnew])
     return res
 
 
-def preparedf(data):
+def addsuffix(df, suffix):
+    """
+    Add a suffix to each of the dataframe column
+    Args:
+        df (pd.DataFrame):
+        suffix (str):
+
+    Returns:
+        pd.DataFrame
+
+    Examples:
+        df.columns = ['name', 'age']
+        addsuffix(df, '_left').columns = ['name_left', 'age_left']
+    """
+    df = df.copy().rename(
+        columns=dict(
+            zip(
+                df.columns,
+                map(
+                    lambda r: r + suffix,
+                    df.columns
+                ),
+
+            )
+        )
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df
+
+
+def rmvsuffix(df, suffix):
+    """
+    Rmv a suffix to each of the dataframe column
+    Args:
+        df (pd.DataFrame):
+        suffix (str):
+
+    Returns:
+        pd.DataFrame
+
+    Examples:
+        df.columns = ['name_left', 'age_left']
+        addsuffix(df, '_left').columns = ['name', 'age']
+    """
+    df = df.copy().rename(
+        columns=dict(
+            zip(
+                df.columns,
+                map(
+                    lambda r: r[:-len(suffix)],
+                    df.columns
+                ),
+
+            )
+        )
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df
+
+
+def preparedf(data, ixname='ix'):
     """
     Perform several of pre-processing step on the dataframe
     - check the index
@@ -409,13 +469,18 @@ def preparedf(data):
     Returns:
         pd.DataFrame
     """
-
     df = data.copy()
+    # check the index
+    df = _chkixdf(df, ixname=ixname)
+
     # Index
-    df['index'] = df['index'].apply(idtostr)
+    df[ixname] = df[ixname].apply(idtostr)
+
     ## Create an alert if the index is not unique
-    if pd.Series(df['index']).unique().shape[0] != df.shape[0]:
+    if pd.Series(df[ixname]).unique().shape[0] != df.shape[0]:
         raise KeyError('Error: index is not unique')
+    df.set_index([ixname], inplace=True)
+
     # Name
     df['name_ascii'] = df['name'].apply(lowerascii)
     df['name_ascii_wostopwords'] = df['name'].apply(
@@ -440,7 +505,7 @@ def preparedf(data):
         lambda r: None if pd.isnull(r) else r[:2]
     )
     ## City
-    df['city_ascii'].apply(
+    df['city_ascii'] = df['city'].apply(
         lowerascii
     ).apply(
         lambda r: rmvstopwords(r, stop_words=citystopwords)
@@ -454,7 +519,7 @@ def preparedf(data):
     df['countrycode'] = df['countrycode'].apply(lowerascii)
 
     # IDs
-    for c in ['duns', 'kapis', 'euvat', 'registerid', 'taxid', 'cage']:
+    for c in ['duns', 'kapis', 'euvat', 'registerid', 'taxid', 'cage', 'siret', 'siren']:
         if not c in df.columns:
             df[c] = None
         df[c] = df[c].apply(idtostr)
@@ -462,3 +527,25 @@ def preparedf(data):
     df['duns'] = df['duns'].apply(cleanduns)
 
     return df
+
+
+def _chkixdf(df, ixname='ix'):
+    """
+    Check that the dataframe does not already have a column of the name ixname
+    And checks that the index name is ixname
+    And reset the index to add ixname as a column
+    Does not work on copy
+    Args:
+        df (pd.DataFrame):
+        ixname (str): name of the index
+
+    Returns:
+        pd.DataFrame
+    """
+    if ixname in df.columns:
+        raise KeyError('{} already in df columns'.format(ixname))
+    else:
+        df.reset_index(inplace=True, drop=False)
+        if ixname not in df.columns:
+            raise KeyError('{} not in df columns')
+        return df

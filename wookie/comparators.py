@@ -195,7 +195,7 @@ class TokenComparator(TransformerMixin):
         return score
 
 
-def compare_token_series(new_series, train_series, tokenizer, new_ix='ix_new', train_ix='ix_train'):
+def compare_token_series(new_series, train_series, tokenizer, new_ix='ix_new', train_ix='ix_train', fit=False):
     """
     return the cosine similarity of the tf-idf score of each possible pairs of documents
     Args:
@@ -204,12 +204,16 @@ def compare_token_series(new_series, train_series, tokenizer, new_ix='ix_new', t
         tokenizer: tokenizer of type sklearn
         new_ix (str): column name of new ix
         train_ix (str): column name of train ix
+        fit (bool): if False, do not fit the tokenizer (is already fitted)
     Returns:
         pd.DataFrame
     """
-    alldata = pd.concat([train_series, new_series], axis=0, ignore_index=True)
-    tokenizer.fit(alldata)
-    train_tfidf = tokenizer.transform(train_series)
+    train_series = train_series.copy().dropna()
+    new_series = new_series.copy().dropna()
+    if fit is True:
+        alldata = pd.concat([train_series, new_series], axis=0, ignore_index=True)
+        tokenizer.fit(alldata)
+    train_tfidf = tokenizer.transform(train_series.dropna())
     new_tfidf = tokenizer.transform(new_series)
     X = pd.DataFrame(cosine_similarity(new_tfidf, train_tfidf), columns=train_series.index)
     X[new_ix] = new_series.index
@@ -218,7 +222,35 @@ def compare_token_series(new_series, train_series, tokenizer, new_ix='ix_new', t
         id_vars=new_ix,
         var_name=train_ix,
         value_name='score'
+    ).sort_values(by='score', ascending=False)
+    return score
+
+
+def tfidfpos(left, right, tokenizer, on, ixname='ix', fit=False, threshold=0):
+    """
+
+    Args:
+        left (pd.DataFrame):
+        right (pd.DataFrame):
+        tokenizer:
+        on (str):
+        ixname (str):
+        fit (bool):
+        threshold (float):
+
+    Returns:
+        pd.DataFrame
+    """
+    score = compare_token_series(
+        new_series=left[on],
+        train_series=right[on],
+        tokenizer=tokenizer,
+        new_ix=ixname + '_left',
+        train_ix=ixname + '_right',
+        fit=fit
     )
+    if not threshold is None:
+        score = score.loc[score['score'] > threshold]
     return score
 
 
@@ -317,8 +349,13 @@ def token_score(left, right):
 
 class DataPasser(TransformerMixin):
     """
-    This dont do anything, just pass the data as it is
+    This dont do anything, just pass the data on selected columns
+    if on_cols is None, pass the whole dataframe
     """
+
+    def __init__(self, on_cols=None):
+        TransformerMixin.__init__(self)
+        self.on_cols = on_cols
 
     def fit(self, X, y=None):
         return self
@@ -332,4 +369,46 @@ class DataPasser(TransformerMixin):
         Returns:
 
         """
-        return X
+        if not self.on_cols is None:
+            assert isinstance(X, pd.DataFrame)
+            assert all(map(lambda c: c in X.columns, self.on_cols))
+            res = X[self.on_cols]
+        else:
+            res = X
+        return res
+
+
+def preparevocab(col, df_left, df_right):
+    """
+    create a series with all the vocab wors
+    Args:
+        col (str): column to take for the vocabulary
+        df_left (pd.DataFrame):
+        df_right (pd.DataFrame)
+    Returns:
+        pd.Series
+    """
+    vocab = pd.Series(name=col)
+    for df in [df_left, df_right]:
+        vocab = pd.concat([vocab, df[col].dropna()], axis=0, ignore_index=True)
+    return vocab
+
+
+def innermatch(left, right, col, ixname='ix'):
+    xleft = left[[col]].copy().dropna().reset_index(drop=False)
+    xright = right[[col]].copy().dropna().reset_index(drop=False)
+    x = pd.merge(left=xleft, right=xright, left_on=col, right_on=col, how='inner', suffixes=['_left', '_right'])
+    x = x[[ixname + '_left', ixname + '_right']].set_index([ixname + '_left', ixname + '_right'])
+    x[col + '_exact'] = 1
+    return x
+
+
+def idsmatch(left, right, ids, ixname='ix'):
+    alldata = None
+    for c in ids:
+        pos = innermatch(left=left, right=right, col=c, ixname=ixname)
+        if alldata is None:
+            alldata = pos.copy()
+        else:
+            alldata = pd.merge(left=alldata, right=pos, left_index=True, right_index=True, how='outer')
+    return alldata
