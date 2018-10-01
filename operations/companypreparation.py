@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 from fuzzywuzzy.fuzz import partial_token_set_ratio as fuzzyscore
 
+from wookie import connectors
+from wookie.connectors import rmv_end_str
+
 navalues = [
     '#', None, np.nan, 'None', '-', 'nan', 'n.a.',
     ' ', '', '#REF!', '#N/A', '#NAME?', '#DIV/0!',
@@ -228,18 +231,6 @@ def lowerascii(s, lower=True):
         return s
 
 
-def rmv_end_str(w, s):
-    """
-    remove str at the end of tken
-    :param w: str, token to be cleaned
-    :param s: str, string to be removed
-    :return: str
-    """
-    if w.endswith(s):
-        w = w[:-len(s)]
-    return w
-
-
 def rmv_end_list(w, mylist):
     """
     removed string at the end of tok
@@ -392,66 +383,6 @@ def concatenate_names(m):
     return res
 
 
-def addsuffix(df, suffix):
-    """
-    Add a suffix to each of the dataframe column
-    Args:
-        df (pd.DataFrame):
-        suffix (str):
-
-    Returns:
-        pd.DataFrame
-
-    Examples:
-        df.columns = ['name', 'age']
-        addsuffix(df, '_left').columns = ['name_left', 'age_left']
-    """
-    df = df.copy().rename(
-        columns=dict(
-            zip(
-                df.columns,
-                map(
-                    lambda r: r + suffix,
-                    df.columns
-                ),
-
-            )
-        )
-    )
-    assert isinstance(df, pd.DataFrame)
-    return df
-
-
-def rmvsuffix(df, suffix):
-    """
-    Rmv a suffix to each of the dataframe column
-    Args:
-        df (pd.DataFrame):
-        suffix (str):
-
-    Returns:
-        pd.DataFrame
-
-    Examples:
-        df.columns = ['name_left', 'age_left']
-        addsuffix(df, '_left').columns = ['name', 'age']
-    """
-    df = df.copy().rename(
-        columns=dict(
-            zip(
-                df.columns,
-                map(
-                    lambda r: r[:-len(suffix)],
-                    df.columns
-                ),
-
-            )
-        )
-    )
-    assert isinstance(df, pd.DataFrame)
-    return df
-
-
 def preparedf(data, ixname='ix'):
     """
     Perform several of pre-processing step on the dataframe
@@ -471,7 +402,7 @@ def preparedf(data, ixname='ix'):
     """
     df = data.copy()
     # check the index
-    df = _chkixdf(df, ixname=ixname)
+    df = connectors._chkixdf(df, ixname=ixname)
 
     # Index
     df[ixname] = df[ixname].apply(idtostr)
@@ -529,23 +460,3 @@ def preparedf(data, ixname='ix'):
     return df
 
 
-def _chkixdf(df, ixname='ix'):
-    """
-    Check that the dataframe does not already have a column of the name ixname
-    And checks that the index name is ixname
-    And reset the index to add ixname as a column
-    Does not work on copy
-    Args:
-        df (pd.DataFrame):
-        ixname (str): name of the index
-
-    Returns:
-        pd.DataFrame
-    """
-    if ixname in df.columns:
-        raise KeyError('{} already in df columns'.format(ixname))
-    else:
-        df.reset_index(inplace=True, drop=False)
-        if ixname not in df.columns:
-            raise KeyError('{} not in df columns')
-        return df

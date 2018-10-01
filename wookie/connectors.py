@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
@@ -266,3 +267,225 @@ class Cartesian(BaseConnector):
         b = len(relevance)
         c = a / b > self.relevance_threshold
         return c
+
+
+def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname='ix'):
+    """
+    Separate a side by side training table into the left table, the right table, and the list of pairs
+    Args:
+        df (pd.DataFrame): side by side dataframe {['ix_left', 'ix_right'] :['name_left', 'name_right']}
+        lsuffix (str): left suffix
+        rsuffix (str): right suffix
+        y_true (str): name of y_true column
+
+    Returns:
+        pd.DataFrame, pd.DataFrame, pd.DataFrame
+    """
+
+    def takeside(df, suffix, ixname):
+        new = df.copy().reset_index(drop=False)
+        new = new[list(filter(lambda r: r[-len(suffix):] == suffix, new.columns))]
+        new = rmvsuffix(new, suffix).drop_duplicates(subset=[ixname])
+        new.set_index([ixname], inplace=True)
+        return new
+
+    xleft = takeside(df, lsuffix, ixname=ixname)
+    xright = takeside(df, rsuffix, ixname=ixname)
+    pairs = df[[y_true]].copy(
+    )
+    return xleft, xright, pairs
+
+
+def createsbs(pairs, left, right, lsuffix='_left', rsuffix='_right', ixname='ix'):
+    """
+    Create a side by side table from a list of pairs (as a DataFrame)
+    Args:
+        pairs (pd.DataFrame): of the form {['ix_left', 'ix_right']:['y_true']}
+        left (pd.DataFrame): of the form ['name'], index=ixname
+        right (pd.DataFrame): of the form ['name'], index=ixname
+        lsuffix (str): default '_left'
+        rsuffix (str): default '_right'
+        ixname (str): default 'ix' name of the index
+
+    Returns:
+        pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
+    """
+    xleft = _chkixdf(left.copy(), ixname=ixname)
+    xright = _chkixdf(right.copy(), ixname=ixname)
+    xpairs = pairs.copy().reset_index(drop=False)
+
+    xleft = addsuffix(xleft, lsuffix).set_index(ixname + lsuffix)
+    xright = addsuffix(xright, rsuffix).set_index(ixname + rsuffix)
+    sbs = xpairs.join(
+        xleft, on=ixname + lsuffix, how='left'
+    ).join(
+        xright, on=ixname + rsuffix, how='left'
+    ).set_index(
+        [
+            ixname + lsuffix,
+            ixname + rsuffix
+        ]
+    )
+    return sbs
+
+
+def safeconcat(dfs, usecols):
+    """
+    Concatenate two dataframe vertically using the same columns
+    Checks that the indexes do not overlap
+    safeconcat([df1,df2], usecols ['name']
+    Args:
+        dfs (list): [df1, df2] list of two dataframe
+        usecols (list): list of column names
+
+    Returns:
+        pd.DataFrame {'ix': [cols]}
+    """
+    assert isinstance(dfs, list)
+    df1 = dfs[0]
+    assert isinstance(df1, pd.DataFrame)
+    df2 = dfs[1]
+    assert isinstance(df2, pd.DataFrame)
+
+    intersection = np.intersect1d(df1.index, df2.index)
+    if intersection.shape[0] > 0:
+        raise KeyError('The indexes of the two df overlap: {}'.format(intersection))
+    X = pd.concat(
+        [
+            df1[usecols],
+            df2[usecols]
+        ],
+        axis=0,
+        ignore_index=False
+    )
+    return X
+
+
+def showpairs(pairs, left, right, usecols):
+    res = createsbs(pairs=pairs, left=left, right=right)
+    displaycols = pairs.columns.tolist()
+    for c in usecols:
+        displaycols.append(c + '_left')
+        displaycols.append(c + '_right')
+    res = res[displaycols]
+    return res
+
+
+def concattrainnew(left, right, trainsbs, func):
+    """
+    Args:
+        left (pd.DataFrame): left data {ixname: [cols]}
+        right (pd.DataFrame): right data {ixname: [cols]}
+        trainsbs (pd.DataFrame): side_by_side analysis of the data \
+            [ixname_lsuffix, ixname_rsuffix, col_lsuffix, col_rsuffix]
+        func (callable): preprocessing function
+
+    Returns:
+        pd.DataFrame, pd.DataFrame, pd.DataFrame: X_left {'ix': ['name']}, X_right, pairs {['ix_left', 'ix_right']: ['y_true']}
+    """
+
+    trainleft, trainright, pairs = separatesides(trainsbs)
+    newleft = func(left)
+    newright = func(right)
+    trainleft = func(trainleft)
+    trainright = func(trainright)
+    usecols = list(set(trainleft.columns).intersection(set(newleft.columns)))
+    X_left = safeconcat([trainleft, newleft], usecols=usecols)
+    X_right = safeconcat([trainright, newright], usecols=usecols)
+    return X_left, X_right, pairs
+
+
+def _chkixdf(df, ixname='ix'):
+    """
+    Check that the dataframe does not already have a column of the name ixname
+    And checks that the index name is ixname
+    And reset the index to add ixname as a column
+    Does not work on copy
+    Args:
+        df (pd.DataFrame): {ixname: [cols]}
+        ixname (str): name of the index
+
+    Returns:
+        pd.DataFrame: [ixname, cols]
+    """
+    if ixname in df.columns:
+        raise KeyError('{} already in df columns'.format(ixname))
+    else:
+        if df.index.name != ixname:
+            raise KeyError('index name {} != expected name {}'.format(df.index.name, ixname))
+        df.reset_index(inplace=True, drop=False)
+        if ixname not in df.columns:
+            raise KeyError('{} not in df columns'.format(ixname))
+        return df
+
+
+def rmv_end_str(w, s):
+    """
+    remove str at the end of tken
+    :param w: str, token to be cleaned
+    :param s: str, string to be removed
+    :return: str
+    """
+    if w.endswith(s):
+        w = w[:-len(s)]
+    return w
+
+
+def addsuffix(df, suffix):
+    """
+    Add a suffix to each of the dataframe column
+    Args:
+        df (pd.DataFrame):
+        suffix (str):
+
+    Returns:
+        pd.DataFrame
+
+    Examples:
+        df.columns = ['name', 'age']
+        addsuffix(df, '_left').columns = ['name_left', 'age_left']
+    """
+    df = df.copy().rename(
+        columns=dict(
+            zip(
+                df.columns,
+                map(
+                    lambda r: r + suffix,
+                    df.columns
+                ),
+
+            )
+        )
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df
+
+
+def rmvsuffix(df, suffix):
+    """
+    Rmv a suffix to each of the dataframe column
+    Args:
+        df (pd.DataFrame):
+        suffix (str):
+
+    Returns:
+        pd.DataFrame
+
+    Examples:
+        df.columns = ['name_left', 'age_left']
+        addsuffix(df, '_left').columns = ['name', 'age']
+    """
+    df = df.copy().rename(
+        columns=dict(
+            zip(
+                df.columns,
+                map(
+                    lambda r: r[:-len(suffix)],
+                    df.columns
+                ),
+
+            )
+        )
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df

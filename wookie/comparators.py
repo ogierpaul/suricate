@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from fuzzywuzzy.fuzz import ratio, token_set_ratio
 from sklearn.base import TransformerMixin
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union
 
@@ -46,6 +47,37 @@ class BaseComparator(TransformerMixin):
 
     def fit(self, *_):
         return self
+
+
+class DataPasser(TransformerMixin):
+    """
+    This dont do anything, just pass the data on selected columns
+    if on_cols is None, pass the whole dataframe
+    """
+
+    def __init__(self, on_cols=None):
+        TransformerMixin.__init__(self)
+        self.on_cols = on_cols
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        """
+        This dont do anything, just pass the data as it is
+        Args:
+            X:
+
+        Returns:
+
+        """
+        if not self.on_cols is None:
+            assert isinstance(X, pd.DataFrame)
+            assert all(map(lambda c: c in X.columns, self.on_cols))
+            res = X[self.on_cols]
+        else:
+            res = X
+        return res
 
 
 class FuzzyWuzzyComparator(BaseComparator, TransformerMixin):
@@ -97,6 +129,7 @@ class PipeComparator(TransformerMixin):
     }
 )
     """
+
     def __init__(self, scoreplan):
         """
 
@@ -174,12 +207,12 @@ class TokenComparator(TransformerMixin):
         new_series = _prepare_deduped_series(X, ix=self.new_ix, val=self.new_col)
         train_series = _prepare_deduped_series(X, ix=self.train_ix, val=self.train_col)
 
-        score = compare_token_series(
-            train_series=train_series,
-            new_series=new_series,
+        score = _tokencompare(
+            right=train_series,
+            left=new_series,
             tokenizer=self.tokenizer,
-            new_ix=self.new_ix,
-            train_ix=self.train_ix
+            ix_left=self.new_ix,
+            ix_right=self.train_ix
         )
         score.set_index(
             [self.new_ix, self.train_ix],
@@ -195,62 +228,34 @@ class TokenComparator(TransformerMixin):
         return score
 
 
-def compare_token_series(new_series, train_series, tokenizer, new_ix='ix_new', train_ix='ix_train', fit=False):
+def _tokencompare(left, right, tokenizer, ix_left='ix_left', ix_right='ix_right', fit=False):
     """
     return the cosine similarity of the tf-idf score of each possible pairs of documents
     Args:
-        new_series (pd.Series): new data (To compare against train data)
-        train_series (pd.Series): train data (To fit the tf-idf transformer)
+        left (pd.Series): new data (To compare against train data)
+        right (pd.Series): train data (To fit the tf-idf transformer)
         tokenizer: tokenizer of type sklearn
-        new_ix (str): column name of new ix
-        train_ix (str): column name of train ix
+        ix_left (str): column name of new ix
+        ix_right (str): column name of train ix
         fit (bool): if False, do not fit the tokenizer (is already fitted)
     Returns:
         pd.DataFrame
     """
-    train_series = train_series.copy().dropna()
-    new_series = new_series.copy().dropna()
+    right = right.copy().dropna()
+    left = left.copy().dropna()
     if fit is True:
-        alldata = pd.concat([train_series, new_series], axis=0, ignore_index=True)
+        alldata = pd.concat([right, left], axis=0, ignore_index=True)
         tokenizer.fit(alldata)
-    train_tfidf = tokenizer.transform(train_series.dropna())
-    new_tfidf = tokenizer.transform(new_series)
-    X = pd.DataFrame(cosine_similarity(new_tfidf, train_tfidf), columns=train_series.index)
-    X[new_ix] = new_series.index
+    right_tfidf = tokenizer.transform(right.dropna())
+    left_tfidf = tokenizer.transform(left)
+    X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right.index)
+    X[ix_left] = left.index
     score = pd.melt(
         X,
-        id_vars=new_ix,
-        var_name=train_ix,
+        id_vars=ix_left,
+        var_name=ix_right,
         value_name='score'
     ).sort_values(by='score', ascending=False)
-    return score
-
-
-def tfidfpos(left, right, tokenizer, on, ixname='ix', fit=False, threshold=0):
-    """
-
-    Args:
-        left (pd.DataFrame):
-        right (pd.DataFrame):
-        tokenizer:
-        on (str):
-        ixname (str):
-        fit (bool):
-        threshold (float):
-
-    Returns:
-        pd.DataFrame
-    """
-    score = compare_token_series(
-        new_series=left[on],
-        train_series=right[on],
-        tokenizer=tokenizer,
-        new_ix=ixname + '_left',
-        train_ix=ixname + '_right',
-        fit=fit
-    )
-    if not threshold is None:
-        score = score.loc[score['score'] > threshold]
     return score
 
 
@@ -347,68 +352,139 @@ def token_score(left, right):
     return s
 
 
-class DataPasser(TransformerMixin):
-    """
-    This dont do anything, just pass the data on selected columns
-    if on_cols is None, pass the whole dataframe
-    """
-
-    def __init__(self, on_cols=None):
-        TransformerMixin.__init__(self)
-        self.on_cols = on_cols
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X):
-        """
-        This dont do anything, just pass the data as it is
-        Args:
-            X:
-
-        Returns:
-
-        """
-        if not self.on_cols is None:
-            assert isinstance(X, pd.DataFrame)
-            assert all(map(lambda c: c in X.columns, self.on_cols))
-            res = X[self.on_cols]
-        else:
-            res = X
-        return res
-
-
-def preparevocab(col, df_left, df_right):
+def preparevocab(on, left, right):
     """
     create a series with all the vocab wors
     Args:
-        col (str): column to take for the vocabulary
-        df_left (pd.DataFrame):
-        df_right (pd.DataFrame)
+        on (str): column to take for the vocabulary
+        left (pd.DataFrame):
+        right (pd.DataFrame)
     Returns:
         pd.Series
     """
-    vocab = pd.Series(name=col)
-    for df in [df_left, df_right]:
-        vocab = pd.concat([vocab, df[col].dropna()], axis=0, ignore_index=True)
+    vocab = pd.Series(name=on)
+    for df in [left, right]:
+        vocab = pd.concat([vocab, df[on].dropna()], axis=0, ignore_index=True)
     return vocab
 
 
-def innermatch(left, right, col, ixname='ix'):
-    xleft = left[[col]].copy().dropna().reset_index(drop=False)
-    xright = right[[col]].copy().dropna().reset_index(drop=False)
-    x = pd.merge(left=xleft, right=xright, left_on=col, right_on=col, how='inner', suffixes=['_left', '_right'])
-    x = x[[ixname + '_left', ixname + '_right']].set_index([ixname + '_left', ixname + '_right'])
-    x[col + '_exact'] = 1
+def innermatch(left, right, on, ixname='ix', lsuffix='_left', rsuffix='_right'):
+    """
+    Gives the indexes of the two dataframe where the ids are matching
+    Args:
+        left (pd.DataFrame): left df of the form {ixname:['name',..]}
+        right (pd.DataFrame): right df of the form {ixname:['name',..]}
+        on (str): name of the column
+        ixname (str): default 'ix'
+        lsuffix (str): default '_left'
+        rsuffix (str): default '_right'
+    Returns:
+        {['ix_left', 'ix_right']: [id_exact]}
+    """
+
+    left = left[[on]].dropna().copy().reset_index(drop=False)
+    right = right[[on]].dropna().copy().reset_index(drop=False)
+    ix_left = ixname + lsuffix
+    ix_right = ixname + rsuffix
+    scorename = on + '_exact'
+    x = pd.merge(left=left, right=right, left_on=on, right_on=on, how='inner', suffixes=[lsuffix, rsuffix])
+    x = x[[ix_left, ix_right]].set_index([ix_left, ix_right])
+    x[scorename] = 1
     return x
 
 
-def idsmatch(left, right, ids, ixname='ix'):
+def idsconnector(left, right, on_cols, ixname='ix', lsuffix='_left', rsuffix='_right'):
+    """
+        Gives the indexes of the two dataframe where the ids are matching
+    Args:
+        left (pd.DataFrame): left df of the form {ixname:['name',..]}
+        right (pd.DataFrame): right df of the form {ixname:['name',..]}
+        on_cols (list): names of the columns
+        ixname (str): default 'ix'
+        lsuffix (str): default '_left'
+        rsuffix (str): default '_right'
+    Returns:
+        {['ix_left', 'ix_right']: [id_exact, id2_exact]}
+    """
     alldata = None
-    for c in ids:
-        pos = innermatch(left=left, right=right, col=c, ixname=ixname)
+    for c in on_cols:
+        pos = innermatch(left=left, right=right, on=c, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
         if alldata is None:
             alldata = pos.copy()
         else:
             alldata = pd.merge(left=alldata, right=pos, left_index=True, right_index=True, how='outer')
+    alldata.fillna(0, inplace=True)
     return alldata
+
+
+def tfidfconnector(left, right, on, threshold=0, ixname='ix', lsuffix='_left', rsuffix='_right', **kwargs):
+    """
+
+    Args:
+        left (pd.DataFrame): left df of the form {ixname:['name',..]}
+        right (pd.DataFrame): right df of the form {ixname:['name',..]}
+        on (str): column on which to calculate the tfidf similarity score
+        ixname (str): default 'ix'
+        lsuffix (str): default '_left'
+        rsuffix (str): default '_right'
+        threshold: Threshold on which to filter the pairs
+        **kwargs: kwargs for the scikit learn TfIdf Vectorizer
+
+    Returns:
+        pd.DataFrame {[ixname+lsuffix, ixname+rsuffix]: [on+'_tfidf']}
+    """
+    left = left[on].dropna().copy()
+    right = right[on].dropna().copy()
+    assert isinstance(left, pd.Series)
+    assert isinstance(right, pd.Series)
+    ix_left = ixname + lsuffix
+    ix_right = ixname + rsuffix
+    scorename = on + '_tfidf'
+    tokenizer = TfidfVectorizer(**kwargs)
+    vocab = pd.concat(
+        [left, right],
+        axis=0,
+        ignore_index=True
+    )
+    tokenizer.fit(vocab)
+    right_tfidf = tokenizer.transform(right.dropna())
+    left_tfidf = tokenizer.transform(left)
+    X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right.index)
+    X[ix_left] = left.index
+    score = pd.melt(
+        X,
+        id_vars=ix_left,
+        var_name=ix_right,
+        value_name=scorename
+    ).set_index(
+        [
+            ix_left,
+            ix_right
+        ]
+    ).sort_values(
+        by=scorename,
+        ascending=False
+    )
+    if not threshold is None:
+        score = score.loc[score[scorename] > threshold]
+    return score
+
+
+def mergescore(scores):
+    """
+    Merge the scores of the tfidfconnector and of the idsconnector
+    Args:
+        scores (list): list of pd.DataFrame of the form {['ix_left', 'ix_right']: [score]}
+
+    Returns:
+        pd.DataFrame : of the form {['ix_left', 'ix_right']: [score1, score2, ...]}
+    """
+    X = None
+    for s in scores:
+        if X is None:
+            X = s
+        else:
+            X = pd.merge(left=X, right=s, how='outer', left_index=True, right_index=True)
+
+    X.fillna(0, inplace=True)
+    return X
