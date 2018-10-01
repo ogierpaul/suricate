@@ -228,6 +228,73 @@ class TokenComparator(TransformerMixin):
         return score
 
 
+class Tfidf_Connector(TransformerMixin):
+    def __init__(self, on, left, right, ixname='ix', lsuffix='_left', rsuffix='_right', threshold=0, **kwargs):
+        TransformerMixin.__init__(self)
+        self.on = on
+        self.ixname = ixname
+        self.lsuffix = lsuffix
+        self.rsuffix = rsuffix
+        self.vocab = pd.Series()
+        self.left = left
+        self.right = right
+        self.ix_left = ixname + lsuffix
+        self.ix_right = ixname + rsuffix
+        self.ixs = [self.ix_left, self.ix_right]
+        self.scorename = self.on + '_tfidf'
+        self.threshold = threshold
+        self.tokenizer = TfidfVectorizer(**kwargs)
+        pass
+
+    def fit(self, X=None, y=None, addvocab=True):
+        left = self.left[self.on].dropna().copy()
+        right = self.right[self.on].dropna().copy()
+        assert isinstance(left, pd.Series)
+        assert isinstance(right, pd.Series)
+        vocab2 = pd.concat(
+            [left, right],
+            axis=0,
+            ignore_index=True
+        )
+        if addvocab is True:
+            self.vocab = pd.concat(
+                [self.vocab, addvocab],
+                axis=0,
+                ignore_index=True
+            )
+        else:
+            self.vocab = vocab2
+        self.tokenizer.fit(self.vocab)
+        return self
+
+    def transform(self, X=None):
+        left = self.left[self.on].dropna().copy()
+        right = self.right[self.on].dropna().copy()
+        right_tfidf = self.tokenizer.transform(left)
+        left_tfidf = self.tokenizer.transform(right)
+        X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right)
+        X[self.ix_left] = left.index
+        score = pd.melt(
+            X,
+            id_vars=self.ix_left,
+            var_name=self.ix_right,
+            value_name=self.scorename
+        ).set_index(
+            self.ixs
+        ).sort_values(
+            by=self.scorename,
+            ascending=False
+        )
+        if not self.threshold is None:
+            score = score.loc[score[self.scorename] > self.threshold]
+        return score
+
+    def update(self, left, right):
+        self.left = left
+        self.right = right
+        pass
+
+
 def _tokencompare(left, right, tokenizer, ix_left='ix_left', ix_right='ix_right', fit=False):
     """
     return the cosine similarity of the tf-idf score of each possible pairs of documents
