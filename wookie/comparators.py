@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from fuzzywuzzy.fuzz import ratio, token_set_ratio
+from fuzzywuzzy.fuzz import ratio as simpleratio, partial_token_set_ratio as tokenratio
 from sklearn.base import TransformerMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -398,7 +398,7 @@ def fuzzy_score(left, right):
     if valid_inputs(left, right) is False:
         return navalue_score
     else:
-        s = (ratio(left, right) / 100)
+        s = (simpleratio(left, right) / 100)
     return s
 
 
@@ -415,7 +415,7 @@ def token_score(left, right):
     if valid_inputs(left, right) is False:
         return navalue_score
     else:
-        s = token_set_ratio(left, right) / 100
+        s = tokenratio(left, right) / 100
     return s
 
 
