@@ -458,5 +458,3 @@ def preparedf(data, ixname='ix'):
     df['duns'] = df['duns'].apply(cleanduns)
 
     return df
-
-

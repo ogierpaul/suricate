@@ -362,6 +362,17 @@ def safeconcat(dfs, usecols):
 
 
 def showpairs(pairs, left, right, usecols):
+    """
+
+    Args:
+        pairs (pd.DataFrame): {[ix_left, ix_right]: [cols]}
+        left (pd.DataFrame): {ix: [cols]}
+        right (pd.DataFrame): {ix: [cols]}
+        usecols (list): [name, duns, ..]
+
+    Returns:
+        pd.DataFrame: {[ix_left, ix_right]: [name_left, name_right, duns_left, duns_right]}
+    """
     res = createsbs(pairs=pairs, left=left, right=right)
     displaycols = pairs.columns.tolist()
     for c in usecols:
