@@ -169,6 +169,8 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
             idtostr('0123', zfill=6) --> '000123'
         - remove chars
             idtostr('1-23', rmvchars=['-']) --> '123'
+        - remove .0:
+            idtostr(123.0) --> '123'
         - remove words
             idtostr('#N/A', rmvwords=['#N/A']) --> None
     """
@@ -191,6 +193,9 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     ## remove leading zeroes
     if rmvlzeroes is True:
         s = s.lstrip('0')
+    # remove trailing zero decimals
+    if s.endswith(('.0')):
+        s = s[:-2]
     ## Remove special chars
     if not rmvchars is None:
         for c in rmvchars:
