@@ -23,8 +23,8 @@ def _tokencompare(left, right, tokenizer, ix_left='ix_left', ix_right='ix_right'
     if fit is True:
         alldata = pd.concat([right, left], axis=0, ignore_index=True)
         tokenizer.fit(alldata)
-    right_tfidf = tokenizer.transform(right.dropna())
-    left_tfidf = tokenizer.transform(left)
+    right_tfidf = tokenizer.predict(right.dropna())
+    left_tfidf = tokenizer.predict(left)
     X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right.index)
     X[ix_left] = left.index
     score = pd.melt(
@@ -193,8 +193,8 @@ class LrTfidfConnector:
         """
 
         Args:
-            left (pd.Series):
-            right (pd.Series):
+            left (pd.Series): {ixname: val}
+            right (pd.Series): {ixname: val}
             refit (bool): whether to re-fit the data to new vocabulary
 
         Returns:
@@ -211,7 +211,7 @@ class LrTfidfConnector:
         )
         if refit is True:
             self.vocab = pd.concat(
-                [self.vocab, refit],
+                [self.vocab, vocab2],
                 axis=0,
                 ignore_index=True
             )
@@ -225,9 +225,12 @@ class LrTfidfConnector:
             self.fit(left=left, right=right, refit=refit)
         left = left.dropna().copy()
         right = right.dropna().copy()
-        right_tfidf = self.tokenizer.transform(left)
-        left_tfidf = self.tokenizer.transform(right)
-        X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right)
+        left_tfidf = self.tokenizer.transform(left)
+        right_tfidf = self.tokenizer.transform(right)
+        X = pd.DataFrame(
+            cosine_similarity(left_tfidf, right_tfidf),
+            columns=right.index
+        )
         X[self.ixnameleft] = left.index
         score = pd.melt(
             X,
@@ -246,7 +249,7 @@ class LrTfidfConnector:
 
 
 class IdTfIdfConnector:
-    def __init__(self, left, right, tfidf_cols=None, stop_words=None, id_cols=None, threshold=0):
+    def __init__(self, tfidf_cols=None, stop_words=None, id_cols=None, threshold=0.3):
         """
 
         Args:
@@ -255,31 +258,41 @@ class IdTfIdfConnector:
             tfidf_cols (list): ['name', 'street']
             stop_words (dict): {'name': ['inc', 'ltd'], 'street':['road', 'avenue']}
             id_cols (list): ['duns', 'euvat']
-            threshold (float): 0 / not transmitted for the moment
+            threshold (float): 0.3
         """
-        self.left = left
-        self.right = right
         self.tfidf_cols = tfidf_cols
         self.stop_words = stop_words
         self.idcols = id_cols
         self.threshold = threshold
         self.tokenizers = dict()
-        # check both left and right data are pd.DataFrame
-        assert isinstance(left, pd.DataFrame)
-        assert isinstance(right, pd.DataFrame)
         if not stop_words is None:
             assert isinstance(stop_words, dict)
         # Initiate the tokenizers
         if tfidf_cols is not None:
             assert hasattr(tfidf_cols, '__iter__')
             for c in tfidf_cols:
-                assert c in left.columns
-                assert c in right.columns
                 if not stop_words is None and not stop_words.get(c) is None:
                     assert hasattr(stop_words[c], '__iter__')
-                    self.tokenizers[c] = LrTfidfConnector(on=c, stop_words=stop_words[c])
+                self.tokenizers[c] = self._init_tokenizer(on=c, stop_words=stop_words, threshold=threshold)
         if id_cols is not None:
             assert hasattr(id_cols, '__iter__')
+
+    def _init_tokenizer(self, on, stop_words, threshold=0):
+        """
+        Initiate the Left-Right Tokenizer
+        Args:
+            on (str): column name
+            stop_words (dict): dictionnnary of stopwords
+
+        Returns:
+            LrTfidfConnector
+        """
+        if stop_words is None:
+            sw = None
+        else:
+            sw = stop_words.get(on)
+
+        return LrTfidfConnector(on=on, stop_words=sw, threshold=threshold)
 
     def fit(self, left, right):
         for c in self.tfidf_cols:
@@ -290,7 +303,9 @@ class IdTfIdfConnector:
         scores = list()
         if self.tfidf_cols is not None:
             for c in self.tfidf_cols:
-                tfscore = self.tokenizers[c].transform(left[c], right[c])
+                tk = self.tokenizers[c]
+                assert isinstance(tk, LrTfidfConnector)
+                tfscore = tk.transform(left[c], right[c])
                 scores.append(tfscore)
         if self.idcols is not None:
             idsscore = idsconnector(left=left, right=right, on_cols=self.idcols)
