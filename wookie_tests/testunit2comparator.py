@@ -17,10 +17,10 @@ def test2(verbose=True):
         print('\n columns used {}'.format(df_train.columns.tolist()))
     usecols = ['_'.join(c) for c in itertools.product(
         ['street', 'name'], ['left', 'right'])]
-    from wookie.comparators import FuzzyWuzzyComparator
+    from wookie.sbscomparators import FuzzyWuzzySbsComparator
     left_col = usecols[0]
     right_col = usecols[1]
-    fc = FuzzyWuzzyComparator(left=left_col, right=right_col, comparator='fuzzy')
+    fc = FuzzyWuzzySbsComparator(left=left_col, right=right_col, comparator='fuzzy')
     x_2 = fc.fit_transform(df_train)
     print(x_2)
     pass
@@ -33,12 +33,12 @@ def test3(verbose=True):
     df_train = pd.read_csv(trainingpath, nrows=500)
     usecols = ['_'.join(c) for c in itertools.product(
         ['street', 'name'], ['left', 'right'])]
-    from wookie.comparators import PipeComparator
+    from wookie.sbscomparators import PipeSbsComparator
     scoreplan = dict()
     for c in ['name', 'street', 'city']:
         scoreplan[c] = ['exact', 'token']
 
-    fc = PipeComparator(scoreplan=scoreplan)
+    fc = PipeSbsComparator(scoreplan=scoreplan)
     x_2 = fc.fit_transform(df_train)
     print(x_2)
     pass

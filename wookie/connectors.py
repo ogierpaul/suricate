@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from wookie.comparators import exact_score
+from wookie import sbscomparators
 
 
 def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'):
@@ -92,6 +92,27 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
     return dfnew
 
 
+class FuncTransfomer(TransformerMixin):
+    """
+    Transformer than can acco
+    """
+
+    def __init__(self, transfunc):
+        """
+
+        Args:
+            transfunc (callable):
+        """
+        self.transfunc = transfunc
+
+    def fit(self, X=None, y=None):
+        return self
+
+    def transform(self, X):
+        res = self.transfunc(X)
+        return res
+
+
 class BaseConnector(TransformerMixin):
     """
     Class inherited from TransformerMixin
@@ -166,7 +187,7 @@ class Cartesian(BaseConnector):
         BaseConnector.__init__(self, *args, **kwargs)
         assert isinstance(reference, pd.DataFrame)
         if relevance_func is None:
-            relevance_func = exact_score
+            relevance_func = sbscomparators._exact_score
         assert (callable(relevance_func))
         self.reference = reference
         self.attributesCols = self.reference.columns.tolist()
@@ -277,6 +298,7 @@ def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname
         lsuffix (str): left suffix
         rsuffix (str): right suffix
         y_true (str): name of y_true column
+        ixname (str): name in index column
 
     Returns:
         pd.DataFrame, pd.DataFrame, pd.DataFrame
@@ -314,6 +336,7 @@ def createsbs(pairs, left, right, lsuffix='_left', rsuffix='_right', ixname='ix'
     xright = _chkixdf(right.copy(), ixname=ixname)
     xpairs = pairs.copy().reset_index(drop=False)
 
+
     xleft = addsuffix(xleft, lsuffix).set_index(ixname + lsuffix)
     xright = addsuffix(xright, rsuffix).set_index(ixname + rsuffix)
     sbs = xpairs.join(
@@ -346,6 +369,15 @@ def safeconcat(dfs, usecols):
     assert isinstance(df1, pd.DataFrame)
     df2 = dfs[1]
     assert isinstance(df2, pd.DataFrame)
+
+    # Check that the two indexes are of the same type
+    for df in [df1, df2]:
+        if df.index.dtype != np.dtype('O') or df.index.dtype in [np.dtype('float64'), np.dtype('int32')]:
+            raise IndexError(
+                'Non-string index type {}: all indexes should be string'.format(
+                    type(df.index)
+                )
+            )
 
     intersection = np.intersect1d(df1.index, df2.index)
     if intersection.shape[0] > 0:
@@ -382,24 +414,24 @@ def showpairs(pairs, left, right, usecols):
     return res
 
 
-def concattrainnew(left, right, trainsbs, func):
+def concattrainnew(left, right, trainsbs, transfunc):
     """
     Args:
         left (pd.DataFrame): left data {ixname: [cols]}
         right (pd.DataFrame): right data {ixname: [cols]}
         trainsbs (pd.DataFrame): side_by_side analysis of the data \
             [ixname_lsuffix, ixname_rsuffix, col_lsuffix, col_rsuffix]
-        func (callable): preprocessing function
+        transfunc (callable): preprocessing function
 
     Returns:
         pd.DataFrame, pd.DataFrame, pd.DataFrame: X_left {'ix': ['name']}, X_right, pairs {['ix_left', 'ix_right']: ['y_true']}
     """
 
     trainleft, trainright, pairs = separatesides(trainsbs)
-    newleft = func(left)
-    newright = func(right)
-    trainleft = func(trainleft)
-    trainright = func(trainright)
+    newleft = transfunc(left)
+    newright = transfunc(right)
+    trainleft = transfunc(trainleft)
+    trainright = transfunc(trainright)
     usecols = list(set(trainleft.columns).intersection(set(newleft.columns)))
     X_left = safeconcat([trainleft, newleft], usecols=usecols)
     X_right = safeconcat([trainright, newright], usecols=usecols)

@@ -410,7 +410,7 @@ def preparedf(data, ixname='ix'):
     df = connectors._chkixdf(df, ixname=ixname)
 
     # Index
-    df[ixname] = df[ixname].apply(idtostr)
+    # df[ixname] = df[ixname].apply(idtostr)
 
     ## Create an alert if the index is not unique
     if pd.Series(df[ixname]).unique().shape[0] != df.shape[0]:

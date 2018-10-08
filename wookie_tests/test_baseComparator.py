@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from wookie.comparators import exact_score, BaseComparator
+from wookie.sbscomparators import _exact_score, BaseSbsComparator
 
 
 class TestBaseComparator(TestCase):
@@ -15,10 +15,10 @@ class TestBaseComparator(TestCase):
                 'name_right': ['foo', 'baz']
             }
         )
-        bc = BaseComparator(
+        bc = BaseSbsComparator(
             left='name_left',
             right='name_right',
-            compfunc=exact_score
+            compfunc=_exact_score
         )
         assert isinstance(bc, TransformerMixin)
         x1 = bc.transform(x)
@@ -34,10 +34,10 @@ class TestBaseComparator(TestCase):
                 'name_right': ['foo', 'baz']
             }
         )
-        bc = BaseComparator(
+        bc = BaseSbsComparator(
             left='name_left',
             right='name_right',
-            compfunc=exact_score
+            compfunc=_exact_score
         )
         assert isinstance(bc, TransformerMixin)
         bc.fit(x)
