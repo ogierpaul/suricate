@@ -12,315 +12,9 @@ from sklearn.preprocessing import Imputer
 import wookie.preutils
 from wookie import connectors
 
+_navalue_score = None
 
-def _tokencompare(left, right, tokenizer, ix_left='ix_left', ix_right='ix_right', fit=False):
-    """
-    return the cosine similarity of the tf-idf score of each possible pairs of documents
-    Args:
-        left (pd.Series): new data (To compare against train data)
-        right (pd.Series): train data (To fit the tf-idf transformer)
-        tokenizer: tokenizer of type sklearn
-        ix_left (str): column name of new ix
-        ix_right (str): column name of train ix
-        fit (bool): if False, do not fit the tokenizer (is already fitted)
-    Returns:
-        pd.DataFrame
-    """
-    right = right.copy().dropna()
-    left = left.copy().dropna()
-    if fit is True:
-        alldata = pd.concat([right, left], axis=0, ignore_index=True)
-        tokenizer.fit(alldata)
-    right_tfidf = tokenizer.predict(right.dropna())
-    left_tfidf = tokenizer.predict(left)
-    X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right.index)
-    X[ix_left] = left.index
-    score = pd.melt(
-        X,
-        id_vars=ix_left,
-        var_name=ix_right,
-        value_name='score'
-    ).sort_values(by='score', ascending=False)
-    return score
-
-
-def _preparevocab(on, left, right):
-    """
-    create a series with all the vocab wors
-    Args:
-        on (str): column to take for the vocabulary
-        left (pd.DataFrame):
-        right (pd.DataFrame)
-    Returns:
-        pd.Series
-    """
-    vocab = pd.Series(name=on)
-    for df in [left, right]:
-        vocab = pd.concat([vocab, df[on].dropna()], axis=0, ignore_index=True)
-    return vocab
-
-
-def innermatch(left, right, on, ixname='ix', lsuffix='_left', rsuffix='_right'):
-    """
-    Gives the indexes of the two dataframe where the ids are matching
-    Args:
-        left (pd.DataFrame): left df of the form {ixname:['name',..]}
-        right (pd.DataFrame): right df of the form {ixname:['name',..]}
-        on (str): name of the column
-        ixname (str): default 'ix'
-        lsuffix (str): default '_left'
-        rsuffix (str): default '_right'
-    Returns:
-        {['ix_left', 'ix_right']: [id_exact]}
-    """
-
-    left = left[[on]].dropna().copy().reset_index(drop=False)
-    right = right[[on]].dropna().copy().reset_index(drop=False)
-    ix_left = ixname + lsuffix
-    ix_right = ixname + rsuffix
-    scorename = on + '_exact'
-    x = pd.merge(left=left, right=right, left_on=on, right_on=on, how='inner', suffixes=[lsuffix, rsuffix])
-    x = x[[ix_left, ix_right]].set_index([ix_left, ix_right])
-    x[scorename] = 1
-    return x
-
-
-def idsconnector(left, right, on_cols, ixname='ix', lsuffix='_left', rsuffix='_right'):
-    """
-        Gives the indexes of the two dataframe where the ids are matching
-    Args:
-        left (pd.DataFrame): left df of the form {ixname:['name',..]}
-        right (pd.DataFrame): right df of the form {ixname:['name',..]}
-        on_cols (list): names of the columns
-        ixname (str): default 'ix'
-        lsuffix (str): default '_left'
-        rsuffix (str): default '_right'
-    Returns:
-        {['ix_left', 'ix_right']: [id_exact, id2_exact]}
-    """
-    alldata = None
-    for c in on_cols:
-        pos = innermatch(left=left, right=right, on=c, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
-        if alldata is None:
-            alldata = pos.copy()
-        else:
-            alldata = pd.merge(left=alldata, right=pos, left_index=True, right_index=True, how='outer')
-    alldata.fillna(0, inplace=True)
-    return alldata
-
-
-def tfidfconnector(left, right, on, threshold=0, ixname='ix', lsuffix='_left', rsuffix='_right', **kwargs):
-    """
-
-    Args:
-        left (pd.DataFrame): left df of the form {ixname:['name',..]}
-        right (pd.DataFrame): right df of the form {ixname:['name',..]}
-        on (str): column on which to calculate the tfidf similarity score
-        ixname (str): default 'ix'
-        lsuffix (str): default '_left'
-        rsuffix (str): default '_right'
-        threshold: Threshold on which to filter the pairs
-        **kwargs: kwargs for the scikit learn TfIdf Vectorizer
-
-    Returns:
-        pd.DataFrame {[ixname+lsuffix, ixname+rsuffix]: [on+'_tfidf']}
-    """
-    left = left[on].dropna().copy()
-    right = right[on].dropna().copy()
-    assert isinstance(left, pd.Series)
-    assert isinstance(right, pd.Series)
-    ix_left = ixname + lsuffix
-    ix_right = ixname + rsuffix
-    scorename = on + '_tfidf'
-    tokenizer = TfidfVectorizer(**kwargs)
-    vocab = pd.concat(
-        [left, right],
-        axis=0,
-        ignore_index=True
-    )
-    tokenizer.fit(vocab)
-    right_tfidf = tokenizer.transform(right.dropna())
-    left_tfidf = tokenizer.transform(left)
-    X = pd.DataFrame(cosine_similarity(left_tfidf, right_tfidf), columns=right.index)
-    X[ix_left] = left.index
-    score = pd.melt(
-        X,
-        id_vars=ix_left,
-        var_name=ix_right,
-        value_name=scorename
-    ).set_index(
-        [
-            ix_left,
-            ix_right
-        ]
-    ).sort_values(
-        by=scorename,
-        ascending=False
-    )
-    if not threshold is None:
-        score = score.loc[score[scorename] > threshold]
-    return score
-
-
-def mergescore(scores):
-    """
-    Merge the scores of the tfidfconnector and of the idsconnector
-    Args:
-        scores (list): list of pd.DataFrame of the form {['ix_left', 'ix_right']: [score]}
-
-    Returns:
-        pd.DataFrame : of the form {['ix_left', 'ix_right']: [score1, score2, ...]}
-    """
-    X = None
-    for s in scores:
-        if X is None:
-            X = s
-        else:
-            X = pd.merge(left=X, right=s, how='outer', left_index=True, right_index=True)
-    return X
-
-
-class LrTfidfConnector:
-    def __init__(self, on, ixname='ix', lsuffix='_left', rsuffix='_right', threshold=0, **kwargs):
-        self.on = on
-        self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.vocab = pd.Series()
-        self.ixnameleft = ixname + lsuffix
-        self.ixnameright = ixname + rsuffix
-        self.ixnamepairs = [self.ixnameleft, self.ixnameright]
-        self.scorename = self.on + '_tfidf'
-        self.threshold = threshold
-        self.tokenizer = TfidfVectorizer(**kwargs)
-        pass
-
-    def fit(self, left, right, refit=True):
-        """
-
-        Args:
-            left (pd.Series): {ixname: val}
-            right (pd.Series): {ixname: val}
-            refit (bool): whether to re-fit the data to new vocabulary
-
-        Returns:
-
-        """
-        left = left.dropna().copy()
-        right = right.dropna().copy()
-        assert isinstance(left, pd.Series)
-        assert isinstance(right, pd.Series)
-        vocab2 = pd.concat(
-            [left, right],
-            axis=0,
-            ignore_index=True
-        )
-        if refit is True:
-            self.vocab = pd.concat(
-                [self.vocab, vocab2],
-                axis=0,
-                ignore_index=True
-            )
-        else:
-            self.vocab = vocab2
-        self.tokenizer.fit(self.vocab)
-        return self
-
-    def transform(self, left, right, refit=True):
-        if refit is True:
-            self.fit(left=left, right=right, refit=refit)
-        left = left.dropna().copy()
-        right = right.dropna().copy()
-        left_tfidf = self.tokenizer.transform(left)
-        right_tfidf = self.tokenizer.transform(right)
-        X = pd.DataFrame(
-            cosine_similarity(left_tfidf, right_tfidf),
-            columns=right.index
-        )
-        X[self.ixnameleft] = left.index
-        score = pd.melt(
-            X,
-            id_vars=self.ixnameleft,
-            var_name=self.ixnameright,
-            value_name=self.scorename
-        ).set_index(
-            self.ixnamepairs
-        ).sort_values(
-            by=self.scorename,
-            ascending=False
-        )
-        if not self.threshold is None:
-            score = score.loc[score[self.scorename] > self.threshold]
-        return score
-
-
-class IdTfIdfConnector:
-    def __init__(self, tfidf_cols=None, stop_words=None, id_cols=None, threshold=0.3):
-        """
-
-        Args:
-            left (pd.DataFrame):
-            right (pd.DataFrame):
-            tfidf_cols (list): ['name', 'street']
-            stop_words (dict): {'name': ['inc', 'ltd'], 'street':['road', 'avenue']}
-            id_cols (list): ['duns', 'euvat']
-            threshold (float): 0.3
-        """
-        self.tfidf_cols = tfidf_cols
-        self.stop_words = stop_words
-        self.idcols = id_cols
-        self.threshold = threshold
-        self.tokenizers = dict()
-        if not stop_words is None:
-            assert isinstance(stop_words, dict)
-        # Initiate the tokenizers
-        if tfidf_cols is not None:
-            assert hasattr(tfidf_cols, '__iter__')
-            for c in tfidf_cols:
-                if not stop_words is None and not stop_words.get(c) is None:
-                    assert hasattr(stop_words[c], '__iter__')
-                self.tokenizers[c] = self._init_tokenizer(on=c, stop_words=stop_words, threshold=threshold)
-        if id_cols is not None:
-            assert hasattr(id_cols, '__iter__')
-
-    def _init_tokenizer(self, on, stop_words, threshold=0):
-        """
-        Initiate the Left-Right Tokenizer
-        Args:
-            on (str): column name
-            stop_words (dict): dictionnnary of stopwords
-
-        Returns:
-            LrTfidfConnector
-        """
-        if stop_words is None:
-            sw = None
-        else:
-            sw = stop_words.get(on)
-
-        return LrTfidfConnector(on=on, stop_words=sw, threshold=threshold)
-
-    def fit(self, left, right):
-        for c in self.tfidf_cols:
-            self.tokenizers[c].fit(left, right)
-        pass
-
-    def transform(self, left, right):
-        scores = list()
-        if self.tfidf_cols is not None:
-            for c in self.tfidf_cols:
-                tk = self.tokenizers[c]
-                assert isinstance(tk, LrTfidfConnector)
-                tfscore = tk.transform(left[c], right[c])
-                scores.append(tfscore)
-        if self.idcols is not None:
-            idsscore = idsconnector(left=left, right=right, on_cols=self.idcols)
-            scores.append(idsscore)
-        if len(scores) > 0:
-            connectscores = mergescore(scores)
-        else:
-            connectscores = connectors.cartesian_join(left[[]], right[[]])
-        return connectscores
+_tfidf_threshold_value = 0.3
 
 
 class BaseSbsComparator(TransformerMixin):
@@ -482,233 +176,6 @@ class PipeSbsComparator(TransformerMixin):
         res = pipe.fit_transform(X)
 
         return res
-
-
-class _SbsTokenComparator(TransformerMixin):
-    def __init__(self, tokenizer, ixnameleft='ix_left', ixnameright='ix_right', new_col='name', train_col='name'):
-        """
-
-        Args:
-            tokenizer (TfidfVectorizer): Tokenizer
-        """
-        TransformerMixin.__init__(self)
-        self.tokenizer = tokenizer
-        self.new_ix = ixnameleft
-        self.train_ix = ixnameright
-        self.new_col = new_col
-        self.train_col = train_col
-
-    def fit(self, X=None, y=None):
-        """
-        Do Nothing
-        Args:
-            X: iterable
-            y
-
-        Returns:
-
-        """
-        return self
-
-    def transform(self, X):
-        """
-
-        Args:
-            X (pd.DataFrame):
-
-        Returns:
-            pd.DataFrame
-        """
-        ## format
-        new_series = _prepare_deduped_series(X, ix=self.new_ix, val=self.new_col)
-        train_series = _prepare_deduped_series(X, ix=self.train_ix, val=self.train_col)
-
-        score = _tokencompare(
-            right=train_series,
-            left=new_series,
-            tokenizer=self.tokenizer,
-            ix_left=self.new_ix,
-            ix_right=self.train_ix
-        )
-        score.set_index(
-            [self.new_ix, self.train_ix],
-            drop=True,
-            inplace=True
-        )
-        score = score.loc[
-            X.set_index(
-                [self.new_ix, self.train_ix]
-            ).index
-        ]
-
-        return score
-
-
-def _prepare_deduped_series(X, ix, val):
-    """
-    deduplicate the records for one column based on one index column
-    Args:
-        X (pd.DataFrame)
-        ix (str): name of index col
-        val (str): name of value col
-    Returns:
-        pd.Series
-    """
-    y = X[
-        [ix, val]
-    ].drop_duplicates(
-        subset=[ix]
-    ).rename(
-        columns={val: 'data'}
-    ).set_index(
-        ix, drop=True
-    ).dropna(
-        subset=['data']
-    )['data']
-    return y
-
-
-_navalue_score = None
-
-
-def _valid_inputs(left, right):
-    """
-    takes two inputs and return True if none of them is null, or False otherwise
-    Args:
-        left: first object (scalar)
-        right: second object (scalar)
-
-    Returns:
-        bool
-    """
-    if any(pd.isnull([left, right])):
-        return False
-    else:
-        return True
-
-
-def _exact_score(left, right):
-    """
-    Checks if the two values are equali
-    Args:
-        left (object): object number 1
-        right (object): object number 2
-
-    Returns:
-        float
-    """
-    if _valid_inputs(left, right) is False:
-        return _navalue_score
-    else:
-        return float(left == right)
-
-
-def _fuzzy_score(left, right):
-    """
-    return ratio score of fuzzywuzzy
-    Args:
-        left (str): string number 1
-        right (str): string number 2
-
-    Returns:
-        float
-    """
-    if _valid_inputs(left, right) is False:
-        return _navalue_score
-    else:
-        s = (simpleratio(left, right) / 100)
-    return s
-
-
-def _token_score(left, right):
-    """
-    return the token_set_ratio score of fuzzywuzzy
-    Args:
-        left (str): string number 1
-        right (str): string number 2
-
-    Returns:
-        float
-    """
-    if _valid_inputs(left, right) is False:
-        return _navalue_score
-    else:
-        s = tokenratio(left, right) / 100
-    return s
-
-
-_tfidf_threshold_value = 0.3
-
-
-# DEPRECATED
-class SbsModel:
-    def __init__(self, prefunc, idtfidf, sbscomparator, estimator):
-        self.prefunc = prefunc
-        assert isinstance(idtfidf, IdTfIdfConnector)
-        self.idtfidf = idtfidf
-        self.sbscomparator = sbscomparator
-        self.estimator = estimator
-        self.skmodel = BaseEstimator()
-        pass
-
-    def fit(self, left, right, pairs):
-        """
-
-        Args:
-            left (pd.DataFrame): {'ixname': [cols..] }
-            right (pd.DataFrame): {'ixname': [cols..] }
-            pairs (pd.DataFrame): {['ixname_left', 'ixname_right']: [y_true] }
-
-        Returns:
-
-        """
-        newleft = self.prefunc(left)
-        newright = self.prefunc(right)
-        connectscores = self.idtfidf.transform(newleft, newright)
-        ixtrain = pairs.index.intersection(connectscores.index)
-        X_sbs = connectors.createsbs(pairs=connectscores, left=newleft, right=newright)
-        X_train = X_sbs.loc[ixtrain]
-        y_train = pairs.loc[ixtrain, 'y_true']
-        dp_connectscores = wookie.comparators.DataPasser(on_cols=connectscores.columns.tolist())
-        # noinspection PyTypeChecker
-        scorer = make_union(
-            *[
-                self.sbscomparator,
-                dp_connectscores
-            ]
-        )
-        ## Estimator
-        imp = Imputer()
-        self.skmodel = make_pipeline(
-            *[
-                scorer,
-                imp,
-                self.estimator
-            ]
-        )
-        self.skmodel.fit(X_train, y_train)
-        pass
-
-    def predict(self, left, right):
-        newleft = self.prefunc(left)
-        newright = self.prefunc(right)
-        connectscores = self.idtfidf.transform(newleft, newright)
-        X_sbs = connectors.createsbs(pairs=connectscores, left=newleft, right=newright)
-        y_pred = self.skmodel.predict(X_sbs)
-        y_pred = pd.Series(y_pred, index=X_sbs.index)
-        return y_pred
-
-    def score(self, left, right, pairs):
-        y_pred = self.predict(left=left, right=right)
-        assert isinstance(y_pred, pd.Series)
-        y_true = pairs['y_true']
-        assert isinstance(y_true, pd.Series)
-        y_pred2 = pd.Series(index=y_true.index)
-        y_pred2.loc[y_true.index.intersection(y_pred.index)] = y_pred
-        y_pred2.fillna(0, inplace=True)
-        score = accuracy_score(y_true=y_true, y_pred=y_pred2)
-        return score
-
 
 class LrDuplicateFinder:
     """
@@ -1089,3 +556,110 @@ class LrDuplicateFinder:
         y_pred2.fillna(0, inplace=True)
         score = accuracy_score(y_true=y_true, y_pred=y_pred2)
         return score
+
+
+def _preparevocab(on, left, right):
+    """
+    create a series with all the vocab wors
+    Args:
+        on (str): column to take for the vocabulary
+        left (pd.DataFrame):
+        right (pd.DataFrame)
+    Returns:
+        pd.Series
+    """
+    vocab = pd.Series(name=on)
+    for df in [left, right]:
+        vocab = pd.concat([vocab, df[on].dropna()], axis=0, ignore_index=True)
+    return vocab
+
+
+def innermatch(left, right, on, ixname='ix', lsuffix='_left', rsuffix='_right'):
+    """
+    Gives the indexes of the two dataframe where the ids are matching
+    Args:
+        left (pd.DataFrame): left df of the form {ixname:['name',..]}
+        right (pd.DataFrame): right df of the form {ixname:['name',..]}
+        on (str): name of the column
+        ixname (str): default 'ix'
+        lsuffix (str): default '_left'
+        rsuffix (str): default '_right'
+    Returns:
+        {['ix_left', 'ix_right']: [id_exact]}
+    """
+
+    left = left[[on]].dropna().copy().reset_index(drop=False)
+    right = right[[on]].dropna().copy().reset_index(drop=False)
+    ix_left = ixname + lsuffix
+    ix_right = ixname + rsuffix
+    scorename = on + '_exact'
+    x = pd.merge(left=left, right=right, left_on=on, right_on=on, how='inner', suffixes=[lsuffix, rsuffix])
+    x = x[[ix_left, ix_right]].set_index([ix_left, ix_right])
+    x[scorename] = 1
+    return x
+
+
+def _valid_inputs(left, right):
+    """
+    takes two inputs and return True if none of them is null, or False otherwise
+    Args:
+        left: first object (scalar)
+        right: second object (scalar)
+
+    Returns:
+        bool
+    """
+    if any(pd.isnull([left, right])):
+        return False
+    else:
+        return True
+
+
+def _exact_score(left, right):
+    """
+    Checks if the two values are equali
+    Args:
+        left (object): object number 1
+        right (object): object number 2
+
+    Returns:
+        float
+    """
+    if _valid_inputs(left, right) is False:
+        return _navalue_score
+    else:
+        return float(left == right)
+
+
+def _fuzzy_score(left, right):
+    """
+    return ratio score of fuzzywuzzy
+    Args:
+        left (str): string number 1
+        right (str): string number 2
+
+    Returns:
+        float
+    """
+    if _valid_inputs(left, right) is False:
+        return _navalue_score
+    else:
+        s = (simpleratio(left, right) / 100)
+    return s
+
+
+def _token_score(left, right):
+    """
+    return the token_set_ratio score of fuzzywuzzy
+    Args:
+        left (str): string number 1
+        right (str): string number 2
+
+    Returns:
+        float
+    """
+    if _valid_inputs(left, right) is False:
+        return _navalue_score
+    else:
+        s = tokenratio(left, right) / 100
+    return s

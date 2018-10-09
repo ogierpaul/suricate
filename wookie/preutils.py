@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 from fuzzywuzzy.fuzz import partial_token_set_ratio as fuzzyscore
 
-from wookie.connectors import rmv_end_str
-
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
@@ -217,3 +215,99 @@ navalues = [
     ' ', '', '#REF!', '#N/A', '#NAME?', '#DIV/0!',
     '#NUM!', 'NaT', 'NULL'
 ]
+
+
+def _chkixdf(df, ixname='ix'):
+    """
+    Check that the dataframe does not already have a column of the name ixname
+    And checks that the index name is ixname
+    And reset the index to add ixname as a column
+    Does not work on copy
+    Args:
+        df (pd.DataFrame): {ixname: [cols]}
+        ixname (str): name of the index
+
+    Returns:
+        pd.DataFrame: [ixname, cols]
+    """
+    if ixname in df.columns:
+        raise KeyError('{} already in df columns'.format(ixname))
+    else:
+        if df.index.name != ixname:
+            raise KeyError('index name {} != expected name {}'.format(df.index.name, ixname))
+        df.reset_index(inplace=True, drop=False)
+        if ixname not in df.columns:
+            raise KeyError('{} not in df columns'.format(ixname))
+        return df
+
+
+def rmv_end_str(w, s):
+    """
+    remove str at the end of tken
+    :param w: str, token to be cleaned
+    :param s: str, string to be removed
+    :return: str
+    """
+    if w.endswith(s):
+        w = w[:-len(s)]
+    return w
+
+
+def addsuffix(df, suffix):
+    """
+    Add a suffix to each of the dataframe column
+    Args:
+        df (pd.DataFrame):
+        suffix (str):
+
+    Returns:
+        pd.DataFrame
+
+    Examples:
+        df.columns = ['name', 'age']
+        addsuffix(df, '_left').columns = ['name_left', 'age_left']
+    """
+    df = df.copy().rename(
+        columns=dict(
+            zip(
+                df.columns,
+                map(
+                    lambda r: r + suffix,
+                    df.columns
+                ),
+
+            )
+        )
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df
+
+
+def rmvsuffix(df, suffix):
+    """
+    Rmv a suffix to each of the dataframe column
+    Args:
+        df (pd.DataFrame):
+        suffix (str):
+
+    Returns:
+        pd.DataFrame
+
+    Examples:
+        df.columns = ['name_left', 'age_left']
+        addsuffix(df, '_left').columns = ['name', 'age']
+    """
+    df = df.copy().rename(
+        columns=dict(
+            zip(
+                df.columns,
+                map(
+                    lambda r: r[:-len(suffix)],
+                    df.columns
+                ),
+
+            )
+        )
+    )
+    assert isinstance(df, pd.DataFrame)
+    return df
