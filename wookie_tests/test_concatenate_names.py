@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from operations.companypreparation import concatenate_names
+from wookie.preutils import concatenate_names
 
 
 class TestConcatenate_names(TestCase):

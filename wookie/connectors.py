@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from wookie import sbscomparators
+import wookie.comparators
 
 
 def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'):
@@ -187,7 +187,7 @@ class Cartesian(BaseConnector):
         BaseConnector.__init__(self, *args, **kwargs)
         assert isinstance(reference, pd.DataFrame)
         if relevance_func is None:
-            relevance_func = sbscomparators._exact_score
+            relevance_func = wookie.comparators._exact_score
         assert (callable(relevance_func))
         self.reference = reference
         self.attributesCols = self.reference.columns.tolist()

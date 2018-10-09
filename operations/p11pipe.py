@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier
 
 from operations import companypreparation as preprocessing
-from wookie import sbscomparators, connectors, interface, oaacomparators
+from wookie import connectors, LrDuplicateFinder
 
 if __name__ == '__main__':
     # Variable definition
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     filepath_training = 'data/trainingdata.csv'
     filepath_results = 'results from {}.xlsx'.format(pd.datetime.now().strftime("%d-%m-%y %Hh%M"))
     ## Estimator
-    n_estimators = 2000  # number of estimators for the Gradient Boosting Classifier
+    n_estimators = 5  # number of estimators for the Gradient Boosting Classifier
     displaycols = [
         'name',
         'street',
@@ -37,35 +37,37 @@ if __name__ == '__main__':
     df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
     train_left, train_right, y_train = connectors.separatesides(df_train)
 
-    sbs = interface.SbsModel(
-        prefunc=lambda df: preprocessing.preparedf(df, ixname='ix'),
-        idtfidf=oaacomparators.IdTfIdfConnector(
-            id_cols=['euvat', 'siret'],
-            tfidf_cols=['name', 'street'],
-            stop_words={
-                'name': preprocessing.companystopwords,
-                'street': preprocessing.streetstopwords
-            }
-        ),
-        sbscomparator=sbscomparators.PipeSbsComparator(
-            scoreplan={
-                'name_ascii': ['exact', 'fuzzy', 'token'],
-                'street_ascii': ['exact', 'token'],
-                'street_ascii_wostopwords': ['token'],
-                'name_ascii_wostopwords': ['fuzzy'],
-                'city': ['fuzzy'],
-                'postalcode_ascii': ['exact'],
-                'postalcode_2char': ['exact'],
-                'countrycode': ['exact']
-            }
-        ),
-        estimator=GradientBoostingClassifier(n_estimators=n_estimators)
+    sbs = LrDuplicateFinder(
+        prefunc=preprocessing.preparedf,
+        scoreplan={
+            'name': {
+                'type': 'FreeText',
+                'stop_words': preprocessing.companystopwords,
+                'threshold': 0.6,
+            },
+            'street': {
+                'type': 'FreeText',
+                'stop_words': preprocessing.streetstopwords,
+                'threshold': 0.6
+            },
+            'city': {
+                'type': 'FreeText',
+                'stop_words': preprocessing.citystopwords,
+                'threshold': None
+            },
+            'duns': {'type': 'Id'},
+            'postalcode': {'type': 'Code'},
+            'countrycode': {'type': 'Category'},
+            'postalcode_2char': {'type': 'Code'}
+        },
+        estimator=GradientBoostingClassifier(n_estimators=n_estimators),
+        verbose=True
     )
     print(pd.datetime.now(), 'start')
     sbs.fit(
         left=train_left,
         right=train_right,
-        pairs=y_train
+        pairs=y_train,
     )
     print(pd.datetime.now(), 'stop fit')
     score = sbs.score(train_left, train_right, y_train)

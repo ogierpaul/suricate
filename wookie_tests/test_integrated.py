@@ -6,8 +6,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Imputer
 
+from wookie import PipeSbsComparator
 from wookie.connectors import Cartesian
-from wookie.sbscomparators import PipeSbsComparator
 from wookie_tests.db_builder import create_training_database, create_gid_database
 
 n_jobs = 2
