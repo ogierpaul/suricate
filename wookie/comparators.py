@@ -640,6 +640,7 @@ def _token_score(left, right):
 _tfidf_threshold_value = 0.3
 
 
+# DEPRECATED
 class SbsModel:
     def __init__(self, prefunc, idtfidf, sbscomparator, estimator):
         self.prefunc = prefunc
