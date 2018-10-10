@@ -1,8 +1,10 @@
 import pandas as pd
-from sklearn.ensemble import GradientBoostingClassifier
+# from sklearn.ensemble import GradientBoostingClassifier as clf
+from sklearn.ensemble import RandomForestClassifier as Clf
+from sklearn.model_selection import train_test_split
 
 from operations import companypreparation as preprocessing
-from wookie import connectors, LrDuplicateFinder
+from wookie import connectors, comparators
 
 if __name__ == '__main__':
     # Variable definition
@@ -16,39 +18,29 @@ if __name__ == '__main__':
     ## File path
     filepath_left = '/Users/paulogier/81-GithubPackages/wookie/operations/data/left.csv'
     filepath_right = '/Users/paulogier/81-GithubPackages/wookie/operations/data/right.csv'
-    filepath_training = 'data/trainingdata.csv'
-    filepath_results = 'results from {}.xlsx'.format(pd.datetime.now().strftime("%d-%m-%y %Hh%M"))
-    ## Estimator
-    n_estimators = 5  # number of estimators for the Gradient Boosting Classifier
-    displaycols = [
-        'name',
-        'street',
-        'postalcode',
-        'city',
-        'countrycode',
-        # 'siret',
-        # 'siren',
-        # 'euvat'
-    ]
+    filepath_training = '/Users/paulogier/81-GithubPackages/wookie/operations/data/trainingdata.csv'
 
     # Data Preparation
     # left = pd.read_csv(filepath_left, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
-    df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
+    data = pd.read_csv(filepath_training).set_index(ixnamepairs)
+    df_train, df_test = train_test_split(data, train_size=0.7)
     train_left, train_right, y_train = connectors.separatesides(df_train)
-
-    sbs = LrDuplicateFinder(
+    y_train = y_train['y_true']
+    test_left, test_right, y_test = connectors.separatesides(df_test)
+    y_test = y_test['y_true']
+    dedupe = comparators.LrDuplicateFinder(
         prefunc=preprocessing.preparedf,
         scoreplan={
             'name': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.companystopwords,
-                'threshold': 0.6,
+                'threshold': 0.3,
             },
             'street': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.streetstopwords,
-                'threshold': 0.6
+                'threshold': 0.3
             },
             'city': {
                 'type': 'FreeText',
@@ -60,16 +52,19 @@ if __name__ == '__main__':
             'countrycode': {'type': 'Category'},
             'postalcode_2char': {'type': 'Code'}
         },
-        estimator=GradientBoostingClassifier(n_estimators=n_estimators),
+        estimator=Clf(n_estimators=10),
         verbose=True
     )
-    print(pd.datetime.now(), 'start')
-    sbs.fit(
+    dedupe.fit(
         left=train_left,
         right=train_right,
         pairs=y_train,
+        verbose=True
     )
-    print(pd.datetime.now(), 'stop fit')
-    score = sbs.score(train_left, train_right, y_train)
-    print(pd.datetime.now(), 'score: ', score)
+
+    y_pred_train = dedupe.predict(left=train_left, right=train_right)
+    comparators._evalpred(y_true=y_train, y_pred=y_pred_train, verbose=True, set='train')
+    y_pred_test = dedupe.predict(left=test_left, right=test_right)
+    comparators._evalpred(y_true=y_test, y_pred=y_pred_test, verbose=True, set='test')
+
     pass

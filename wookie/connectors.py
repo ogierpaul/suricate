@@ -102,7 +102,7 @@ def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname
         ixname (str): name in index column
 
     Returns:
-        pd.DataFrame, pd.DataFrame, pd.DataFrame
+        pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
     """
 
     def takeside(df, suffix, ixname):
@@ -114,8 +114,9 @@ def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname
 
     xleft = takeside(df, lsuffix, ixname=ixname)
     xright = takeside(df, rsuffix, ixname=ixname)
-    pairs = df[[y_true]].copy(
+    pairs = df[y_true].copy(
     )
+    pairs.name = y_true
     return xleft, xright, pairs
 
 
@@ -123,7 +124,7 @@ def createsbs(pairs, left, right, lsuffix='_left', rsuffix='_right', ixname='ix'
     """
     Create a side by side table from a list of pairs (as a DataFrame)
     Args:
-        pairs (pd.DataFrame): of the form {['ix_left', 'ix_right']:['y_true']}
+        pairs (pd.DataFrame/pd.Series): of the form {['ix_left', 'ix_right']:['y_true']}
         left (pd.DataFrame): of the form ['name'], index=ixname
         right (pd.DataFrame): of the form ['name'], index=ixname
         lsuffix (str): default '_left'
@@ -136,7 +137,8 @@ def createsbs(pairs, left, right, lsuffix='_left', rsuffix='_right', ixname='ix'
     xleft = _chkixdf(left.copy(), ixname=ixname)
     xright = _chkixdf(right.copy(), ixname=ixname)
     xpairs = pairs.copy().reset_index(drop=False)
-
+    if isinstance(xpairs, pd.Series):
+        xpairs = pd.DataFrame(xpairs)
 
     xleft = addsuffix(xleft, lsuffix).set_index(ixname + lsuffix)
     xright = addsuffix(xright, rsuffix).set_index(ixname + rsuffix)
@@ -194,11 +196,11 @@ def safeconcat(dfs, usecols):
     return X
 
 
-def showpairs(pairs, left, right, usecols):
+def showpairs(pairs, left, right, usecols=None):
     """
 
     Args:
-        pairs (pd.DataFrame): {[ix_left, ix_right]: [cols]}
+        pairs (pd.DataFrame/pd.Series): {[ix_left, ix_right]: col}
         left (pd.DataFrame): {ix: [cols]}
         right (pd.DataFrame): {ix: [cols]}
         usecols (list): [name, duns, ..]
@@ -206,8 +208,14 @@ def showpairs(pairs, left, right, usecols):
     Returns:
         pd.DataFrame: {[ix_left, ix_right]: [name_left, name_right, duns_left, duns_right]}
     """
-    res = createsbs(pairs=pairs, left=left, right=right)
-    displaycols = pairs.columns.tolist()
+    if isinstance(pairs, pd.Series):
+        xpairs = pd.DataFrame(pairs).copy()
+    else:
+        xpairs = pairs.copy()
+    if usecols is None:
+        usecols = left.columns.intersection(right.columns)
+    res = createsbs(pairs=xpairs, left=left, right=right)
+    displaycols = xpairs.columns.tolist()
     for c in usecols:
         displaycols.append(c + '_left')
         displaycols.append(c + '_right')
@@ -239,3 +247,51 @@ def concattrainnew(left, right, trainsbs, transfunc):
     return X_left, X_right, pairs
 
 
+def indexwithytrue(y_true, y_pred):
+    """
+
+    Args:
+        y_true (pd.Series):
+        y_pred (pd.Series):
+
+    Returns:
+        pd.Series: y_pred but with the missing indexes of y_true filled with 0
+    """
+    y_pred2 = pd.Series(index=y_true.index, name=y_pred.name)
+    y_pred2.loc[y_true.index.intersection(y_pred.index)] = y_pred
+    y_pred2.loc[y_true.index.difference(y_pred.index)] = 0
+    return y_pred2
+
+
+def _analyzeerrors(y_true, y_pred, rmvsameindex=True, ixnameleft='ix_left', ixnameright='ix_right'):
+    ixnamepairs = [ixnameleft, ixnameright]
+    y_true = y_true.copy()
+    y_true.name = 'y_true'
+    y_pred = y_pred.copy()
+    y_pred.name = 'y_pred'
+    pairs = pd.concat(
+        [y_true, y_pred],
+        axis=1
+    )
+    pairs['y_pred'].fillna(0, inplace=True)
+    pairs = pairs.loc[
+        ~(
+            (pairs['y_pred'] == 0) & (
+                pairs['y_true'] == 0
+            )
+        )
+    ]
+    pairs['correct'] = 'Ok'
+    pairs.loc[
+        (pairs['y_pred'] == 0) & (pairs['y_true'] == 1),
+        'correct'
+    ] = 'recall_error'
+    pairs.loc[
+        (pairs['y_pred'] == 1) & (pairs['y_true'] == 0),
+        'correct'
+    ] = 'precision_error'
+    if rmvsameindex:
+        pairs.reset_index(inplace=True)
+        pairs = pairs[pairs[ixnameleft] != pairs[ixnameright]]
+        pairs.set_index(ixnamepairs, inplace=True)
+    return pairs

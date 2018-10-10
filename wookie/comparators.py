@@ -4,7 +4,7 @@ from fuzzywuzzy.fuzz import ratio as simpleratio, partial_token_set_ratio as tok
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
@@ -177,6 +177,7 @@ class PipeSbsComparator(TransformerMixin):
 
         return res
 
+
 class LrDuplicateFinder:
     """
             score plan
@@ -205,17 +206,19 @@ class LrDuplicateFinder:
         """
         Args:
             estimator (BaseEstimator): Sklearn Estimator
-            prefunc (callable):
+            prefunc (callable): Add features to the data. Default lambda df: df
             scoreplan(dict):
         """
         if estimator is not None:
             assert issubclass(type(estimator), BaseEstimator)
             self.estimator = estimator
         else:
-            self.estimator = RandomForestClassifier(n_estimators=10)
+            self.estimator = RandomForestClassifier(n_estimators=100)
 
         if prefunc is not None:
             assert callable(prefunc)
+        else:
+            prefunc = lambda df: df
         self.prefunc = prefunc
         assert isinstance(scoreplan, dict)
         self.scoreplan = scoreplan
@@ -232,6 +235,7 @@ class LrDuplicateFinder:
         self._suffixexact = 'exact'
         self._suffixtoken = 'token'
         self._suffixtfidf = 'tfidf'
+        self._suffixfuzzy = 'fuzzy'
         # From score plan initiate the list of columns
         self._usedcols = scoreplan.keys()
         self._id_cols = list()
@@ -246,7 +250,7 @@ class LrDuplicateFinder:
         self._scorenames = dict()
         self._sbspipeplan = dict()
         self._tokenizermodel = TfidfVectorizer
-        self.verbose = True
+        self.verbose = verbose
         # Initiate for subclass the scikit-learn pipeline
         self._skmodel = BaseEstimator()
         # Loop through the score plan
@@ -266,25 +270,25 @@ class LrDuplicateFinder:
             elif scoretype == 'FreeText':
                 actualcolname = '_'.join([c, self._suffixascii])
                 self._text_cols.append(actualcolname)
+                self._vocab[actualcolname] = list()
+                self._scorenames[actualcolname] = [
+                    '_'.join([c, self._suffixwosw, self._suffixtoken]),
+                    '_'.join([c, self._suffixtfidf]),
+                    '_'.join([c, self._suffixtoken]),
+                    '_'.join([c, self._suffixfuzzy])
+                ]
+                self._sbspipeplan[actualcolname] = [self._suffixtoken, self._suffixfuzzy]
+                self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
+
                 if self.scoreplan[c].get('stop_words') is not None:
                     self._stop_words[actualcolname] = self.scoreplan[c].get('stop_words')
-                if self.scoreplan[c].get('threshold') is None:
-                    self._thresholds[actualcolname] = _tfidf_threshold_value
-                else:
+                if self.scoreplan[c].get('threshold') is not None:
                     assert self.scoreplan[c].get('threshold') <= 1.0
-                    self._thresholds[actualcolname] = self.scoreplan[c].get('threshold')
+                self._thresholds[actualcolname] = self.scoreplan[c].get('threshold')
                 self._tokenizers[actualcolname] = self._tokenizermodel(
                     stop_words=self._stop_words.get(actualcolname)
                 )
-                self._vocab[actualcolname] = list()
-                self._scorenames[actualcolname] = [
-                    c + '_' + self._suffixexact,
-                    c + '_' + self._suffixwosw + '_' + self._suffixtoken,
-                    c + '_' + self._suffixtoken,
-                    c + '_' + self._suffixtfidf
-                ]
-                self._sbspipeplan[actualcolname] = [self._suffixexact, self._suffixtoken]
-                self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
+
         self._connectcols = [
                                 c + '_' + self._suffixtfidf for c in self._text_cols
                             ] + [
@@ -312,13 +316,13 @@ class LrDuplicateFinder:
         )
         pass
 
-    def _tfidf_transform(self, left, right, on, addvocab=True, prune=False):
+    def _tfidf_transform(self, left, right, on, addvocab='add', prune=False):
         """
         Args:
             left (pd.Series):
             right (pd.Series):
             on (str):
-            addvocab (bool):
+            addvocab (str): 'add', 'keep', 'replace'
         Returns:
             pd.Series
         """
@@ -327,7 +331,7 @@ class LrDuplicateFinder:
         right = right.dropna().copy()
         assert isinstance(left, pd.Series)
         assert isinstance(right, pd.Series)
-        if addvocab is True:
+        if addvocab in ['add', 'replace']:
             self._tfidf_fit(left=left, right=right, on=on, addvocab=addvocab)
         left_tfidf = self._tokenizers[on].transform(left)
         right_tfidf = self._tokenizers[on].transform(right)
@@ -344,37 +348,44 @@ class LrDuplicateFinder:
         ).set_index(
             self._ixnamepairs
         )
-        if prune is True:
-            ths = self._thresholds[on]
+        if prune:
+            ths = self._thresholds.get(on)
             if ths is None:
                 ths = _tfidf_threshold_value
             score = score[score[scorename] > ths]
         score = score[scorename]
         return score
 
-    def _tfidf_fit(self, left, right, on, addvocab=True):
+    def _tfidf_fit(self, left, right, on, addvocab='add'):
         """
         update the vocabulary of the tokenizer
         Args:
             left (pd.Series):
             right (pd.Series):
             on (str):
-            addvocab (bool):
+            addvocab (str):
+                - 'add' --> add new vocab to existing vocab
+                - 'keep' --> keep existing vocab
+                - 'replace' --> replace existing vocab with new
 
         Returns:
             self
         """
         assert isinstance(left, pd.Series)
         assert isinstance(right, pd.Series)
-        left = left.dropna().copy().tolist()
-        right = right.dropna().copy().tolist()
-        vocab2 = left + right
-        if addvocab is True:
-            assert isinstance(self._vocab[on], list)
-            self._vocab[on] += vocab2
+        assert addvocab in ['add', 'keep', 'replace']
+        if addvocab == 'keep':
+            return self
         else:
-            self._vocab[on] = vocab2
-        self._tokenizers[on].fit(self._vocab[on])
+            left = left.dropna().copy().tolist()
+            right = right.dropna().copy().tolist()
+            vocab2 = left + right
+            if addvocab == 'add':
+                assert isinstance(self._vocab[on], list)
+                self._vocab[on] += vocab2
+            elif addvocab == 'replace':
+                self._vocab[on] = vocab2
+            self._tokenizers[on].fit(self._vocab[on])
         return self
 
     def _id_transform(self, left, right, on):
@@ -430,14 +441,16 @@ class LrDuplicateFinder:
         assert isinstance(new, pd.DataFrame)
         return new
 
-    def _pruning_fit(self, left, right, addvocab=True):
+    def _pruning_fit(self, left, right, addvocab='add'):
         """
 
         Args:
             left (pd.DataFrame):
             right (pd.DataFrame):
-            addvocab (bool):
-
+            addvocab (str):
+                - 'add' --> add new vocab to existing vocab
+                - 'keep' --> keep existing vocab
+                - 'replace' --> replace existing vocab with new
         Returns:
 
         """
@@ -445,13 +458,16 @@ class LrDuplicateFinder:
             self._tfidf_fit(left=left[c], right=right[c], on=c, addvocab=addvocab)
         return self
 
-    def _pruning_transform(self, left, right, addvocab=True):
+    def _pruning_transform(self, left, right, addvocab='add', verbose=False):
         """
 
         Args:
             left (pd.DataFrame): {ix: [cols]}
             right (pd.DataFrame): {ix: [cols]}
-            addvocab (bool)
+            addvocab (str):
+                - 'add' --> add new vocab to existing vocab
+                - 'keep' --> keep existing vocab
+                - 'replace' --> replace existing vocab with new
 
         Returns:
             pd.DataFrame {[ix_left, ix_right]: [scores]}
@@ -469,7 +485,7 @@ class LrDuplicateFinder:
             del idscore
         for c in self._text_cols:
             tfidf_score = self._tfidf_transform(left=left[c], right=right[c], on=c, addvocab=addvocab, prune=True)
-            if self._thresholds[c] is not None:
+            if self._thresholds.get(c) is not None:
                 ix_taken = ix_taken.union(
                     tfidf_score.loc[tfidf_score > self._thresholds[c]].index
                 )
@@ -483,79 +499,199 @@ class LrDuplicateFinder:
         # case we have no id cols or text cols make a cartesian joi
         if connectscores.shape[1] == 0:
             connectscores = connectors.cartesian_join(left[[]], right[[]])
-        if self.verbose is True:
+        if verbose is True:
             possiblepairs = left.shape[0] * right.shape[0]
             actualpairs = connectscores.shape[0]
             compression = int(possiblepairs / actualpairs)
-            print('Compression of {} : {} of {} selected'.format(compression, actualpairs, possiblepairs))
+            print(
+                '{} | Pruning compression factor of {} on {} possibles pairs'.format(
+                    pd.datetime.now(), compression, possiblepairs
+                )
+            )
         return connectscores
 
-    def fit(self, left, right, pairs, addvocab=True):
+    def _connectscores(self, left, right, addvocab='add', verbose=False):
+        """
+
+        Args:
+            left: {ix: [cols]}
+            right: {ix: [cols]}
+            addvocab (str):
+                - 'add' --> add new vocab to existing vocab
+                - 'keep' --> keep existing vocab
+                - 'replace' --> replace existing vocab with new
+        Returns:
+            pd.DataFrame
+        """
+        X_connect = self._pruning_transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
+        X_sbs = connectors.createsbs(pairs=X_connect, left=left, right=right)
+        return X_sbs
+
+    def fit(self, left, right, pairs, addvocab='add', verbose=None):
         """
 
         Args:
             left (pd.DataFrame):
             right (pd.DataFrame):
-            pairs (pd.DataFrame):
-            addvocab(bool):
+            pairs (pd.Series/pd.DataFrame):
+            addvocab(str):
+                - 'add' --> add new vocab to existing vocab
+                - 'keep' --> keep existing vocab
+                - 'replace' --> replace existing vocab with new
 
         Returns:
             self
         """
+        if verbose is None:
+            verbose = self.verbose
+        if verbose:
+            print('{} | Start fit'.format(pd.datetime.now()))
         newleft = self._prepare_data(self.prefunc(left))
         newright = self._prepare_data(self.prefunc(right))
-        assert isinstance(newleft, pd.DataFrame)
-        assert isinstance(newright, pd.DataFrame)
+        if isinstance(pairs, pd.DataFrame):
+            pairs = pairs['y_true']
+        y_train = pairs
+
         self._pruning_fit(left=newleft, right=newright, addvocab=addvocab)
-        connectscores = self._pruning_transform(left=newleft, right=newright)
-        ixtrain = pairs.index.intersection(connectscores.index)
-        X_sbs = connectors.createsbs(pairs=connectscores, left=newleft, right=newright)
-        X_train = X_sbs.loc[ixtrain]
-        y_train = pairs.loc[ixtrain, 'y_true']
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=True)
+        if verbose:
+            precision, recall = _evalprecisionrecall(y_true=y_train, y_catched=X_sbs)
+            print('{} | Pruning score: precision: {:.2%}, recall: {:.2%}'.format(pd.datetime.now(), precision, recall))
+        # Expand X_sbs to:
+        # - include positives samples not included in pruning
+        # - fill those rows with 0 for the pruning scores
+        true_pos = y_train.loc[y_train == 1]
+        missed_pos = true_pos.loc[
+            true_pos.index.difference(
+                X_sbs.index
+            )
+        ]
+        X_missed = pd.DataFrame(
+            index=missed_pos,
+            columns=X_sbs.columns
+        )
+        X_missed[self._connectcols] = 0
+        X_sbs = pd.concat(
+            [X_sbs, X_missed],
+            axis=0, ignore_index=False
+        )
+        # Redefine y_train to have a common index with x_sbs
+        y_train = y_train.loc[
+            y_train.index.intersection(
+                X_sbs.index
+            )
+        ]
+        X_train = X_sbs.loc[
+            y_train.index
+        ]
         self._skmodel.fit(X_train, y_train)
+        if verbose:
+            scores = self.score(left=left, right=right, pairs=pairs, kind='all')
+            assert isinstance(scores, dict)
+            print(
+                '{} | Model score: precision: {:.2%}, recall: {:.2%}'.format(
+                    pd.datetime.now(),
+                    scores['precision'],
+                    scores['recall']
+                )
+            )
+            pass
         return self
 
-    def predict(self, left, right, addvocab=True):
+    def _pruning_pred(self, left, right, pairs, addvocab='add'):
+        """
+
+        Args:
+            left:
+            right:
+            pairs (pd.Series/pd.DataFrame):
+            addvocab:
+
+        Returns:
+
+        """
+        newleft = self._prepare_data(self.prefunc(left))
+        newright = self._prepare_data(self.prefunc(right))
+        if isinstance(pairs, pd.DataFrame):
+            pairs = pairs['y_true']
+        y_true = pairs
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
+        y_pred = pd.Series(index=X_sbs.index).fillna(1)
+        y_pred = connectors.indexwithytrue(y_true=y_true, y_pred=y_pred)
+        return y_pred
+
+    def predict(self, left, right, addvocab='add', verbose=False):
         """
 
         Args:
             left (pd.DataFrame):
             right (pd.DataFrame):
-            addvocab(bool):
+            addvocab(str):
+                - 'add' --> add new vocab to existing vocab
+                - 'keep' --> keep existing vocab
+                - 'replace' --> replace existing vocab with new
 
         Returns:
             pd.Series
         """
+        if verbose:
+            print('{} | Start pred'.format(pd.datetime.now()))
         newleft = self._prepare_data(self.prefunc(left))
         newright = self._prepare_data(self.prefunc(right))
-        assert isinstance(newleft, pd.DataFrame)
-        assert isinstance(newright, pd.DataFrame)
-        connectscores = self._pruning_transform(left=newleft, right=newright)
-        X_sbs = connectors.createsbs(pairs=connectscores, left=newleft, right=newright)
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
         y_pred = self._skmodel.predict(X_sbs)
-        y_pred = pd.Series(y_pred, index=X_sbs.index)
+        y_pred = pd.Series(y_pred, index=X_sbs.index, name='y_pred')
         return y_pred
 
-    def score(self, left, right, pairs):
+    def _evalpruning(self, left, right, pairs, addvocab='add', verbose=False):
+        newleft = self._prepare_data(self.prefunc(left))
+        newright = self._prepare_data(self.prefunc(right))
+        if isinstance(pairs, pd.DataFrame):
+            pairs = pairs['y_true']
+        y_train = pairs
+
+        self._pruning_fit(left=newleft, right=newright, addvocab=addvocab)
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
+        precision, recall = _evalprecisionrecall(y_true=y_train, y_catched=X_sbs)
+        return precision, recall
+
+    def score(self, left, right, pairs, kind='accuracy'):
         """
 
         Args:
             left (pd.DataFrame):
             right (pd.DataFrame):
-            pairs (pd.DataFrame):
-
+            pairs (pd.DataFrame/ pd.Series):
+            kind (str): 'accuracy', 'precision', 'recall', 'f1', 'all'
         Returns:
             float
         """
+        assert kind in ['accuracy', 'precision', 'recall', 'f1', 'all']
+        scores = self._scores(left=left, right=right, pairs=pairs)
+        if kind != 'all':
+            return scores[kind]
+        else:
+            return scores
+
+    def _scores(self, left, right, pairs):
+        """
+
+        Args:
+            left:
+            right:
+            pairs:
+
+        Returns:
+            dict
+        """
         y_pred = self.predict(left=left, right=right)
         assert isinstance(y_pred, pd.Series)
-        y_true = pairs['y_true']
+        if isinstance(pairs, pd.DataFrame):
+            pairs = pairs['y_true']
+        y_true = pairs
         assert isinstance(y_true, pd.Series)
-        y_pred2 = pd.Series(index=y_true.index)
-        y_pred2.loc[y_true.index.intersection(y_pred.index)] = y_pred
-        y_pred2.fillna(0, inplace=True)
-        score = accuracy_score(y_true=y_true, y_pred=y_pred2)
-        return score
+        scores = _metrics(y_true=y_true, y_pred=y_pred)
+        return scores
 
 
 def _preparevocab(on, left, right):
@@ -663,3 +799,58 @@ def _token_score(left, right):
     else:
         s = tokenratio(left, right) / 100
     return s
+
+
+def _evalprecisionrecall(y_true, y_catched):
+    """
+
+    Args:
+        y_catched (pd.DataFrame/pd.Series):
+        y_true (pd.Series):
+
+    Returns:
+        float, float: precision and recall
+    """
+    true_pos = y_true.loc[y_true == 1]
+    true_neg = y_true.loc[y_true == 0]
+    catched_pos = y_catched.loc[true_pos.index.intersection(y_catched.index)]
+    catched_neg = y_catched.loc[y_catched.index.difference(catched_pos.index)]
+    missed_pos = true_pos.loc[true_pos.index.difference(y_catched.index)]
+    assert true_pos.shape[0] + true_neg.shape[0] == y_true.shape[0]
+    assert catched_pos.shape[0] + catched_neg.shape[0] == y_catched.shape[0]
+    assert catched_pos.shape[0] + missed_pos.shape[0] == true_pos.shape[0]
+    recall = catched_pos.shape[0] / true_pos.shape[0]
+    precision = catched_pos.shape[0] / y_catched.shape[0]
+    return precision, recall
+
+
+def _metrics(y_true, y_pred):
+    y_pred2 = connectors.indexwithytrue(y_true=y_true, y_pred=y_pred)
+    scores = dict()
+    scores['accuracy'] = accuracy_score(y_true=y_true, y_pred=y_pred2)
+    scores['precision'] = precision_score(y_true=y_true, y_pred=y_pred2)
+    scores['recall'] = recall_score(y_true=y_true, y_pred=y_pred2)
+    scores['f1'] = f1_score(y_true=y_true, y_pred=y_pred2)
+    return scores
+
+
+def _evalpred(y_true, y_pred, verbose=True, set=None):
+    if set is None:
+        sset = ''
+    else:
+        sset = 'for set {}'.format(set)
+    precision, recall = _evalprecisionrecall(y_true=y_true, y_catched=y_pred)
+    if verbose:
+        print(
+            '{} | Pruning score: precision: {:.2%}, recall: {:.2%} {}'.format(
+                pd.datetime.now(), precision, recall, sset
+            )
+        )
+    scores = _metrics(y_true=y_true, y_pred=y_pred)
+    if verbose:
+        print(
+            '{} | Model score: precision: {:.2%}, recall: {:.2%} {}'.format(
+                pd.datetime.now(), scores['precision'], scores['recall'], sset
+            )
+        )
+    return scores
