@@ -1,6 +1,5 @@
 import pandas as pd
-# from sklearn.ensemble import GradientBoostingClassifier as clf
-from sklearn.ensemble import RandomForestClassifier as Clf
+from sklearn.ensemble import GradientBoostingClassifier as Clf
 from sklearn.model_selection import train_test_split
 
 from operations import companypreparation as preprocessing
@@ -26,9 +25,7 @@ if __name__ == '__main__':
     data = pd.read_csv(filepath_training).set_index(ixnamepairs)
     df_train, df_test = train_test_split(data, train_size=0.7)
     train_left, train_right, y_train = connectors.separatesides(df_train)
-    y_train = y_train['y_true']
     test_left, test_right, y_test = connectors.separatesides(df_test)
-    y_test = y_test['y_true']
     dedupe = comparators.LrDuplicateFinder(
         prefunc=preprocessing.preparedf,
         scoreplan={
@@ -52,7 +49,7 @@ if __name__ == '__main__':
             'countrycode': {'type': 'Category'},
             'postalcode_2char': {'type': 'Code'}
         },
-        estimator=Clf(n_estimators=10),
+        estimator=Clf(n_estimators=500),
         verbose=True
     )
     dedupe.fit(

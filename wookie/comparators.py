@@ -475,7 +475,8 @@ class LrDuplicateFinder:
         scores = dict()
         ix_taken = pd.MultiIndex(levels=[[], []],
                                  labels=[[], []],
-                                 names=self._ixnamepairs)
+                                 names=self._ixnamepairs
+                                 )
         for c in self._id_cols:
             idscore = self._id_transform(left=left[c], right=right[c], on=c)
             ix_taken = ix_taken.union(
@@ -554,6 +555,13 @@ class LrDuplicateFinder:
 
         self._pruning_fit(left=newleft, right=newright, addvocab=addvocab)
         X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=True)
+        if X_sbs is None:
+            raise Warning(
+                'No possible matches based on current pruning --> not possible to fit.',
+                '\n - Provide better training data',
+                '\n - Check the pruning threshold and ids',
+            )
+
         if verbose:
             precision, recall = _evalprecisionrecall(y_true=y_train, y_catched=X_sbs)
             print('{} | Pruning score: precision: {:.2%}, recall: {:.2%}'.format(pd.datetime.now(), precision, recall))
