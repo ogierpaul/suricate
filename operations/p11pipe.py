@@ -1,9 +1,8 @@
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier as Clf
-from sklearn.model_selection import train_test_split
 
 from operations import companypreparation as preprocessing
-from wookie import connectors, comparators
+from wookie import connectors, comparators, grouping
 
 if __name__ == '__main__':
     # Variable definition
@@ -22,10 +21,10 @@ if __name__ == '__main__':
     # Data Preparation
     # left = pd.read_csv(filepath_left, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
-    data = pd.read_csv(filepath_training).set_index(ixnamepairs)
-    df_train, df_test = train_test_split(data, train_size=0.7)
+    df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
+    # df_train, df_test = train_test_split(data, train_size=0.5)
     train_left, train_right, y_train = connectors.separatesides(df_train)
-    test_left, test_right, y_test = connectors.separatesides(df_test)
+    # test_left, test_right, y_test = connectors.separatesides(df_test)
     dedupe = comparators.LrDuplicateFinder(
         prefunc=preprocessing.preparedf,
         scoreplan={
@@ -49,7 +48,7 @@ if __name__ == '__main__':
             'countrycode': {'type': 'Category'},
             'postalcode_2char': {'type': 'Code'}
         },
-        estimator=Clf(n_estimators=500),
+        estimator=Clf(n_estimators=1000),
         verbose=True
     )
     dedupe.fit(
@@ -58,10 +57,7 @@ if __name__ == '__main__':
         pairs=y_train,
         verbose=True
     )
-
-    y_pred_train = dedupe.predict(left=train_left, right=train_right)
-    comparators._evalpred(y_true=y_train, y_pred=y_pred_train, verbose=True, set='train')
-    y_pred_test = dedupe.predict(left=test_left, right=test_right)
-    comparators._evalpred(y_true=y_test, y_pred=y_pred_test, verbose=True, set='test')
-
+    singlegrouper = grouping.SingleGrouping(dedupe=dedupe)
+    singlegrouper.findduplicates(data=train_left, n_batches=None, n_records=30)
+    singlegrouper.data.to_csv('results_left.csv')
     pass

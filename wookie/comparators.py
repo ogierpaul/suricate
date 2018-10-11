@@ -331,6 +331,14 @@ class LrDuplicateFinder:
         right = right.dropna().copy()
         assert isinstance(left, pd.Series)
         assert isinstance(right, pd.Series)
+        # If we cannot find a single value we return blank
+        if left.shape[0] == 0 or right.shape[0] == 0:
+            ix = pd.MultiIndex(levels=[[], []],
+                               labels=[[], []],
+                               names=self._ixnamepairs
+                               )
+            r = pd.Series(index=ix, name=scorename)
+            return r
         if addvocab in ['add', 'replace']:
             self._tfidf_fit(left=left, right=right, on=on, addvocab=addvocab)
         left_tfidf = self._tokenizers[on].transform(left)
@@ -404,8 +412,10 @@ class LrDuplicateFinder:
         left = pd.DataFrame(left.dropna().copy()).reset_index(drop=False)
         right = pd.DataFrame(right.dropna().copy()).reset_index(drop=False)
         scorename = on + '_' + self._suffixexact
+
         x = pd.merge(left=left, right=right, left_on=on, right_on=on, how='inner',
                      suffixes=[self.lsuffix, self.rsuffix])
+
         x = x[self._ixnamepairs].set_index(self._ixnamepairs)
         x[scorename] = 1
         x = x[scorename]
@@ -555,7 +565,7 @@ class LrDuplicateFinder:
 
         self._pruning_fit(left=newleft, right=newright, addvocab=addvocab)
         X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=True)
-        if X_sbs is None:
+        if X_sbs.shape[0] == 0:
             raise Warning(
                 'No possible matches based on current pruning --> not possible to fit.',
                 '\n - Provide better training data',
@@ -628,7 +638,68 @@ class LrDuplicateFinder:
         y_pred = connectors.indexwithytrue(y_true=y_true, y_pred=y_pred)
         return y_pred
 
-    def predict(self, left, right, addvocab='add', verbose=False):
+    def predict_proba(self, left, right, addvocab='add', verbose=False, addmissingleft=False) -> pd.Series:
+        """
+
+        Args:
+            left:
+            right:
+            addvocab:
+            verbose:
+
+        Returns:
+            pd.Series
+        """
+
+        if verbose:
+            print('{} | Start pred'.format(pd.datetime.now()))
+        newleft = self._prepare_data(self.prefunc(left))
+        newright = self._prepare_data(self.prefunc(right))
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
+
+        # if we have results
+        if X_sbs.shape[0] > 0:
+            df_pred = self._skmodel.predict_proba(X_sbs)
+            y_proba = pd.DataFrame(
+                df_pred,
+                index=X_sbs.index
+            )[1]
+            y_proba.name = 'y_proba'
+        else:
+            # Create an empty recipient
+            y_proba = pd.Series(
+                index=pd.MultiIndex(
+                    levels=[[], []],
+                    labels=[[], []],
+                    names=self._ixnamepairs
+                ),
+                name='y_proba'
+            )
+        # add a case for missing lefts
+        if addmissingleft is True:
+            missing_lefts = newleft.index.difference(
+                X_sbs.index.get_level_values(self._ixnameleft)
+            )
+            missing_lefts = pd.MultiIndex.from_product(
+                [
+                    missing_lefts,
+                    [None]
+                ],
+                names=self._ixnamepairs
+            )
+            missing_lefts = pd.Series(
+                index=missing_lefts,
+                name='y_proba'
+            ).fillna(
+                0
+            )
+            y_proba = pd.concat([y_proba, missing_lefts], axis=0)
+        assert isinstance(y_proba, pd.Series)
+        assert y_proba.name == 'y_proba'
+        assert y_proba.index.names == self._ixnamepairs
+        return y_proba
+
+    def predict(self, left, right, addvocab='add', verbose=False, addmissingleft=False):
         """
 
         Args:
@@ -642,13 +713,13 @@ class LrDuplicateFinder:
         Returns:
             pd.Series
         """
-        if verbose:
-            print('{} | Start pred'.format(pd.datetime.now()))
-        newleft = self._prepare_data(self.prefunc(left))
-        newright = self._prepare_data(self.prefunc(right))
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
-        y_pred = self._skmodel.predict(X_sbs)
-        y_pred = pd.Series(y_pred, index=X_sbs.index, name='y_pred')
+        y_proba = self.predict_proba(left=left, right=right, addvocab=addvocab,
+                                     verbose=verbose, addmissingleft=addmissingleft)
+
+        # noinspection PyUnresolvedReferences
+        y_pred = (y_proba > 0.5).astype(float)
+        assert isinstance(y_pred, pd.Series)
+        y_pred.name = 'y_proba'
         return y_pred
 
     def _evalpruning(self, left, right, pairs, addvocab='add', verbose=False):
