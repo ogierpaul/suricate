@@ -1,8 +1,9 @@
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier as Clf
+from sklearn.model_selection import train_test_split
 
 from operations import companypreparation as preprocessing
-from wookie import connectors, comparators, grouping
+from wookie import connectors, comparators
 
 if __name__ == '__main__':
     # Variable definition
@@ -10,6 +11,7 @@ if __name__ == '__main__':
     ixname = 'ix'
     lsuffix = '_left'
     rsuffix = '_right'
+    n_estimators = 10
     ixnameleft = ixname + lsuffix
     ixnameright = ixname + rsuffix
     ixnamepairs = [ixnameleft, ixnameright]
@@ -22,33 +24,35 @@ if __name__ == '__main__':
     # left = pd.read_csv(filepath_left, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
-    # df_train, df_test = train_test_split(data, train_size=0.5)
+    df_train, df_test = train_test_split(df_train, train_size=0.8)
     train_left, train_right, y_train = connectors.separatesides(df_train)
-    # test_left, test_right, y_test = connectors.separatesides(df_test)
+    test_left, test_right, y_test = connectors.separatesides(df_test)
     dedupe = comparators.LrDuplicateFinder(
         prefunc=preprocessing.preparedf,
         scoreplan={
             'name': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.companystopwords,
-                'threshold': 0.3,
+                'use_scores': ['tfidf', 'ngram', 'fuzzy', 'token'],
+                'threshold': 0.5,
             },
             'street': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.streetstopwords,
-                'threshold': 0.3
+                'use_scores': ['tfidf', 'ngram', 'fuzzy', 'token'],
+                'threshold': 0.5
             },
             'city': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.citystopwords,
+                'use_scores': ['tfidf', 'ngram', 'fuzzy'],
                 'threshold': None
             },
             'duns': {'type': 'Id'},
             'postalcode': {'type': 'Code'},
-            'countrycode': {'type': 'Category'},
-            'postalcode_2char': {'type': 'Code'}
+            'countrycode': {'type': 'Category'}
         },
-        estimator=Clf(n_estimators=1000),
+        estimator=Clf(n_estimators=n_estimators),
         verbose=True
     )
     dedupe.fit(
@@ -57,7 +61,11 @@ if __name__ == '__main__':
         pairs=y_train,
         verbose=True
     )
-    singlegrouper = grouping.SingleGrouping(dedupe=dedupe)
-    singlegrouper.findduplicates(data=train_left, n_batches=None, n_records=30)
-    singlegrouper.data.to_csv('results_left.csv')
+    for s, y_true, in zip(['train', 'test'], [y_train, y_test]):
+        print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
+        y_pred = dedupe.predict(left=train_left, right=train_right)
+        comparators._evalpred(y_true=y_true, y_pred=y_pred, namesplit=s)
+    # singlegrouper = grouping.SingleGrouping(dedupe=dedupe)
+    # singlegrouper.findduplicates(data=train_right, n_batches=None, n_records=30)
+    # singlegrouper.data.to_csv('results_right.csv')
     pass

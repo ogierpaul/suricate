@@ -3,7 +3,7 @@ import pandas as pd
 from fuzzywuzzy.fuzz import ratio as simpleratio, partial_token_set_ratio as tokenratio
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union, make_pipeline
@@ -14,7 +14,7 @@ from wookie import connectors
 
 _navalue_score = None
 
-_tfidf_threshold_value = 0.3
+_tfidf_threshold_value = 0.2
 
 
 class BaseSbsComparator(TransformerMixin):
@@ -185,14 +185,14 @@ class LrDuplicateFinder:
             name_col:{
                 'type': one of ['FreeText', 'Category', 'Id', 'Code']
                 'stop_words': [list of stopwords]
-                'score': (defaults)
-                    for free text:
-                        ['exact', 'fuzzy', 'tf-idf', 'token_wostopwords']
-                    for category:
+                'use_scores':
+                    defaults for free text:
+                        ['exact', 'fuzzy', 'tf-idf', 'n-gram_wostopwords' ,'token_wostopwords']
+                    defaults for category:
                         ['exact'] --> but not taken into account for pruning
-                    for Id:
+                    defaults for Id:
                         ['exact']
-                    for code: --> but not taken into account for pruning
+                    defaults for code: --> but not taken into account for pruning
                         ['exact', 'first n_digits/ngrams' --> to do]
                 'threshold'
                     'tf-idf' --> Default 0.3
@@ -236,6 +236,7 @@ class LrDuplicateFinder:
         self._suffixtoken = 'token'
         self._suffixtfidf = 'tfidf'
         self._suffixfuzzy = 'fuzzy'
+        self._suffixngram = 'ngram'
         # From score plan initiate the list of columns
         self._usedcols = scoreplan.keys()
         self._id_cols = list()
@@ -245,20 +246,25 @@ class LrDuplicateFinder:
         # Initiate the list of values used for the FreeTextAnalyszs
         self._stop_words = dict()
         self._thresholds = dict()
-        self._tokenizers = dict()
+        self._transformers_cv = dict()
+        self._transformers_tfidf = dict()
+        self._transformers_all = dict()
         self._vocab = dict()
         self._scorenames = dict()
         self._sbspipeplan = dict()
-        self._tokenizermodel = TfidfVectorizer
+        self._ngram_cv = (2, 4)
+        self._ngram_tfidf = (1, 1)
+        self._vecmodel_cv = CountVectorizer
+        self._vecmodel_tfidf = TfidfVectorizer
         self.verbose = verbose
         # Initiate for subclass the scikit-learn pipeline
         self._skmodel = BaseEstimator()
         # Loop through the score plan
-        for c in self._usedcols:
-            scoretype = self.scoreplan[c]['type']
+        for inputfield in self._usedcols:
+            scoretype = self.scoreplan[inputfield]['type']
             if scoretype in ['Id', 'Category', 'Code']:
-                actualcolname = '_'.join([c, self._suffixid])
-                self._scorenames[c] = ['_'.join([actualcolname, self._suffixexact])]
+                actualcolname = '_'.join([inputfield, self._suffixid])
+                self._scorenames[inputfield] = ['_'.join([actualcolname, self._suffixexact])]
                 if scoretype == 'Id':
                     self._id_cols.append(actualcolname)
                 else:
@@ -267,30 +273,75 @@ class LrDuplicateFinder:
                         self._cat_cols.append(actualcolname)
                     elif scoretype == 'Code':
                         self._code_cols.append(actualcolname)
+                        self._scorenames[inputfield].append('_'.join([actualcolname, self._suffixngram]))
+                        self._vocab[actualcolname] = list()
+                        self._transformers_cv[actualcolname] = self._vecmodel_cv(
+                            strip_accents='ascii',
+                            analyzer='char',
+                            ngram_range=self._ngram_cv
+                        )
             elif scoretype == 'FreeText':
-                actualcolname = '_'.join([c, self._suffixascii])
+                actualcolname = '_'.join([inputfield, self._suffixascii])
                 self._text_cols.append(actualcolname)
                 self._vocab[actualcolname] = list()
-                self._scorenames[actualcolname] = [
-                    '_'.join([c, self._suffixwosw, self._suffixtoken]),
-                    '_'.join([c, self._suffixtfidf]),
-                    '_'.join([c, self._suffixtoken]),
-                    '_'.join([c, self._suffixfuzzy])
-                ]
-                self._sbspipeplan[actualcolname] = [self._suffixtoken, self._suffixfuzzy]
-                self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
+                self._scorenames[inputfield] = list()
+                if self.scoreplan[inputfield].get('stop_words') is not None:
+                    self._stop_words[actualcolname] = self.scoreplan[inputfield].get('stop_words')
+                if self.scoreplan[inputfield].get('use_scores') is None:
+                    use_scores = [
+                        self._suffixtfidf,
+                        self._suffixngram,
+                        self._suffixfuzzy,
+                        self._suffixtoken
+                    ]
+                else:
+                    use_scores = self.scoreplan[inputfield].get('use_scores')
+                for s2 in use_scores:
+                    self._scorenames[inputfield].append(
+                        '_'.join([actualcolname, s2])
+                    )
+                    if s2 in [self._suffixtoken, self._suffixfuzzy]:
+                        if self._sbspipeplan.get(actualcolname) is None:
+                            self._sbspipeplan[actualcolname] = [s2]
+                        else:
+                            self._sbspipeplan[actualcolname].append(s2)
+                    if s2 == self._suffixtfidf:
+                        self._transformers_tfidf[actualcolname] = self._vecmodel_tfidf(
+                            stop_words=self._stop_words.get(actualcolname),
+                            strip_accents='ascii',
+                            analyzer='word',
+                            ngram_range=self._ngram_tfidf
+                        )
+                    if s2 == self._suffixngram:
+                        self._transformers_cv[actualcolname] = self._vecmodel_cv(
+                            strip_accents='ascii',
+                            analyzer='char',
+                            ngram_range=self._ngram_cv
+                        )
+                    if self._stop_words.get(actualcolname) is not None:
+                        swcolname = actualcolname + '_' + self._suffixwosw
+                        self._scorenames[inputfield].append(
+                            '_'.join([swcolname, self._suffixngram])
+                        )
+                        self._scorenames[inputfield].append(
+                            '_'.join([swcolname, self._suffixtoken])
+                        )
+                        self._vocab[swcolname] = list()
+                        self._transformers_cv[swcolname] = self._vecmodel_cv(
+                            strip_accents='ascii',
+                            analyzer='char',
+                            ngram_range=self._ngram_cv
+                        )
+                        self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
 
-                if self.scoreplan[c].get('stop_words') is not None:
-                    self._stop_words[actualcolname] = self.scoreplan[c].get('stop_words')
-                if self.scoreplan[c].get('threshold') is not None:
-                    assert self.scoreplan[c].get('threshold') <= 1.0
-                self._thresholds[actualcolname] = self.scoreplan[c].get('threshold')
-                self._tokenizers[actualcolname] = self._tokenizermodel(
-                    stop_words=self._stop_words.get(actualcolname)
-                )
+                if self.scoreplan[inputfield].get('threshold') is not None:
+                    assert self.scoreplan[inputfield].get('threshold') <= 1.0
+                self._thresholds[actualcolname] = self.scoreplan[inputfield].get('threshold')
 
         self._connectcols = [
-                                c + '_' + self._suffixtfidf for c in self._text_cols
+                                c + '_' + self._suffixtfidf for c in self._transformers_tfidf.keys()
+                            ] + [
+                                c + '_' + self._suffixngram for c in self._transformers_cv.keys()
                             ] + [
                                 c + '_' + self._suffixexact for c in self._id_cols
                             ]
@@ -316,55 +367,7 @@ class LrDuplicateFinder:
         )
         pass
 
-    def _tfidf_transform(self, left, right, on, addvocab='add', prune=False):
-        """
-        Args:
-            left (pd.Series):
-            right (pd.Series):
-            on (str):
-            addvocab (str): 'add', 'keep', 'replace'
-        Returns:
-            pd.Series
-        """
-        scorename = on + '_' + self._suffixtfidf
-        left = left.dropna().copy()
-        right = right.dropna().copy()
-        assert isinstance(left, pd.Series)
-        assert isinstance(right, pd.Series)
-        # If we cannot find a single value we return blank
-        if left.shape[0] == 0 or right.shape[0] == 0:
-            ix = pd.MultiIndex(levels=[[], []],
-                               labels=[[], []],
-                               names=self._ixnamepairs
-                               )
-            r = pd.Series(index=ix, name=scorename)
-            return r
-        if addvocab in ['add', 'replace']:
-            self._tfidf_fit(left=left, right=right, on=on, addvocab=addvocab)
-        left_tfidf = self._tokenizers[on].transform(left)
-        right_tfidf = self._tokenizers[on].transform(right)
-        X = pd.DataFrame(
-            cosine_similarity(left_tfidf, right_tfidf),
-            columns=right.index
-        )
-        X[self._ixnameleft] = left.index
-        score = pd.melt(
-            X,
-            id_vars=self._ixnameleft,
-            var_name=self._ixnameright,
-            value_name=scorename
-        ).set_index(
-            self._ixnamepairs
-        )
-        if prune:
-            ths = self._thresholds.get(on)
-            if ths is None:
-                ths = _tfidf_threshold_value
-            score = score[score[scorename] > ths]
-        score = score[scorename]
-        return score
-
-    def _tfidf_fit(self, left, right, on, addvocab='add'):
+    def _tokenizer_fit(self, left, right, on, tokenizer, addvocab='add'):
         """
         update the vocabulary of the tokenizer
         Args:
@@ -379,22 +382,9 @@ class LrDuplicateFinder:
         Returns:
             self
         """
-        assert isinstance(left, pd.Series)
-        assert isinstance(right, pd.Series)
-        assert addvocab in ['add', 'keep', 'replace']
-        if addvocab == 'keep':
-            return self
-        else:
-            left = left.dropna().copy().tolist()
-            right = right.dropna().copy().tolist()
-            vocab2 = left + right
-            if addvocab == 'add':
-                assert isinstance(self._vocab[on], list)
-                self._vocab[on] += vocab2
-            elif addvocab == 'replace':
-                self._vocab[on] = vocab2
-            self._tokenizers[on].fit(self._vocab[on])
-        return self
+        self._vocab[on] = _update_vocab(left=left, right=right, addvocab=addvocab, vocab=self._vocab[on])
+        tokenizer = tokenizer.fit(self._vocab[on])
+        return tokenizer
 
     def _id_transform(self, left, right, on):
         """
@@ -464,9 +454,55 @@ class LrDuplicateFinder:
         Returns:
 
         """
-        for c in self._text_cols:
-            self._tfidf_fit(left=left[c], right=right[c], on=c, addvocab=addvocab)
+        for c in self._transformers_cv.keys():
+            self._transformers_cv[c] = self._tokenizer_fit(
+                left=left[c],
+                right=right[c],
+                on=c,
+                addvocab=addvocab,
+                tokenizer=self._transformers_cv[c])
+        for c in self._transformers_tfidf.keys():
+            self._transformers_tfidf[c] = self._tokenizer_fit(
+                left=left[c],
+                right=right[c],
+                on=c,
+                addvocab=addvocab,
+                tokenizer=self._transformers_tfidf[c])
+
         return self
+
+    def _transform_tk(self, left, right, on, tokenizer, addvocab, suffixscore):
+        """
+
+        Args:
+            left (pd.Series):
+            right (pd.Series):
+            on:
+            tokenizer:
+            addvocab:
+            suffixscore:
+
+        Returns:
+
+        """
+        self._vocab[on] = _update_vocab(
+            left=left,
+            right=right,
+            vocab=self._vocab[on],
+            addvocab=addvocab
+        )
+        tokenizer = tokenizer.fit(self._vocab[on])
+        tfidf_score = _transform_tkscore(
+            left=left,
+            right=right,
+            on=on,
+            tokenizer=tokenizer,
+            addvocab=addvocab,
+            ixnameleft=self._ixnameleft,
+            ixnameright=self._ixnameright,
+            suffixscore=suffixscore
+        )
+        return tfidf_score
 
     def _pruning_transform(self, left, right, addvocab='add', verbose=False):
         """
@@ -487,26 +523,46 @@ class LrDuplicateFinder:
                                  labels=[[], []],
                                  names=self._ixnamepairs
                                  )
-        for c in self._id_cols:
-            idscore = self._id_transform(left=left[c], right=right[c], on=c)
+        for on in self._id_cols:
+            idscore = self._id_transform(left=left[on], right=right[on], on=on)
             ix_taken = ix_taken.union(
                 idscore.index
             )
-            scores[c] = idscore
+            scores[on + '_' + self._suffixexact] = idscore
             del idscore
-        for c in self._text_cols:
-            tfidf_score = self._tfidf_transform(left=left[c], right=right[c], on=c, addvocab=addvocab, prune=True)
-            if self._thresholds.get(c) is not None:
+        for on in self._transformers_tfidf.keys():
+            tfidf_score = self._transform_tk(left=left[on],
+                                             right=right[on],
+                                             addvocab=addvocab,
+                                             on=on,
+                                             tokenizer=self._transformers_tfidf.get(on),
+                                             suffixscore=self._suffixtfidf
+                                             )
+            scores[on + '_' + self._suffixtfidf] = tfidf_score
+            if self._thresholds.get(on) is not None:
                 ix_taken = ix_taken.union(
-                    tfidf_score.loc[tfidf_score > self._thresholds[c]].index
+                    tfidf_score.loc[tfidf_score > self._thresholds[on]].index
                 )
-            scores[c] = tfidf_score
             del tfidf_score
+        for on in self._transformers_cv.keys():
+            cv_score = self._transform_tk(left=left[on],
+                                          right=right[on],
+                                          addvocab=addvocab,
+                                          on=on,
+                                          tokenizer=self._transformers_cv.get(on),
+                                          suffixscore=self._suffixngram
+                                          )
+            scores[on + '_' + self._suffixngram] = cv_score
+            if self._thresholds.get(on) is not None:
+                ix_taken = ix_taken.union(
+                    cv_score.loc[cv_score > self._thresholds[on]].index
+                )
+            del cv_score
+
         connectscores = pd.DataFrame(index=ix_taken)
-        for c in self._text_cols:
-            connectscores[c + '_' + self._suffixtfidf] = scores[c].loc[ix_taken.intersection(scores[c].index)]
-        for c in self._id_cols:
-            connectscores[c + '_' + self._suffixexact] = scores[c].loc[ix_taken.intersection(scores[c].index)]
+        for k in scores.keys():
+            connectscores[k] = scores[k].loc[ix_taken.intersection(scores[k].index)]
+            pass
         # case we have no id cols or text cols make a cartesian joi
         if connectscores.shape[1] == 0:
             connectscores = connectors.cartesian_join(left[[]], right[[]])
@@ -913,11 +969,11 @@ def _metrics(y_true, y_pred):
     return scores
 
 
-def _evalpred(y_true, y_pred, verbose=True, set=None):
-    if set is None:
+def _evalpred(y_true, y_pred, verbose=True, namesplit=None):
+    if namesplit is None:
         sset = ''
     else:
-        sset = 'for set {}'.format(set)
+        sset = 'for set {}'.format(namesplit)
     precision, recall = _evalprecisionrecall(y_true=y_true, y_catched=y_pred)
     if verbose:
         print(
@@ -933,3 +989,107 @@ def _evalpred(y_true, y_pred, verbose=True, set=None):
             )
         )
     return scores
+
+
+def _update_vocab(left, right, vocab=None, addvocab='add'):
+    """
+
+    Args:
+        vocab (list):
+        addvocab (str):
+            - 'add' --> add new vocab to existing vocab
+            - 'keep' --> keep existing vocab
+            - 'replace' --> replace existing vocab with new
+    Returns:
+        list
+    """
+    assert isinstance(left, pd.Series)
+    assert isinstance(right, pd.Series)
+    assert addvocab in ['add', 'keep', 'replace']
+    if vocab is None:
+        vocab = list()
+    assert isinstance(vocab, list)
+    if addvocab == 'keep':
+        return vocab
+    else:
+        left = left.dropna().copy().tolist()
+        right = right.dropna().copy().tolist()
+        vocab2 = left + right
+        if addvocab == 'add':
+            vocab += vocab2
+        elif addvocab == 'replace':
+            vocab = vocab2
+    return vocab
+
+
+def _fit_tokenizer(left, right, tokenizer, vocab=None, addvocab='add'):
+    """
+    update the vocabulary of the tokenizer
+    Args:
+        left (pd.Series):
+        right (pd.Series):
+        vocab (list)
+        addvocab (str):
+
+
+    Returns:
+        self
+    """
+
+    vocab = _update_vocab(left=left, right=right, vocab=vocab, addvocab=addvocab)
+    tokenizer.fit(vocab)
+    return tokenizer
+
+
+def _transform_tkscore(left, right, on,
+                       tokenizer, vocab=None, addvocab='add',
+                       ixnameleft='ix_left',
+                       ixnameright='ix_right',
+                       suffixscore='tfidf',
+                       threshold=None):
+    """
+    Args:
+        left (pd.Series):
+        right (pd.Series):
+        on (str):
+        addvocab (str): 'add', 'keep', 'replace'
+    Returns:
+        pd.Series
+    """
+    scorename = on + '_' + suffixscore
+    left = left.dropna().copy()
+    right = right.dropna().copy()
+    assert isinstance(left, pd.Series)
+    assert isinstance(right, pd.Series)
+    ixnamepairs = [ixnameleft, ixnameright]
+    # If we cannot find a single value we return blank
+    if left.shape[0] == 0 or right.shape[0] == 0:
+        ix = pd.MultiIndex(levels=[[], []],
+                           labels=[[], []],
+                           names=ixnamepairs
+                           )
+        r = pd.Series(index=ix, name=scorename)
+        return r
+
+    if addvocab in ['add', 'replace']:
+        tokenizer = _fit_tokenizer(left=left, right=right, tokenizer=tokenizer, addvocab=addvocab, vocab=vocab)
+
+    left_tfidf = tokenizer.transform(left)
+    right_tfidf = tokenizer.transform(right)
+    X = pd.DataFrame(
+        cosine_similarity(left_tfidf, right_tfidf),
+        columns=right.index
+    )
+    X[ixnameleft] = left.index
+    score = pd.melt(
+        X,
+        id_vars=ixnameleft,
+        var_name=ixnameright,
+        value_name=scorename
+    ).set_index(
+        ixnamepairs
+    )
+    if not threshold is None:
+        score = score[score[scorename] > threshold]
+    score = score[scorename]
+    return score
