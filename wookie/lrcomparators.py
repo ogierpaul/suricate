@@ -13,6 +13,8 @@ from wookie import connectors
 # noinspection PyProtectedMember
 from wookie.comparators import _evalprecisionrecall, _metrics
 
+# TODO: initiate X_sbs when Pipeplan is None
+
 _tfidf__store_threshold_value = 0.5
 
 
@@ -177,8 +179,19 @@ class LrTokenComparator(BaseLrComparator):
         """
         newleft, newright = self._toseries(left=left, right=right)
         if addvocab in ['add', 'replace']:
+            # TODO: Check
+            try:
+                _tempabbefore = len(self._vocab)
+                _tempvocbefore = len(self.tokenizer.vocabulary_)
+            except:
+                _tempvocbefore = 0
+                _tempabbefore = 0
             self._vocab = _update_vocab(left=newleft, right=newright, vocab=self._vocab, addvocab=addvocab)
-            self.tokenizer.fit(raw_documents=self._vocab)
+            self.tokenizer = self.tokenizer.fit(self._vocab)
+            _tempvocafter = len(self.tokenizer.vocabulary_)
+            _tempabafter = len(self._vocab)
+            print('vocab now: {}, {} lines added'.format(_tempabafter, _tempabafter - _tempabbefore))
+            print('vocabulary_ now: {}, {} lines added'.format(_tempvocafter, _tempvocafter - _tempvocbefore))
         return self
 
     def transform(self, left, right, addvocab='add', *args, **kwargs):
@@ -764,6 +777,7 @@ class LrDuplicateFinder:
                 ),
                 name='y_proba'
             )
+
         # add a case for missing lefts
         if addmissingleft is True:
             missing_lefts = newleft.index.difference(

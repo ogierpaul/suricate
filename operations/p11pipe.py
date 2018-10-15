@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 
 import wookie.lrcomparators
 from operations import companypreparation as preprocessing
-from wookie import connectors
+from wookie import connectors, comparators
 
 if __name__ == '__main__':
     # Variable definition
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     ixname = 'ix'
     lsuffix = '_left'
     rsuffix = '_right'
-    n_estimators = 5
+    n_estimators = 500
     ixnameleft = ixname + lsuffix
     ixnameright = ixname + rsuffix
     ixnamepairs = [ixnameleft, ixnameright]
@@ -33,25 +33,25 @@ if __name__ == '__main__':
         scoreplan={
             'name': {
                 'type': 'FreeText',
-                'stop_words': preprocessing.companystopwords,
-                'use_scores': ['tfidf', 'ngram', 'fuzzy', 'token'],
+                # 'stop_words': preprocessing.companystopwords,
+                'use_scores': ['tfidf'],
                 'threshold': 0.5,
-            },
-            'street': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.streetstopwords,
-                'use_scores': ['tfidf', 'ngram', 'fuzzy', 'token'],
-                'threshold': 0.5
-            },
-            'city': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.citystopwords,
-                'use_scores': ['tfidf', 'ngram', 'fuzzy'],
-                'threshold': None
-            },
-            'duns': {'type': 'Id'},
-            'postalcode': {'type': 'Code'},
-            'countrycode': {'type': 'Category'}
+            }
+            # 'street': {
+            #     'type': 'FreeText',
+            #     'stop_words': preprocessing.streetstopwords,
+            #     'use_scores': ['tfidf', 'ngram'],
+            #     'threshold': 0.5
+            # },
+            # 'city': {
+            #     'type': 'FreeText',
+            #     'stop_words': preprocessing.citystopwords,
+            #     'use_scores': ['tfidf', 'ngram'],
+            #     'threshold': None
+            # },
+            # 'duns': {'type': 'Id'},
+            # 'postalcode': {'type': 'Code'},
+            # 'countrycode': {'type': 'Category'}
         },
         estimator=Clf(n_estimators=n_estimators),
         verbose=True
@@ -62,10 +62,10 @@ if __name__ == '__main__':
         pairs=y_train,
         verbose=True
     )
-    # for s, y_true, in zip(['train', 'test'], [y_train, y_test]):
-    #     print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
-    #     y_pred = dedupe.predict(left=train_left, right=train_right)
-    #     comparators._evalpred(y_true=y_true, y_pred=y_pred, namesplit=s)
+    for s, y_true, in zip(['test'], [y_test]):
+        print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
+        y_pred = dedupe.predict(left=train_left, right=train_right)
+        comparators._evalpred(y_true=y_true, y_pred=y_pred, namesplit=s)
     # singlegrouper = grouping.SingleGrouping(dedupe=dedupe)
     # singlegrouper.findduplicates(data=train_right, n_batches=None, n_records=30)
     # singlegrouper.data.to_csv('results_right.csv')
