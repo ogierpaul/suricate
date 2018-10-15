@@ -13,7 +13,7 @@ from wookie import connectors
 # noinspection PyProtectedMember
 from wookie.comparators import _evalprecisionrecall, _metrics
 
-_tfidf_threshold_value = 0.2
+_tfidf__store_threshold_value = 0.5
 
 
 class BaseLrComparator(TransformerMixin):
@@ -33,7 +33,6 @@ class BaseLrComparator(TransformerMixin):
         self.scoresuffix = scoresuffix
         self.ixnameleft = '_'.join([self.ixname, self.lsuffix])
         self.ixnameright = '_'.join([self.ixname, self.rsuffix])
-        self.ixnamepairs = [self.ixnameleft, self.ixnameright]
         self.ixnamepairs = [self.ixnameleft, self.ixnameright]
         self.store_threshold = store_threshold
         self.outcol = '_'.join([self.on, self.scoresuffix])
@@ -116,7 +115,7 @@ class LrTokenComparator(BaseLrComparator):
     def __init__(self, vectorizermodel='tfidf',
                  scoresuffix='tfidf',
                  on=None,
-                 store_threshold=0.2,
+                 store_threshold=_tfidf__store_threshold_value,
                  ixname='ix',
                  lsuffix='left',
                  rsuffix='right',
@@ -197,8 +196,9 @@ class LrTokenComparator(BaseLrComparator):
             left=newleft,
             right=newright,
             tokenizer=self.tokenizer,
-            ixnameleft=self.ixnameleft,
-            ixnameright=self.ixnameright,
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix,
             threshold=self.store_threshold,
             outcol=self.outcol
         )
@@ -263,6 +263,75 @@ class LrIdComparator(BaseLrComparator):
         return score
 
 
+class LrConnector:
+    def __init__(self,
+                 lrcomparators,
+                 ixname='ix',
+                 lsuffix='left',
+                 rsuffix='right',
+                 pruning_thresholds=None):
+        self.lrconnectors = lrcomparators
+        self.outcols = [tk.outcol for tk in self.lrconnectors]
+        self.ixname = ixname
+        self.lsuffix = lsuffix
+        self.rsuffix = rsuffix
+        self.ixnameleft = '_'.join([self.ixname, self.lsuffix])
+        self.ixnameright = '_'.join([self.ixname, self.rsuffix])
+        self.ixnamepairs = [self.ixnameleft, self.ixnameright]
+        if not pruning_thresholds is None:
+            assert isinstance(pruning_thresholds, dict)
+            self.pruning_thresholds = pruning_thresholds
+        else:
+            self.pruning_thresholds = dict()
+
+        pass
+
+    def transform(self, left, right, addvocab='add', verbose=False):
+        scores = dict()
+        ix_taken = pd.MultiIndex(levels=[[], []],
+                                 labels=[[], []],
+                                 names=self.ixnamepairs
+                                 )
+        for con in self.lrconnectors:
+            assert isinstance(con, BaseLrComparator)
+            transfo_score = con.transform(left=left, right=right, addvocab=addvocab)
+            scores[con.outcol] = transfo_score
+            assert transfo_score.index.names == ix_taken.names
+            if self.pruning_thresholds.get(con.on) is not None:
+                ix_taken = ix_taken.union(
+                    transfo_score.loc[transfo_score >= self.pruning_thresholds[con.on]].index
+                )
+            del transfo_score
+
+        X_scores = pd.DataFrame(index=ix_taken)
+        for k in scores.keys():
+            X_scores[k] = scores[k].loc[ix_taken.intersection(scores[k].index)]
+            pass
+        # case we have no id cols or text cols make a cartesian joi
+        if X_scores.shape[1] == 0:
+            X_scores = connectors.cartesian_join(left[[]], right[[]])
+        if verbose is True:
+            possiblepairs = left.shape[0] * right.shape[0]
+            actualpairs = X_scores.shape[0]
+            compression = int(possiblepairs / actualpairs)
+            print(
+                '{} | Pruning compression factor of {} on {} possibles pairs'.format(
+                    pd.datetime.now(), compression, possiblepairs
+                )
+            )
+        return X_scores
+
+    def fit(self, *args, **kwargs):
+        return self
+
+    def _evalscore(self, left, right, y_true):
+        # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
+        # noinspection
+        y_pred = self.transform(left=left, right=right)
+        precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+        return precision, recall
+
+
 class LrDuplicateFinder:
     """
             score plan
@@ -291,8 +360,8 @@ class LrDuplicateFinder:
                  prefunc=None,
                  estimator=None,
                  ixname='ix',
-                 lsuffix='_left',
-                 rsuffix='_right',
+                 lsuffix='left',
+                 rsuffix='right',
                  verbose=False):
         """
         Args:
@@ -317,8 +386,8 @@ class LrDuplicateFinder:
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
         # Derive the new column names
-        self._ixnameleft = self.ixname + self.lsuffix
-        self._ixnameright = self.ixname + self.rsuffix
+        self._ixnameleft = '_'.join([self.ixname, self.lsuffix])
+        self._ixnameright = '_'.join([self.ixname, self.rsuffix])
         self._ixnamepairs = [self._ixnameleft, self._ixnameright]
         self._suffixascii = 'ascii'
         self._suffixwosw = 'wostopwords'
@@ -334,12 +403,11 @@ class LrDuplicateFinder:
         self._code_cols = list()
         self._text_cols = list()
         self._cat_cols = list()
+        self._connectcols = list()
         # Initiate the list of values used for the FreeTextAnalyszs
         self._stop_words = dict()
         self._pruning_thresholds = dict()
-        self._transformers_cv = dict()
-        self._transformers_tfidf = dict()
-        self._lrcomparators = dict()
+        self._lrcomparators = list()
         self._scorenames = dict()
         self._sbspipeplan = dict()
         self._ngram_char = (1, 2)
@@ -352,7 +420,14 @@ class LrDuplicateFinder:
         # Loop through the score plan
         for inputfield in self._usedcols:
             self._initscoreplan(inputfield=inputfield)
-        self._connectcols = ['_'.join([tk.on, tk.scoresuffix]) for tk in self._lrcomparators.keys()]
+        self.lrmodel = LrConnector(
+            lrcomparators=self._lrcomparators,
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix,
+            pruning_thresholds=self._pruning_thresholds
+        )
+        self._connectcols = [con.outcol for con in self._lrcomparators]
         # Prepare the Pipe
         dp_connectscores = wookie.comparators.DataPasser(on_cols=self._connectcols)
 
@@ -388,13 +463,13 @@ class LrDuplicateFinder:
             if scoretype == 'Id':
                 # This score is calculated via Left-Right Id Comparator
                 self._id_cols.append(actualcolname)
-                self._lrcomparators[actualcolname] = LrIdComparator(
+                self._lrcomparators.append(LrIdComparator(
                     on=actualcolname,
                     ixname=self.ixname,
                     lsuffix=self.lsuffix,
                     rsuffix=self.rsuffix,
                     scoresuffix=self._suffixexact
-                )
+                ))
             else:
                 self._sbspipeplan[actualcolname] = [self._suffixexact]
                 if scoretype == 'Category':
@@ -402,7 +477,7 @@ class LrDuplicateFinder:
                 elif scoretype == 'Code':
                     self._code_cols.append(actualcolname)
                     self._scorenames[inputfield].append('_'.join([actualcolname, self._suffixngram]))
-                    self._lrcomparators[actualcolname] = LrTokenComparator(
+                    self._lrcomparators.append(LrTokenComparator(
                         on=actualcolname,
                         ixname=self.ixname,
                         lsuffix=self.lsuffix,
@@ -411,7 +486,7 @@ class LrDuplicateFinder:
                         vectorizermodel='cv',
                         ngram_range=self._ngram_char,
                         analyzer='char'
-                    )
+                    ))
         elif scoretype == 'FreeText':
             actualcolname = '_'.join([inputfield, self._suffixascii])
             self._text_cols.append(actualcolname)
@@ -436,29 +511,29 @@ class LrDuplicateFinder:
                     '_'.join([actualcolname, s2])
                 )
                 if s2 == self._suffixtfidf:
-                    self._lrcomparators[actualcolname] = LrTokenComparator(
+                    self._lrcomparators.append(LrTokenComparator(
                         on=actualcolname,
                         ixname=self.ixname,
                         lsuffix=self.lsuffix,
                         rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixexact,
+                        scoresuffix=self._suffixtfidf,
                         vectorizermodel='tfidf',
                         ngram_range=self._ngram_word,
                         analyzer='word',
                         stop_words=self._stop_words.get(actualcolname)
-                    )
+                    ))
                 elif s2 == self._suffixngram:
-                    self._lrcomparators[actualcolname] = LrTokenComparator(
+                    self._lrcomparators.append(LrTokenComparator(
                         on=actualcolname,
                         ixname=self.ixname,
                         lsuffix=self.lsuffix,
                         rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixexact,
+                        scoresuffix=self._suffixngram,
                         vectorizermodel='tfidf',
                         ngram_range=self._ngram_char,
                         analyzer='char',
                         stop_words=self._stop_words.get(actualcolname)
-                    )
+                    ))
                 elif s2 in [self._suffixtoken, self._suffixfuzzy]:
                     if self._sbspipeplan.get(actualcolname) is None:
                         self._sbspipeplan[actualcolname] = [s2]
@@ -473,16 +548,16 @@ class LrDuplicateFinder:
                     self._scorenames[inputfield].append(
                         '_'.join([swcolname, self._suffixtoken])
                     )
-                    self._lrcomparators[swcolname] = LrTokenComparator(
+                    self._lrcomparators.append(LrTokenComparator(
                         on=swcolname,
                         ixname=self.ixname,
                         lsuffix=self.lsuffix,
                         rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixexact,
+                        scoresuffix=self._suffixngram,
                         vectorizermodel='tfidf',
                         ngram_range=self._ngram_char,
                         analyzer='char'
-                    )
+                    ))
                     self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
 
         pass
@@ -531,38 +606,9 @@ class LrDuplicateFinder:
         Returns:
             pd.DataFrame {[ix_left, ix_right]: [scores]}
         """
-        scores = dict()
-        ix_taken = pd.MultiIndex(levels=[[], []],
-                                 labels=[[], []],
-                                 names=self._ixnamepairs
-                                 )
-        for on in self._lrcomparators.keys():
-            # TODO: here
-            transfo_score = self._lrcomparators[on].transform(left=left, right=right, addvocab=addvocab)
-            scores[self._lrcomparators[on].outcol] = transfo_score
-            if self._pruning_thresholds.get(on) is not None:
-                ix_taken = ix_taken.union(
-                    transfo_score.loc[transfo_score > self._pruning_thresholds[on]].index
-                )
-            del transfo_score
-
-        connectscores = pd.DataFrame(index=ix_taken)
-        for k in scores.keys():
-            connectscores[k] = scores[k].loc[ix_taken.intersection(scores[k].index)]
-            pass
-        # case we have no id cols or text cols make a cartesian joi
-        if connectscores.shape[1] == 0:
-            connectscores = connectors.cartesian_join(left[[]], right[[]])
-        if verbose is True:
-            possiblepairs = left.shape[0] * right.shape[0]
-            actualpairs = connectscores.shape[0]
-            compression = int(possiblepairs / actualpairs)
-            print(
-                '{} | Pruning compression factor of {} on {} possibles pairs'.format(
-                    pd.datetime.now(), compression, possiblepairs
-                )
-            )
-        return connectscores
+        X_scores = self.lrmodel.transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
+        assert set(X_scores.columns.tolist()) == set(self._connectcols)
+        return X_scores
 
     def _connectscores(self, left, right, addvocab='add', verbose=False):
         """
@@ -910,8 +956,9 @@ def _fit_tokenizer(left, right, tokenizer, vocab=None, addvocab='add'):
 def _transform_tkscore(left,
                        right,
                        tokenizer,
-                       ixnameleft='ix_left',
-                       ixnameright='ix_right',
+                       ixname='ix',
+                       lsuffix='left',
+                       rsuffix='right',
                        outcol='score',
                        threshold=None):
     """
@@ -928,6 +975,8 @@ def _transform_tkscore(left,
     right = right.dropna().copy()
     assert isinstance(left, pd.Series)
     assert isinstance(right, pd.Series)
+    ixnameleft = ixname + '_' + lsuffix
+    ixnameright = ixname + '_' + rsuffix
     ixnamepairs = [ixnameleft, ixnameright]
     # If we cannot find a single value we return blank
     if left.shape[0] == 0 or right.shape[0] == 0:
