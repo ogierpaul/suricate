@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier as Clf
 from sklearn.model_selection import train_test_split
 
+import wookie.lrcomparators
 from operations import companypreparation as preprocessing
 from wookie import connectors, comparators
 
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     ixname = 'ix'
     lsuffix = '_left'
     rsuffix = '_right'
-    n_estimators = 10
+    n_estimators = 5
     ixnameleft = ixname + lsuffix
     ixnameright = ixname + rsuffix
     ixnamepairs = [ixnameleft, ixnameright]
@@ -24,23 +25,23 @@ if __name__ == '__main__':
     # left = pd.read_csv(filepath_left, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
-    df_train, df_test = train_test_split(df_train, train_size=0.8)
+    df_train, df_test = train_test_split(df_train, train_size=0.7)
     train_left, train_right, y_train = connectors.separatesides(df_train)
     test_left, test_right, y_test = connectors.separatesides(df_test)
-    dedupe = comparators.LrDuplicateFinder(
+    dedupe = wookie.lrcomparators.LrDuplicateFinder(
         prefunc=preprocessing.preparedf,
         scoreplan={
             'name': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.companystopwords,
                 'use_scores': ['tfidf', 'ngram', 'fuzzy', 'token'],
-                'threshold': 0.5,
+                'threshold': 0.4,
             },
             'street': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.streetstopwords,
                 'use_scores': ['tfidf', 'ngram', 'fuzzy', 'token'],
-                'threshold': 0.5
+                'threshold': 0.4
             },
             'city': {
                 'type': 'FreeText',

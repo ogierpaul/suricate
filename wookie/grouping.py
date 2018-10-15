@@ -1,7 +1,5 @@
 import pandas as pd
 
-from wookie import comparators
-
 
 class SingleGrouping:
     def __init__(self,
@@ -15,7 +13,7 @@ class SingleGrouping:
         """
 
         Args:
-            dedupe (comparators.LrDuplicateFinder):
+            dedupe (wookie.LrDuplicateFinder):
             data (pd.DataFrame): None
             ixname (str):
             lsuffix (str):
