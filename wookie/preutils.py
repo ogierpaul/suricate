@@ -275,7 +275,7 @@ def addsuffix(df, suffix):
             zip(
                 df.columns,
                 map(
-                    lambda r: r + suffix,
+                    lambda r: r + '_' + suffix,
                     df.columns
                 ),
 

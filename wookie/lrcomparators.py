@@ -946,7 +946,7 @@ class LrDuplicateFinder:
             df_pred = pd.concat([df_pred, missing_lefts], axis=0, ignore_index=False)
 
         assert isinstance(df_pred, pd.DataFrame)
-        assert df_pred.columns == [0, 1]
+        assert set(df_pred.columns) == {0, 1}
         assert df_pred.index.names == self._ixnamepairs
         return df_pred
 
