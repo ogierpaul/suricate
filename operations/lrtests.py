@@ -58,7 +58,7 @@ if __name__ == '__main__':
     #     store_threshold=0.2
     # )
     conlist = [con1]
-    model = lrcomparators.LrConnector(
+    model = lrcomparators.LrPruningConnector(
         lrcomparators=conlist,
         pruning_thresholds={'name': 0.5, 'street': 0.6, 'duns': 1.0}
     )
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     for s, x, y_true, in zip(['train', 'test'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
-        precision, recall = model._evalscore(left=x[0], right=x[1], y_true=y_true)
+        precision, recall = model.evalscore(left=x[0], right=x[1], y_true=y_true)
         print(
             '{} | Model score: precision: {:.2%}, recall: {:.2%}, on batch {}'.format(
                 pd.datetime.now(),

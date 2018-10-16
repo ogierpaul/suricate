@@ -6,28 +6,40 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
-import wookie.preutils
-# TO CHECK
-import wookie.sbscomparators
-from wookie import connectors
+from wookie.connectors import cartesian_join, createsbs, indexwithytrue
+from wookie.preutils import lowerascii, idtostr, rmvstopwords
 # noinspection PyProtectedMember
-from wookie.sbscomparators import _evalprecisionrecall, _metrics
+from wookie.sbscomparators import _evalprecisionrecall, _metrics, DataPasser, PipeSbsComparator
 
-# TODO: initiate X_sbs when Pipeplan is None
-
-_tfidf__store_threshold_value = 0.5
+_tfidf_store_threshold_value = 0.5
 
 
 class BaseLrComparator(TransformerMixin):
+    """
+    This is the base Left-Right Comparator
+    Idea is that is should have take a left dataframe, a right dataframe, and return a combination of two, with a comparison score
+    """
     def __init__(self,
                  on=None,
                  ixname='ix',
                  lsuffix='left',
                  rsuffix='right',
                  scoresuffix='score',
-                 store_threshold=0
+                 store_threshold=0.0
                  ):
+        """
+
+        Args:
+            on(str): column to use on the left and right df
+            ixname (str): name of the index of left and right
+            lsuffix (str):
+            rsuffix (str):
+            scoresuffix (str): score suffix: the outputvector has the name on + '_' + scoresuffix
+            store_threshold (float): threshold to use to store the relevance score
+        """
         TransformerMixin.__init__(self)
+        if on is None:
+            on = 'none'
         self.on = on
         self.ixname = ixname
         self.lsuffix = lsuffix
@@ -40,20 +52,6 @@ class BaseLrComparator(TransformerMixin):
         self.outcol = '_'.join([self.on, self.scoresuffix])
         pass
 
-    def _dummyfit(self, left=None, right=None):
-        # DO NOTHING
-        return self
-
-    def _dummytransform(self, left=None, right=None):
-        newleft = left[[]]
-        newright = right[[]]
-        cart = connectors.cartesian_join(
-            left_df=left,
-            right_df=right,
-            left_suffix=self.lsuffix,
-            right_suffix=self.rsuffix
-        )
-        return cart
 
     def _toseries(self, left, right):
         """
@@ -82,7 +80,7 @@ class BaseLrComparator(TransformerMixin):
 
     def _todf(self, left, right):
         """
-        convert to series withoutnulls and copy
+        convert to dataframe with one column withoutnulls and copy
         Args:
             left (pd.Series/pd.DataFrame):
             right (pd.Series/pd.DataFrame):
@@ -93,9 +91,16 @@ class BaseLrComparator(TransformerMixin):
         newleft = pd.DataFrame()
         newright = pd.DataFrame()
         if isinstance(left, pd.DataFrame):
-            newleft = left[[self.on]].dropna(subset=[self.on]).copy()
+            if self.on is not None and self.on != 'none':
+                newleft = left[[self.on]].dropna(subset=[self.on]).copy()
+            else:
+                newleft = left.copy()
         if isinstance(right, pd.DataFrame):
-            newright = right[[self.on]].dropna(subset=[self.on]).copy()
+            if self.on is not None and self.on != 'none':
+                newright = right[[self.on]].dropna(subset=[self.on]).copy()
+            else:
+                newright = right.copy()
+
         if isinstance(left, pd.Series):
             newleft = pd.DataFrame(left.dropna().copy())
         if isinstance(right, pd.Series):
@@ -105,7 +110,17 @@ class BaseLrComparator(TransformerMixin):
                 raise TypeError('type {} not Series or DataFrame for side {}'.format(type(c), s))
         return newleft, newright
 
-    def _evalscore(self, left, right, y_true):
+    def evalscore(self, left, right, y_true):
+        """
+        evaluate precision and recall
+        Args:
+            left (pd.DataFrame/pd.Series):
+            right (pd.DataFrame/pd.Series):
+            y_true (pd.Series):
+
+        Returns:
+            float, float: precision and recall
+        """
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
@@ -117,7 +132,7 @@ class LrTokenComparator(BaseLrComparator):
     def __init__(self, vectorizermodel='tfidf',
                  scoresuffix='tfidf',
                  on=None,
-                 store_threshold=_tfidf__store_threshold_value,
+                 store_threshold=_tfidf_store_threshold_value,
                  ixname='ix',
                  lsuffix='left',
                  rsuffix='right',
@@ -131,8 +146,8 @@ class LrTokenComparator(BaseLrComparator):
         Args:
             vectorizermodel (str): {'tfidf' or 'cv'} for TfIdfVectorizer or CountVectorizer
             scoresuffix (str):
-            on (str):
-            store_threshold (float): variable on which to store the threshold
+            on (str): column to compare
+            store_threshold (float): variable above which the similarity score is stored
             ixname (str):
             lsuffix (str):
             rsuffix (str):
@@ -160,7 +175,7 @@ class LrTokenComparator(BaseLrComparator):
             vectorizerclass = CountVectorizer
         else:
             raise ValueError('{} not in [cv, tfidf]'.format(vectorizermodel))
-        self.tokenizer = vectorizerclass(
+        self.vectorizer = vectorizerclass(
             analyzer=self.analyzer,
             ngram_range=self.ngram_range,
             stop_words=self.stop_words,
@@ -168,36 +183,45 @@ class LrTokenComparator(BaseLrComparator):
         )
         self.store_threshold = store_threshold
 
-    def fit(self, left, right, addvocab='add'):
+    def fit(self, left=None, right=None):
         """
+        Do Nothing
         Args:
-            left (pd.Series/pd.DataFrame):
-            right (pd.Series/pd.DataFrame):
-            addvocab (str)
+            left (pd.DataFrame/pd.Series):
+            right (pd.DataFrame/pd.Series):
+
         Returns:
-            self
+
         """
-        newleft, newright = self._toseries(left=left, right=right)
-        if addvocab in ['add', 'replace']:
-            self._vocab = _update_vocab(left=newleft, right=newright, vocab=self._vocab, addvocab=addvocab)
-            self.tokenizer = self.tokenizer.fit(self._vocab)
+
+        # DO NOTHING
         return self
 
     def transform(self, left, right, addvocab='add', *args, **kwargs):
         """
+        Add, keep, or replace new vocabulary to the vectorizer
+        Fit the tokenizer with the new vocabulary
+        Calculate the cosine_simlarity score for the left and right columns \
+            using the output of the vectorizer
         Args:
             left (pd.Series/pd.DataFrame):
             right (pd.Series/pd.DataFrame):
-            addvocab (str)
+            addvocab (str): in ['add', 'keep', 'replace']
+                'add' --> add new vocabulary to current
+                'keep' --> only keep current vocabulary
+                'replace' --> replace current vocabulary with new
         Returns:
-            pd.Series
+            pd.Series : {['ix_left', 'ix_right']: 'name_tfidf'}
         """
         newleft, newright = self._toseries(left=left, right=right)
-        self.fit(left=newleft, right=newright, addvocab=addvocab)
+        # Fit
+        if addvocab in ['add', 'replace']:
+            self._vocab = _update_vocab(left=newleft, right=newright, vocab=self._vocab, addvocab=addvocab)
+            self.vectorizer = self.vectorizer.fit(self._vocab)
         score = _transform_tkscore(
             left=newleft,
             right=newright,
-            tokenizer=self.tokenizer,
+            vectorizer=self.vectorizer,
             ixname=self.ixname,
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix,
@@ -209,18 +233,22 @@ class LrTokenComparator(BaseLrComparator):
 
 class LrIdComparator(BaseLrComparator):
     def __init__(self,
+                 on,
                  scoresuffix='exact',
-                 on=None,
                  ixname='ix',
                  lsuffix='left',
                  rsuffix='right',
-                 store_threshold=1,
+                 store_threshold=1.0,
                  **kwargs):
         """
 
         Args:
-            tokenizer (str): 'tfidf', 'cv'
-            threshold:
+            on (str): column to compare
+            scoresuffix (str): name of the suffix added to the column name for the score name
+            ixname: 'ix'
+            lsuffix (str): 'left'
+            rsuffix (str): 'right'
+            store_threshold(flat): variable above which the similarity score is stored
             **kwargs:
         """
         BaseLrComparator.__init__(self,
@@ -234,6 +262,7 @@ class LrIdComparator(BaseLrComparator):
 
     def fit(self, left=None, right=None, *args, **kwargs):
         """
+        # Do nothing
         Args:
             left (pd.Series/pd.DataFrame):
             right (pd.Series/pd.DataFrame):
@@ -245,10 +274,10 @@ class LrIdComparator(BaseLrComparator):
     def transform(self, left, right, *args, **kwargs):
         """
         Args:
-            left (pd.Series/pd.DataFrame):
+            left (pd.Series/pd.DataFrame): {'ix':['duns', ...]}
             right (pd.Series/pd.DataFrame):
         Returns:
-            pd.Series
+            pd.Series: {['ix_left', 'ix_right']: 'duns_exact'}
         """
         newleft, newright = self._todf(left=left, right=right)
         score = pd.merge(
@@ -265,13 +294,37 @@ class LrIdComparator(BaseLrComparator):
         return score
 
 
-class LrConnector:
+class LrPruningConnector:
+    """
+    This class pipes together multiple instances of LrComparator: LrTokenComparator or LrIdComparator
+    Returns a DataFrame showing the similarity score of left records vs right records
+    If all similarity scores are below the pruning threshold:
+        the pair is dropped
+    If any similarity score is above the pruning threshold:
+        it is kept (for example to be ingested to a Side-By-Side Comparator and Scikit-Learn Estimator)
+    """
     def __init__(self,
                  lrcomparators,
                  ixname='ix',
                  lsuffix='left',
                  rsuffix='right',
                  pruning_thresholds=None):
+        """
+        Not on the pruning_threshold:
+            if the value is None, that means you do not use this similarity score as the basis for further analysis
+
+        Args:
+            lrcomparators (list): list of LrComparator
+            ixname (str): 'ix'
+            lsuffix (str): 'left'
+            rsuffix (str): 'right'
+            pruning_thresholds (dict): {'name':0.6, 'city':None}
+        Examples:
+            pruning_thresholds: {'name':0.6, 'city':None}: only pairs with similarity on name bigger than 0.6 will be kept
+            pruning_thresholds: {'name':0.6, 'city':05}: only pairs with similarity on name bigger than 0.6 \
+                or similarity on 'city' bigger than 0.5 will be kept
+
+        """
         self.lrconnectors = lrcomparators
         self.outcols = [tk.outcol for tk in self.lrconnectors]
         self.ixname = ixname
@@ -289,6 +342,18 @@ class LrConnector:
         pass
 
     def transform(self, left, right, addvocab='add', verbose=False):
+        """
+        # return all the similarity scores of each LR Comparator as a dataframe
+        # In case we have no id cols or text cols make a cartesian join
+        Args:
+            left (pd.DataFrame): {'ix' :['name', 'duns']}
+            right (pd.DataFrame):
+            addvocab (str): add, keep, or replace
+            verbose (bool): print the compression factor (how many pairs selected out of possible)
+
+        Returns:
+            pd.DataFrame : {['ix_left', 'ix_right']: ['name_tfidf', 'duns_exact'...}
+        """
         scores = dict()
         ix_taken = pd.MultiIndex(levels=[[], []],
                                  labels=[[], []],
@@ -309,9 +374,9 @@ class LrConnector:
         for k in scores.keys():
             X_scores[k] = scores[k].loc[ix_taken.intersection(scores[k].index)]
             pass
-        # case we have no id cols or text cols make a cartesian joi
+        # case we have no id cols or text cols make a cartesian join
         if X_scores.shape[1] == 0:
-            X_scores = connectors.cartesian_join(left[[]], right[[]])
+            X_scores = cartesian_join(left[[]], right[[]])
         if verbose is True:
             possiblepairs = left.shape[0] * right.shape[0]
             actualpairs = X_scores.shape[0]
@@ -324,13 +389,41 @@ class LrConnector:
         return X_scores
 
     def fit(self, *args, **kwargs):
+        """
+        DO NOTHING
+        Args:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
         return self
 
-    def _evalscore(self, left, right, y_true):
+    def evalscore(self, left, right, y_true, verbose=False):
+        """
+        Evaluate precision and recall
+        Args:
+            left (pd.DataFrame): {'ix':[cols..]}
+            right (pd.DataFrame):
+            y_true (pd.Series): {['ix_left', 'ix_right']: 'y_true'}
+            verbose (bool): print out precision and recall
+
+        Returns:
+            float, float: precision and recall
+        """
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
         precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+        if verbose:
+            print(
+                '{} | LrPruningConnector score: precision: {:.2%}, recall: {:.2%}'.format(
+                    pd.datetime.now(),
+                    precision,
+                    recall
+                )
+            )
         return precision, recall
 
 
@@ -422,7 +515,7 @@ class LrDuplicateFinder:
         # Loop through the score plan
         for inputfield in self._usedcols:
             self._initscoreplan(inputfield=inputfield)
-        self.lrmodel = LrConnector(
+        self.lrmodel = LrPruningConnector(
             lrcomparators=self._lrcomparators,
             ixname=self.ixname,
             lsuffix=self.lsuffix,
@@ -431,9 +524,9 @@ class LrDuplicateFinder:
         )
         self._connectcols = [con.outcol for con in self._lrcomparators]
         # Prepare the Pipe
-        dp_connectscores = wookie.sbscomparators.DataPasser(on_cols=self._connectcols)
+        dp_connectscores = DataPasser(on_cols=self._connectcols)
 
-        sbspipe = wookie.sbscomparators.PipeSbsComparator(
+        sbspipe = PipeSbsComparator(
             scoreplan=self._sbspipeplan
         )
         # noinspection PyTypeChecker
@@ -457,8 +550,9 @@ class LrDuplicateFinder:
     def _initscoreplan(self, inputfield):
         scoretype = self.scoreplan[inputfield]['type']
         # inputfield: 'name'
-        # actual field 'name_ascii' or 'duns_cleaned'
+        # actualcolname 'name_ascii' or 'duns_cleaned'
         # If the field is not free text
+
         if scoretype in ['Id', 'Category', 'Code']:
             actualcolname = '_'.join([inputfield, self._suffixid])
             self._scorenames[inputfield] = ['_'.join([actualcolname, self._suffixexact])]
@@ -472,6 +566,10 @@ class LrDuplicateFinder:
                     rsuffix=self.rsuffix,
                     scoresuffix=self._suffixexact
                 ))
+                if self.scoreplan[inputfield].get('threshold') is not None:
+                    self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get('threshold')
+                else:
+                    self._pruning_thresholds[actualcolname] = 1.0
             else:
                 self._sbspipeplan[actualcolname] = [self._suffixexact]
                 if scoretype == 'Category':
@@ -578,18 +676,18 @@ class LrDuplicateFinder:
             scoretype = self.scoreplan[c]['type']
             if scoretype == 'FreeText':
                 actualcolname = '_'.join([c, self._suffixascii])
-                new[actualcolname] = new[c].apply(wookie.preutils.lowerascii)
+                new[actualcolname] = new[c].apply(lowerascii)
                 if actualcolname in self._stop_words.keys():
                     colnamewosw = '_'.join([actualcolname, self._suffixwosw])
                     new[colnamewosw] = new[actualcolname].apply(
-                        lambda r: wookie.preutils.rmvstopwords(r, stop_words=self._stop_words[actualcolname])
+                        lambda r: rmvstopwords(r, stop_words=self._stop_words[actualcolname])
                     )
             else:
                 actualcolname = '_'.join([c, self._suffixid])
                 new[actualcolname] = new[c].apply(
-                    wookie.preutils.lowerascii
+                    lowerascii
                 ).apply(
-                    wookie.preutils.idtostr
+                    idtostr
                 )
         assert isinstance(new, pd.DataFrame)
         return new
@@ -626,7 +724,7 @@ class LrDuplicateFinder:
             pd.DataFrame
         """
         X_connect = self._pruning_fit_transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
-        X_sbs = connectors.createsbs(pairs=X_connect, left=left, right=right)
+        X_sbs = createsbs(pairs=X_connect, left=left, right=right)
         return X_sbs
 
     def fit(self, left, right, pairs, addvocab='add', verbose=False):
@@ -724,7 +822,7 @@ class LrDuplicateFinder:
         self._pruning_fit_transform(left=newleft, right=newright, addvocab=addvocab)
         X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
         y_pred = pd.Series(index=X_sbs.index).fillna(1)
-        y_pred = connectors.indexwithytrue(y_true=y_true, y_pred=y_pred)
+        y_pred = indexwithytrue(y_true=y_true, y_pred=y_pred)
         return y_pred
 
     def predict_proba(self, left, right, addvocab='add', verbose=False, addmissingleft=False) -> pd.Series:
@@ -956,7 +1054,7 @@ def _fit_tokenizer(left, right, tokenizer, vocab=None, addvocab='add'):
 
 def _transform_tkscore(left,
                        right,
-                       tokenizer,
+                       vectorizer,
                        ixname='ix',
                        lsuffix='left',
                        rsuffix='right',
@@ -987,8 +1085,8 @@ def _transform_tkscore(left,
                            )
         r = pd.Series(index=ix, name=scorename)
         return r
-    left_tfidf = tokenizer.transform(left)
-    right_tfidf = tokenizer.transform(right)
+    left_tfidf = vectorizer.transform(left)
+    right_tfidf = vectorizer.transform(right)
     X = pd.DataFrame(
         cosine_similarity(left_tfidf, right_tfidf),
         columns=right.index

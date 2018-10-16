@@ -4,14 +4,14 @@ import pandas as pd
 from wookie.preutils import _chkixdf, addsuffix, rmvsuffix
 
 
-def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'):
+def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
     """
 
     Args:
         left_df (pd.DataFrame): table 1
         right_df (pd.DataFrame): table 2
-        left_suffix (str):
-        right_suffix (str):
+        lsuffix (str):
+        rsuffix (str):
 
     Returns:
         pd.DataFrame
@@ -52,7 +52,7 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
             0   foo
             1	bar
 
-            rename_with_suffix(df, '_right')
+            rename_with_suffix(df, 'right')
 
                 index_right	a_right
             0	0	        foo
@@ -69,7 +69,7 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
         mydict = dict(
             zip(
                 cols,
-                map(lambda c: c + suffix, cols)
+                map(lambda c: c + '_' + suffix, cols)
             )
         )
         df_new.rename(columns=mydict, inplace=True)
@@ -81,8 +81,8 @@ def cartesian_join(left_df, right_df, left_suffix='_left', right_suffix='_right'
         tempcolname += 'f'
 
     # create a new df1 with renamed cols
-    df1new = rename_with_suffix(left_df, left_suffix)
-    df2new = rename_with_suffix(right_df, right_suffix)
+    df1new = rename_with_suffix(left_df, lsuffix)
+    df2new = rename_with_suffix(right_df, rsuffix)
     df1new[tempcolname] = 0
     df2new[tempcolname] = 0
     dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
