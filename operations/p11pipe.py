@@ -13,7 +13,7 @@ if __name__ == '__main__':
     rsuffix = '_right'
     n_estimators = 5
     dem_treshold = 0.5
-    nrows = 1000
+    nrows = None
     ixnameleft = ixname + lsuffix
     ixnameright = ixname + rsuffix
     ixnamepairs = [ixnameleft, ixnameright]

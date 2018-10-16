@@ -145,11 +145,10 @@ def createsbs(pairs, left, right, use_cols=None, lsuffix='left', rsuffix='right'
     xpairs = pairs.copy().reset_index(drop=False)
     if isinstance(xpairs, pd.Series):
         xpairs = pd.DataFrame(xpairs)
-
     xleft = addsuffix(xleft, lsuffix).set_index(ixnameleft)
     xright = addsuffix(xright, rsuffix).set_index(ixnameright)
     sbs = xpairs.join(
-        xleft, on=ixnameright, how='left'
+        xleft, on=ixnameleft, how='left'
     ).join(
         xright, on=ixnameright, how='left'
     ).set_index(
@@ -199,14 +198,14 @@ def safeconcat(dfs, usecols):
     return X
 
 
-def showpairs(pairs, left, right, usecols=None):
+def showpairs(pairs, left, right, use_cols=None):
     """
-
+    Like createsbs, but reorder the columns to compare left and right columns
     Args:
         pairs (pd.DataFrame/pd.Series): {[ix_left, ix_right]: col}
         left (pd.DataFrame): {ix: [cols]}
         right (pd.DataFrame): {ix: [cols]}
-        usecols (list): [name, duns, ..]
+        use_cols (list): [name, duns, ..]
 
     Returns:
         pd.DataFrame: {[ix_left, ix_right]: [name_left, name_right, duns_left, duns_right]}
@@ -215,11 +214,11 @@ def showpairs(pairs, left, right, usecols=None):
         xpairs = pd.DataFrame(pairs).copy()
     else:
         xpairs = pairs.copy()
-    if usecols is None:
-        usecols = left.columns.intersection(right.columns)
-    res = createsbs(pairs=xpairs, left=left, right=right)
+    if use_cols is None:
+        use_cols = left.columns.intersection(right.columns)
+    res = createsbs(pairs=xpairs, left=left, right=right, use_cols=use_cols)
     displaycols = xpairs.columns.tolist()
-    for c in usecols:
+    for c in use_cols:
         displaycols.append(c + '_left')
         displaycols.append(c + '_right')
     res = res[displaycols]
