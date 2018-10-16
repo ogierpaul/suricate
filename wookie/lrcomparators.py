@@ -7,7 +7,7 @@ from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
 from wookie.connectors import cartesian_join, createsbs, indexwithytrue
-from wookie.preutils import lowerascii, idtostr, rmvstopwords
+from wookie.preutils import lowerascii, idtostr, rmvstopwords, _suffixexact, _suffixtoken, _suffixfuzzy
 # noinspection PyProtectedMember
 from wookie.sbscomparators import _evalprecisionrecall, _metrics, DataPasser, PipeSbsComparator
 
@@ -17,8 +17,10 @@ _tfidf_store_threshold_value = 0.5
 class BaseLrComparator(TransformerMixin):
     """
     This is the base Left-Right Comparator
-    Idea is that is should have take a left dataframe, a right dataframe, and return a combination of two, with a comparison score
+    Idea is that is should have take a left dataframe, a right dataframe,
+    and return a combination of two, with a comparison score
     """
+
     def __init__(self,
                  on=None,
                  ixname='ix',
@@ -51,7 +53,6 @@ class BaseLrComparator(TransformerMixin):
         self.store_threshold = store_threshold
         self.outcol = '_'.join([self.on, self.scoresuffix])
         pass
-
 
     def _toseries(self, left, right):
         """
@@ -154,7 +155,7 @@ class LrTokenComparator(BaseLrComparator):
             ngram_range (tuple): default (1,1)
             stop_words (list) : {'english'}, list, or None (default)
             strip_accents (str): {'ascii', 'unicode', None}
-            analyzer (str): {'word', 'char'} or callable. Whether the feature should be made of word or character n-grams.
+            analyzer (str): {'word', 'char'} or callable. Whether the feature should be made of word or chars n-grams.
         """
         BaseLrComparator.__init__(self,
                                   ixname=ixname,
@@ -303,6 +304,7 @@ class LrPruningConnector:
     If any similarity score is above the pruning threshold:
         it is kept (for example to be ingested to a Side-By-Side Comparator and Scikit-Learn Estimator)
     """
+
     def __init__(self,
                  lrcomparators,
                  ixname='ix',
@@ -320,9 +322,9 @@ class LrPruningConnector:
             rsuffix (str): 'right'
             pruning_thresholds (dict): {'name':0.6, 'city':None}
         Examples:
-            pruning_thresholds: {'name':0.6, 'city':None}: only pairs with similarity on name bigger than 0.6 will be kept
-            pruning_thresholds: {'name':0.6, 'city':05}: only pairs with similarity on name bigger than 0.6 \
-                or similarity on 'city' bigger than 0.5 will be kept
+            pruning_thresholds: {'name':0.6, 'city':None}: only pairs with similarity on name >= 0.6 will be kept
+            pruning_thresholds: {'name':0.6, 'city':05}: only pairs with similarity on name >= 0.6 \
+                or similarity on 'city' >=0.5 will be kept
 
         """
         self.lrconnectors = lrcomparators
@@ -333,7 +335,7 @@ class LrPruningConnector:
         self.ixnameleft = '_'.join([self.ixname, self.lsuffix])
         self.ixnameright = '_'.join([self.ixname, self.rsuffix])
         self.ixnamepairs = [self.ixnameleft, self.ixnameright]
-        if not pruning_thresholds is None:
+        if pruning_thresholds is not None:
             assert isinstance(pruning_thresholds, dict)
             self.pruning_thresholds = pruning_thresholds
         else:
@@ -429,7 +431,7 @@ class LrPruningConnector:
 
 class LrDuplicateFinder:
     """
-            score plan
+    score plan
         {
             name_col:{
                 'type': one of ['FreeText', 'Category', 'Id', 'Code']
@@ -443,9 +445,9 @@ class LrDuplicateFinder:
                         ['exact']
                     defaults for code: --> but not taken into account for pruning
                         ['exact', 'first n_digits/ngrams' --> to do]
-                'threshold'
-                    'tf-idf' --> Default 0.3
-                    'exact' --> Default 1
+                'pruning_threshold'
+                        0.6
+                        pruning threshold to pass to the LrPruningConnector
             }
         }
     """
@@ -460,20 +462,55 @@ class LrDuplicateFinder:
                  verbose=False):
         """
         Args:
-            estimator (BaseEstimator): Sklearn Estimator
-            prefunc (callable): Add features to the data. Default lambda df: df
-            scoreplan(dict):
+            scoreplan (dict):
+            prefunc (callable): preprocessing function. Add features to the data. Default lambda df: df
+            estimator (BaseEstimator): Sklearn Estimator, Default RandomForest()
+            ixname (str): 'ix'
+            lsuffix (str): 'left'
+            rsuffix (str): 'right'
+            verbose (bool)
+        Examples:
+                dedupe = wookie.lrcomparators.LrDuplicateFinder(
+                    prefunc=preprocessing.preparedf,
+                    scoreplan={
+                        'name': {
+                            'type': 'FreeText',
+                            'stop_words': preprocessing.companystopwords,
+                            'use_scores': ['tfidf', 'ngram'],
+                            'threshold': 0.6,
+                        }
+                        'street': {
+                            'type': 'FreeText',
+                            'stop_words': preprocessing.streetstopwords,
+                            'use_scores': ['tfidf', 'ngram', 'token'],
+                            'threshold': 0.6
+                        },
+                        'city': {
+                            'type': 'FreeText',
+                            'stop_words': preprocessing.citystopwords,
+                            'use_scores': ['tfidf', 'ngram', 'fuzzy'],
+                            'threshold': None
+                        },
+                        'duns': {'type': 'Id'},
+                        'postalcode': {'type': 'Code'},
+                        'countrycode': {'type': 'Category'}
+                    },
+                    estimator=GradientBoostingClassifier()
+                )
         """
         if estimator is not None:
             assert issubclass(type(estimator), BaseEstimator)
             self.estimator = estimator
         else:
-            self.estimator = RandomForestClassifier(n_estimators=100)
+            self.estimator = RandomForestClassifier()
 
         if prefunc is not None:
             assert callable(prefunc)
         else:
-            prefunc = lambda df: df
+            def passdata(df):
+                return df
+
+            prefunc = passdata
         self.prefunc = prefunc
         assert isinstance(scoreplan, dict)
         self.scoreplan = scoreplan
@@ -487,10 +524,10 @@ class LrDuplicateFinder:
         self._suffixascii = 'ascii'
         self._suffixwosw = 'wostopwords'
         self._suffixid = 'cleaned'
-        self._suffixexact = 'exact'
-        self._suffixtoken = 'token'
+        self._suffixexact = _suffixexact
+        self._suffixtoken = _suffixtoken
         self._suffixtfidf = 'tfidf'
-        self._suffixfuzzy = 'fuzzy'
+        self._suffixfuzzy = _suffixfuzzy
         self._suffixngram = 'ngram'
         # From score plan initiate the list of columns
         self._usedcols = scoreplan.keys()
@@ -523,6 +560,7 @@ class LrDuplicateFinder:
             pruning_thresholds=self._pruning_thresholds
         )
         self._connectcols = [con.outcol for con in self._lrcomparators]
+        self._sbscols = list(self._sbspipeplan.keys())
         # Prepare the Pipe
         dp_connectscores = DataPasser(on_cols=self._connectcols)
 
@@ -548,6 +586,15 @@ class LrDuplicateFinder:
         pass
 
     def _initscoreplan(self, inputfield):
+        """
+        Routine to initiate the class
+        Dig into the code to understand.
+        Args:
+            inputfield (str):
+
+        Returns:
+            None
+        """
         scoretype = self.scoreplan[inputfield]['type']
         # inputfield: 'name'
         # actualcolname 'name_ascii' or 'duns_cleaned'
@@ -664,7 +711,10 @@ class LrDuplicateFinder:
 
     def _prepare_data(self, df):
         """
-
+        - Pass the input data (left or right) through a preprocessing function prefunc
+        - add normalized columns
+            for Free text: 'name' --> 'name_ascii', 'name_ascii_wostopwords' if stop words are passed
+            For others: 'duns' --> 'duns_cleaned' with passing idtostr method
         Args:
             df (pd.DataFrame):
 
@@ -672,19 +722,20 @@ class LrDuplicateFinder:
             new (pd.DataFrame)
         """
         new = df.copy()
-        for c in self.scoreplan.keys():
-            scoretype = self.scoreplan[c]['type']
+        new = self.prefunc(new)
+        for inputfield in self.scoreplan.keys():
+            scoretype = self.scoreplan[inputfield]['type']
             if scoretype == 'FreeText':
-                actualcolname = '_'.join([c, self._suffixascii])
-                new[actualcolname] = new[c].apply(lowerascii)
+                actualcolname = '_'.join([inputfield, self._suffixascii])
+                new[actualcolname] = new[inputfield].apply(lowerascii)
                 if actualcolname in self._stop_words.keys():
                     colnamewosw = '_'.join([actualcolname, self._suffixwosw])
                     new[colnamewosw] = new[actualcolname].apply(
                         lambda r: rmvstopwords(r, stop_words=self._stop_words[actualcolname])
                     )
             else:
-                actualcolname = '_'.join([c, self._suffixid])
-                new[actualcolname] = new[c].apply(
+                actualcolname = '_'.join([inputfield, self._suffixid])
+                new[actualcolname] = new[inputfield].apply(
                     lowerascii
                 ).apply(
                     idtostr
@@ -694,7 +745,6 @@ class LrDuplicateFinder:
 
     def _pruning_fit_transform(self, left, right, addvocab='add', verbose=False):
         """
-
         Args:
             left (pd.DataFrame): {ix: [cols]}
             right (pd.DataFrame): {ix: [cols]}
@@ -702,6 +752,7 @@ class LrDuplicateFinder:
                 - 'add' --> add new vocab to existing vocab
                 - 'keep' --> keep existing vocab
                 - 'replace' --> replace existing vocab with new
+            verbose (bool)
 
         Returns:
             pd.DataFrame {[ix_left, ix_right]: [scores]}
@@ -710,9 +761,9 @@ class LrDuplicateFinder:
         assert set(X_scores.columns.tolist()) == set(self._connectcols)
         return X_scores
 
-    def _connectscores(self, left, right, addvocab='add', verbose=False):
+    def _lr_to_sbs(self, left, right, addvocab='add', verbose=False):
         """
-
+        Return a side by side analysis of the data
         Args:
             left: {ix: [cols]}
             right: {ix: [cols]}
@@ -721,36 +772,54 @@ class LrDuplicateFinder:
                 - 'keep' --> keep existing vocab
                 - 'replace' --> replace existing vocab with new
         Returns:
-            pd.DataFrame
+            pd.DataFrame:  {[ix_left, ix_right]: [scores, 'name_left', 'name_right']}
         """
-        X_connect = self._pruning_fit_transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
-        X_sbs = createsbs(pairs=X_connect, left=left, right=right)
+        X_scores = self.lrmodel.transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
+        assert set(X_scores.columns.tolist()) == set(self._connectcols)
+        X_sbs = createsbs(
+            pairs=X_scores,
+            left=left,
+            right=right,
+            use_cols=self._sbscols,
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix
+        )
         return X_sbs
 
-    def fit(self, left, right, pairs, addvocab='add', verbose=False):
+    def fit(self, left, right, y_true, addvocab='add', verbose=False):
         """
+        # Plan
+        - prepare the data
+        - Use the LrPruningConnector to create a Side by Side view of the records with similarity scores
+        - Use the SbsPipeComparator to do further analysis (Levenshtein) on those side by side
+        - Fit an estimator on the results
+        # Exception:
+        - if no matches are found during pruning - raise warning
+        - The estimator is only trained on the output from the pruning step, some matches may be already missed
 
         Args:
-            left (pd.DataFrame):
+            left (pd.DataFrame): {'ix':[name, duns...]}
             right (pd.DataFrame):
-            pairs (pd.Series/pd.DataFrame):
-            addvocab(str):
+            y_true (pd.Series/pd.DataFrame): pairs {['ix_left', 'ix_right']: y_true}
+            addvocab (str):
                 - 'add' --> add new vocab to existing vocab
                 - 'keep' --> keep existing vocab
                 - 'replace' --> replace existing vocab with new
+            verbose (bool):
 
         Returns:
             self
         """
         if verbose:
             print('{} | Start fit'.format(pd.datetime.now()))
-        newleft = self._prepare_data(self.prefunc(left))
-        newright = self._prepare_data(self.prefunc(right))
-        if isinstance(pairs, pd.DataFrame):
-            pairs = pairs['y_true']
-        y_train = pairs
+        newleft = self._prepare_data(left)
+        newright = self._prepare_data(right)
 
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
+        if isinstance(y_true, pd.DataFrame):
+            y_true = y_true['y_true']
+
+        X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
         if X_sbs.shape[0] == 0:
             raise Warning(
                 'No possible matches based on current pruning --> not possible to fit.',
@@ -759,41 +828,24 @@ class LrDuplicateFinder:
             )
 
         if verbose:
-            precision, recall = _evalprecisionrecall(y_true=y_train, y_pred=X_sbs)
+            precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
             print('{} | Pruning score: precision: {:.2%}, recall: {:.2%}'.format(pd.datetime.now(), precision, recall))
-        # Expand X_sbs to:
-        # - include positives samples not included in pruning
-        # - fill those rows with 0 for the pruning scores
-        true_pos = y_train.loc[y_train == 1]
-        missed_pos = true_pos.loc[
-            true_pos.index.difference(
-                X_sbs.index
-            )
-        ]
-        X_missed = pd.DataFrame(
-            index=missed_pos,
-            columns=X_sbs.columns
+
+        # Redefine X_sbs and y_true to have a common index
+        ix_common = y_true.index.intersection(
+            X_sbs.index
         )
-        X_missed[self._connectcols] = 0
-        X_sbs = pd.concat(
-            [X_sbs, X_missed],
-            axis=0, ignore_index=False
-        )
-        # Redefine y_train to have a common index with x_sbs
-        y_train = y_train.loc[
-            y_train.index.intersection(
-                X_sbs.index
-            )
-        ]
-        X_train = X_sbs.loc[
-            y_train.index
-        ]
-        self._skmodel.fit(X_train, y_train)
+        y_true = y_true.loc[ix_common]
+        X_sbs = X_sbs.loc[ix_common]
+
+        # Fit the ScikitLearn Model
+        self._skmodel.fit(X_sbs, y_true)
+
         if verbose:
-            scores = self.score(left=left, right=right, pairs=pairs, kind='all')
+            scores = self.score(left=left, right=right, pairs=y_true, kind='all')
             assert isinstance(scores, dict)
             print(
-                '{} | Model score: precision: {:.2%}, recall: {:.2%}'.format(
+                '{} | Estimator score: precision: {:.2%}, recall: {:.2%}'.format(
                     pd.datetime.now(),
                     scores['precision'],
                     scores['recall']
@@ -802,67 +854,77 @@ class LrDuplicateFinder:
             pass
         return self
 
-    def _pruning_pred(self, left, right, pairs, addvocab='add'):
+    def _pruning_pred(self, left, right, y_true, addvocab='add'):
         """
-
+        Return the result of the pruning step with all possible matches marked as positive match
+        For precision and recall calculation
         Args:
-            left:
-            right:
-            pairs (pd.Series/pd.DataFrame):
-            addvocab:
+            left (pd.DataFrame):
+            right (pd.DataFrame):
+            y_true (pd.Series/pd.DataFrame): {['ix_left', 'ix_right']: y_true}
+            addvocab (str):
 
         Returns:
-
+            pd.Series {['ix_left', 'ix_right']: 1}
         """
-        newleft = self._prepare_data(self.prefunc(left))
-        newright = self._prepare_data(self.prefunc(right))
-        if isinstance(pairs, pd.DataFrame):
-            pairs = pairs['y_true']
-        y_true = pairs
-        self._pruning_fit_transform(left=newleft, right=newright, addvocab=addvocab)
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
+        newleft = self._prepare_data(left)
+        newright = self._prepare_data(right)
+        if isinstance(y_true, pd.DataFrame):
+            y_true = y_true['y_true']
+        X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab)
         y_pred = pd.Series(index=X_sbs.index).fillna(1)
         y_pred = indexwithytrue(y_true=y_true, y_pred=y_pred)
         return y_pred
 
-    def predict_proba(self, left, right, addvocab='add', verbose=False, addmissingleft=False) -> pd.Series:
+    def predict_proba(self, left, right, addvocab='add', verbose=False, addmissingleft=False) -> pd.DataFrame:
         """
-
+        Predict_proba
         Args:
-            left:
-            right:
-            addvocab:
-            verbose:
+            left (pd.DataFrame):
+            right (pd.DataFrame):
+            addvocab (pd.DataFrame):
+            verbose (bool):
+            addmissingleft (bool): add the missing left values where no possible matches found during pruning
 
         Returns:
-            pd.Series
+            pd.DataFrame : {['ix_left', 'ix_right']: [0, 1]}
+
+        Examples:
+            if addmissingleft is True:
+
+            ix_left     ix_right    0       1
+            m93         m51         0.8     0.2
+            m93         m87         0.4     0.6
+            m16         None        1.0     0.0
+
+            In this example, m93 has two possible matches from the pruning step (m51 and m87)
+            Of those two, only one (m51) is a predicted match
+            m16 has no possible matches because all of the possible records from the right record were pruned out
         """
 
         if verbose:
             print('{} | Start pred'.format(pd.datetime.now()))
-        newleft = self._prepare_data(self.prefunc(left))
-        newright = self._prepare_data(self.prefunc(right))
+        newleft = self._prepare_data(left)
+        newright = self._prepare_data(right)
 
-        self._pruning_fit_transform(left=newleft, right=newright, addvocab=addvocab)
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
+        X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
 
         # if we have results
         if X_sbs.shape[0] > 0:
             df_pred = self._skmodel.predict_proba(X_sbs)
-            y_proba = pd.DataFrame(
+            df_pred = pd.DataFrame(
                 df_pred,
                 index=X_sbs.index
-            )[1]
-            y_proba.name = 'y_proba'
+            )
         else:
             # Create an empty recipient
-            y_proba = pd.Series(
+            df_pred = pd.DataFrame(
                 index=pd.MultiIndex(
                     levels=[[], []],
                     labels=[[], []],
                     names=self._ixnamepairs
                 ),
-                name='y_proba'
+                columns=[0, 1]
             )
 
         # add a case for missing lefts
@@ -877,17 +939,16 @@ class LrDuplicateFinder:
                 ],
                 names=self._ixnamepairs
             )
-            missing_lefts = pd.Series(
-                index=missing_lefts,
-                name='y_proba'
-            ).fillna(
-                0
-            )
-            y_proba = pd.concat([y_proba, missing_lefts], axis=0)
-        assert isinstance(y_proba, pd.Series)
-        assert y_proba.name == 'y_proba'
-        assert y_proba.index.names == self._ixnamepairs
-        return y_proba
+            missing_lefts = pd.DataFrame(index=missing_lefts, columns=[0, 1])
+            # Because those matches were not found: 100% probability of not being a match, 0% proba of being a match
+            missing_lefts[0] = 1
+            missing_lefts[1] = 0
+            df_pred = pd.concat([df_pred, missing_lefts], axis=0, ignore_index=False)
+
+        assert isinstance(df_pred, pd.DataFrame)
+        assert df_pred.columns == [0, 1]
+        assert df_pred.index.names == self._ixnamepairs
+        return df_pred
 
     def predict(self, left, right, addvocab='add', verbose=False, addmissingleft=False):
         """
@@ -898,18 +959,19 @@ class LrDuplicateFinder:
             addvocab(str):
                 - 'add' --> add new vocab to existing vocab
                 - 'keep' --> keep existing vocab
-                - 'replace' --> replace existing vocab with new
+                - 'replace' --> replace existing vocab with new,
+            verbose (bool)
+            addmissingleft (bool): see doc of predict_proba
 
         Returns:
-            pd.Series
+            pd.Series: {['ix_left', 'ix_right']: [0.0 or 1.0]), 1.0 being a match
         """
-        y_proba = self.predict_proba(left=left, right=right, addvocab=addvocab,
+        df_pred = self.predict_proba(left=left, right=right, addvocab=addvocab,
                                      verbose=verbose, addmissingleft=addmissingleft)
-
         # noinspection PyUnresolvedReferences
-        y_pred = (y_proba > 0.5).astype(float)
+        y_pred = (df_pred[1] > 0.5).astype(float)
         assert isinstance(y_pred, pd.Series)
-        y_pred.name = 'y_proba'
+        y_pred.name = 'y_pred'
         return y_pred
 
     def _evalpruning(self, left, right, y_true, addvocab='add', verbose=False):
@@ -918,7 +980,7 @@ class LrDuplicateFinder:
         if isinstance(y_true, pd.DataFrame):
             y_true = y_true['y_true']
 
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
+        X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
         precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
         return precision, recall
 
@@ -961,51 +1023,12 @@ class LrDuplicateFinder:
         return scores
 
 
-def _preparevocab(on, left, right):
-    """
-    create a series with all the vocab wors
-    Args:
-        on (str): column to take for the vocabulary
-        left (pd.DataFrame):
-        right (pd.DataFrame)
-    Returns:
-        pd.Series
-    """
-    vocab = pd.Series(name=on)
-    for df in [left, right]:
-        vocab = pd.concat([vocab, df[on].dropna()], axis=0, ignore_index=True)
-    return vocab
-
-
-def innermatch(left, right, on, ixname='ix', lsuffix='_left', rsuffix='_right'):
-    """
-    Gives the indexes of the two dataframe where the ids are matching
-    Args:
-        left (pd.DataFrame): left df of the form {ixname:['name',..]}
-        right (pd.DataFrame): right df of the form {ixname:['name',..]}
-        on (str): name of the column
-        ixname (str): default 'ix'
-        lsuffix (str): default '_left'
-        rsuffix (str): default '_right'
-    Returns:
-        {['ix_left', 'ix_right']: [id_exact]}
-    """
-
-    left = left[[on]].dropna().copy().reset_index(drop=False)
-    right = right[[on]].dropna().copy().reset_index(drop=False)
-    ix_left = ixname + lsuffix
-    ix_right = ixname + rsuffix
-    scorename = on + '_exact'
-    x = pd.merge(left=left, right=right, left_on=on, right_on=on, how='inner', suffixes=[lsuffix, rsuffix])
-    x = x[[ix_left, ix_right]].set_index([ix_left, ix_right])
-    x[scorename] = 1
-    return x
-
-
 def _update_vocab(left, right, vocab=None, addvocab='add'):
     """
 
     Args:
+        left (pd.Series)
+        right (pd.Series)
         vocab (list):
         addvocab (str):
             - 'add' --> add new vocab to existing vocab
@@ -1033,25 +1056,6 @@ def _update_vocab(left, right, vocab=None, addvocab='add'):
     return vocab
 
 
-def _fit_tokenizer(left, right, tokenizer, vocab=None, addvocab='add'):
-    """
-    update the vocabulary of the tokenizer
-    Args:
-        left (pd.Series):
-        right (pd.Series):
-        vocab (list)
-        addvocab (str):
-
-
-    Returns:
-        self
-    """
-
-    vocab = _update_vocab(left=left, right=right, vocab=vocab, addvocab=addvocab)
-    tokenizer.fit(vocab)
-    return tokenizer
-
-
 def _transform_tkscore(left,
                        right,
                        vectorizer,
@@ -1061,11 +1065,15 @@ def _transform_tkscore(left,
                        outcol='score',
                        threshold=None):
     """
-    DO NOT RE-FIT the algo
     Args:
         left (pd.Series):
         right (pd.Series):
-        outcol (str):
+        vectorizer: TfIdf vectorizer or CountVectorizer
+        outcol (str): name of the output series
+        threshold (float): Filter on scores greater than or equal to the threshold
+        ixname (str)
+        lsuffix (str)
+        rsuffix(str)
     Returns:
         pd.Series
     """
@@ -1100,7 +1108,7 @@ def _transform_tkscore(left,
     ).set_index(
         ixnamepairs
     )
-    if not threshold is None:
+    if threshold is not None:
         score = score[score[scorename] >= threshold]
     score = score[scorename]
     return score

@@ -36,22 +36,22 @@ if __name__ == '__main__':
                 'stop_words': preprocessing.companystopwords,
                 'use_scores': ['tfidf', 'ngram'],
                 'threshold': 0.6,
-            }
-            # 'street': {
-            #     'type': 'FreeText',
-            #     'stop_words': preprocessing.streetstopwords,
-            #     'use_scores': ['tfidf', 'ngram', 'token'],
-            #     'threshold': 0.6
-            # },
-            # 'city': {
-            #     'type': 'FreeText',
-            #     'stop_words': preprocessing.citystopwords,
-            #     'use_scores': ['tfidf', 'ngram', 'fuzzy'],
-            #     'threshold': None
-            # },
-            # 'duns': {'type': 'Id'},
-            # 'postalcode': {'type': 'Code'},
-            # 'countrycode': {'type': 'Category'}
+            },
+            'street': {
+                'type': 'FreeText',
+                'stop_words': preprocessing.streetstopwords,
+                'use_scores': ['tfidf', 'ngram', 'token'],
+                'threshold': 0.6
+            },
+            'city': {
+                'type': 'FreeText',
+                'stop_words': preprocessing.citystopwords,
+                'use_scores': ['tfidf', 'ngram', 'fuzzy'],
+                'threshold': None
+            },
+            'duns': {'type': 'Id'},
+            'postalcode': {'type': 'Code'},
+            'countrycode': {'type': 'Category'}
         },
         estimator=Clf(n_estimators=n_estimators),
         verbose=False
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     dedupe.fit(
         left=train_left,
         right=train_right,
-        pairs=y_train,
+        y_true=y_train,
         verbose=False
     )
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from wookie.preutils import _chkixdf, addsuffix, rmvsuffix
+from wookie.preutils import addsuffix, rmvsuffix
 
 
 def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
@@ -120,37 +120,40 @@ def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname
     return xleft, xright, pairs
 
 
-def createsbs(pairs, left, right, lsuffix='_left', rsuffix='_right', ixname='ix'):
+def createsbs(pairs, left, right, use_cols=None, lsuffix='left', rsuffix='right', ixname='ix'):
     """
     Create a side by side table from a list of pairs (as a DataFrame)
     Args:
         pairs (pd.DataFrame/pd.Series): of the form {['ix_left', 'ix_right']:['y_true']}
         left (pd.DataFrame): of the form ['name'], index=ixname
         right (pd.DataFrame): of the form ['name'], index=ixname
-        lsuffix (str): default '_left'
-        rsuffix (str): default '_right'
+        use_cols (list): columns to use
+        lsuffix (str): default 'left'
+        rsuffix (str): default 'right'
         ixname (str): default 'ix' name of the index
 
     Returns:
         pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
     """
-    xleft = _chkixdf(left.copy(), ixname=ixname)
-    xright = _chkixdf(right.copy(), ixname=ixname)
+    ixnameleft = ixname + '_' + lsuffix
+    ixnameright = ixname + '_' + rsuffix
+    ixnamepairs = [ixnameleft, ixnameright]
+    if use_cols is None or len(use_cols) == 0:
+        use_cols = left.columns.intersection(right.columns)
+    xleft = left[use_cols].copy().reset_index(drop=False)
+    xright = right[use_cols].copy().reset_index(drop=False)
     xpairs = pairs.copy().reset_index(drop=False)
     if isinstance(xpairs, pd.Series):
         xpairs = pd.DataFrame(xpairs)
 
-    xleft = addsuffix(xleft, lsuffix).set_index(ixname + lsuffix)
-    xright = addsuffix(xright, rsuffix).set_index(ixname + rsuffix)
+    xleft = addsuffix(xleft, lsuffix).set_index(ixnameleft)
+    xright = addsuffix(xright, rsuffix).set_index(ixnameright)
     sbs = xpairs.join(
-        xleft, on=ixname + lsuffix, how='left'
+        xleft, on=ixnameright, how='left'
     ).join(
-        xright, on=ixname + rsuffix, how='left'
+        xright, on=ixnameright, how='left'
     ).set_index(
-        [
-            ixname + lsuffix,
-            ixname + rsuffix
-        ]
+        ixnamepairs
     )
     return sbs
 

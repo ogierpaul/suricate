@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 from fuzzywuzzy.fuzz import partial_token_set_ratio as fuzzyscore
 
+_suffixexact = 'exact'
+_suffixtoken = 'token'
+_suffixfuzzy = 'fuzzy'
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
