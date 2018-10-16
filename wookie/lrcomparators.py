@@ -629,7 +629,7 @@ class LrDuplicateFinder:
         X_sbs = connectors.createsbs(pairs=X_connect, left=left, right=right)
         return X_sbs
 
-    def fit(self, left, right, pairs, addvocab='add', verbose=None):
+    def fit(self, left, right, pairs, addvocab='add', verbose=False):
         """
 
         Args:
@@ -644,8 +644,6 @@ class LrDuplicateFinder:
         Returns:
             self
         """
-        if verbose is None:
-            verbose = self.verbose
         if verbose:
             print('{} | Start fit'.format(pd.datetime.now()))
         newleft = self._prepare_data(self.prefunc(left))
@@ -654,7 +652,7 @@ class LrDuplicateFinder:
             pairs = pairs['y_true']
         y_train = pairs
 
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=True)
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
         if X_sbs.shape[0] == 0:
             raise Warning(
                 'No possible matches based on current pruning --> not possible to fit.',

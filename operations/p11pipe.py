@@ -34,27 +34,27 @@ if __name__ == '__main__':
             'name': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.companystopwords,
-                'use_scores': ['tfidf', 'ngram', 'token'],
+                'use_scores': ['tfidf', 'ngram'],
                 'threshold': 0.6,
-            },
-            'street': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.streetstopwords,
-                'use_scores': ['tfidf', 'ngram', 'token'],
-                'threshold': 0.6
-            },
-            'city': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.citystopwords,
-                'use_scores': ['tfidf', 'ngram', 'fuzzy'],
-                'threshold': None
-            },
-            'duns': {'type': 'Id'},
-            'postalcode': {'type': 'Code'},
-            'countrycode': {'type': 'Category'}
+            }
+            # 'street': {
+            #     'type': 'FreeText',
+            #     'stop_words': preprocessing.streetstopwords,
+            #     'use_scores': ['tfidf', 'ngram', 'token'],
+            #     'threshold': 0.6
+            # },
+            # 'city': {
+            #     'type': 'FreeText',
+            #     'stop_words': preprocessing.citystopwords,
+            #     'use_scores': ['tfidf', 'ngram', 'fuzzy'],
+            #     'threshold': None
+            # },
+            # 'duns': {'type': 'Id'},
+            # 'postalcode': {'type': 'Code'},
+            # 'countrycode': {'type': 'Category'}
         },
         estimator=Clf(n_estimators=n_estimators),
-        verbose=True
+        verbose=False
     )
     dedupe.fit(
         left=train_left,
@@ -65,8 +65,9 @@ if __name__ == '__main__':
 
     for s, x, y_true, in zip(['train', 'test'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
+        print('\n****************\n')
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
-        precision, recall = dedupe._evalpruning(left=x[0], right=x[1], y_true=y_true, verbose=True)
+        precision, recall = dedupe._evalpruning(left=x[0], right=x[1], y_true=y_true, verbose=False)
         print(
             '{} | Pruning score: precision: {:.2%}, recall: {:.2%}, on batch {}'.format(
                 pd.datetime.now(),
