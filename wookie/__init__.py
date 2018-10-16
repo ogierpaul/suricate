@@ -1,1 +1,1 @@
-from wookie.comparators import LrDuplicateFinder
+from wookie.lrcomparators import LrDuplicateFinder
