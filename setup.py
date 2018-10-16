@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='wookie',
-      version='0.30',
+      version='0.31',
       description='MAAAAAAAAAAH',
       url='http://github.com/ogierpaul/wookie',
       author='Flying Circus',

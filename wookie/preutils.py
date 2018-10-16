@@ -2,11 +2,11 @@ import unicodedata
 
 import numpy as np
 import pandas as pd
-from fuzzywuzzy.fuzz import partial_token_set_ratio as fuzzyscore
 
 _suffixexact = 'exact'
 _suffixtoken = 'token'
 _suffixfuzzy = 'fuzzy'
+from wookie.sbscomparators import _fuzzy_score
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
@@ -171,7 +171,7 @@ def concatenate_names(m):
     for ix in range(1, len(var1)):
         # Compare fuzzy matching score with already concatenated string
         rnew = var1[ix]
-        score = fuzzyscore(res, rnew) / 100
+        score = _fuzzy_score(res, rnew)
         if pd.isnull(score) or score < 0.9:
             # if score is less than threshold add it
             res = ' '.join([res, rnew])

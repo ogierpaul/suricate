@@ -1,5 +1,7 @@
 import pandas as pd
 
+from wookie.preutils import concatenate_names
+
 
 class SingleGrouping:
     def __init__(self,
@@ -35,7 +37,7 @@ class SingleGrouping:
         self._ixnameright = self.ixname + self.rsuffix
         self._ixnamepairs = [self._ixnameleft, self._ixnameright]
 
-    def findduplicates(self, data, n_batches=None, n_records=3):
+    def launchdedupe(self, data, n_batches=None, n_records=3):
         """
 
         Args:
@@ -126,15 +128,15 @@ class SingleGrouping:
         return self.data
 
 
-def calc_existinggid(y_proba, refdata, ixnameleft='ix_left', ixnameright='ix_right', ixname='ix', gidname='gid'):
+def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='right', gidname='gid'):
     """
 
     Args:
         y_proba (pd.DataFrame/pd.Series): {[ixnameleft, ixnameright] : ['y_proba']
         refdata (pd.DataFrame): {ixname:[gidname, cols..]}
-        ixnameleft (str):
-        ixnameright (str):
         ixname (str):
+        lsuffix (str):
+        rsuffix (str):
         gidname (str):
 
     Returns:
@@ -142,6 +144,14 @@ def calc_existinggid(y_proba, refdata, ixnameleft='ix_left', ixnameright='ix_rig
     """
 
     def goodgids(r):
+        """
+        Return the most common gid
+        Args:
+            r (pd.Series): {'ixnameright':'gid'} for a common ixnameleft
+
+        Returns:
+            str
+        """
         assert isinstance(r, pd.Series)
         vc = r.value_counts()
         if vc.iloc[0] > 1:
@@ -149,7 +159,10 @@ def calc_existinggid(y_proba, refdata, ixnameleft='ix_left', ixnameright='ix_rig
         else:
             return r.iloc[0]
 
+    ixnameleft = '_'.join([ixname, lsuffix])
+    ixnameright = '_'.join([ixname, rsuffix])
     ixnamepairs = [ixnameleft, ixnameright]
+
     if isinstance(y_proba, pd.Series):
         y_proba = pd.DataFrame(y_proba).reset_index(drop=False)
     for c in ixnamepairs + ['y_proba']:
@@ -181,6 +194,7 @@ def calc_existinggid(y_proba, refdata, ixnameleft='ix_left', ixnameright='ix_rig
     results[gidname] = None
     # results :{ rangeix: [ixnameleft, gidname]}
 
+    # merge the two to get the the gids
     gids = pd.merge(
         left=pos_matches,
         right=ref,
@@ -200,12 +214,83 @@ def calc_existinggid(y_proba, refdata, ixnameleft='ix_left', ixnameright='ix_rig
 
 def calc_goldenrecord(data, gidcol, fieldselector):
     """
-
+    Calculate a golden record
     Args:
-        data:
-        gidcol:
-        fieldselector:
+        data (pd.DataFrame): {'ix':[cols,..... gid]}
+        gidcol (str):
+        fieldselector (dict): {colname: 'method'} \
+            method in ['popularity', 'first', 'last', 'concat']
 
     Returns:
-
+        pd.DataFrame
     """
+    possiblemethods = ['popularity', 'first', 'last', 'concat']
+
+    gb = data.groupby(by=[gidcol])
+    df = pd.DataFrame(index=data['gid'].unique())
+    for inputfield in fieldselector.keys():
+        method = fieldselector[inputfield]
+        if method == 'popularity':
+            df[inputfield] = gb[inputfield].apply(lambda r: _popularity(r, keep='first'))
+        elif method == 'first':
+            df[inputfield] = gb[inputfield].apply(lambda r: _byorder(r, keep='first'))
+        elif method == 'last':
+            df[inputfield] = gb[inputfield].apply(lambda r: _byorder(r, keep='last'))
+        elif method == 'concat':
+            df[inputfield] = gb[inputfield].apply(lambda r: _smartconcat(r))
+        else:
+            raise ValueError(
+                '{} | for field {} : method {} not in {}'.format(
+                    pd.datetime.now, inputfield, method, possiblemethods)
+            )
+    return df
+
+
+def _popularity(r, keep='first'):
+    """
+    return the most common value for this series
+    if there are none: return
+    i
+    Args:
+        r (pd.Series):
+        keep (str):
+
+    Returns:
+        scalar
+    """
+    r2 = r.dropna()
+    if r2.shape[0] is None:
+        return None
+    vc = r2.value_counts()
+    if vc.iloc[0] > 1:
+        return vc.index[0]
+    else:
+        return _byorder(r, keep=keep)
+
+
+def _byorder(r, keep='last'):
+    """
+    Args:
+        r (pd.Series):
+        keep (str):
+
+    Returns:
+        scalar
+    """
+    r2 = r.dropna()
+    if keep == 'first':
+        return r2.iloc[0]
+    elif keep == 'last':
+        return r2.iloc[-1]
+
+
+def _smartconcat(r):
+    """
+
+    Args:
+        r:
+
+    Returns:
+        aggregate view
+    """
+    return concatenate_names(r)

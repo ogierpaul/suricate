@@ -11,7 +11,9 @@ if __name__ == '__main__':
     ixname = 'ix'
     lsuffix = '_left'
     rsuffix = '_right'
-    n_estimators = 500
+    n_estimators = 5
+    dem_treshold = 0.5
+    nrows = 1000
     ixnameleft = ixname + lsuffix
     ixnameright = ixname + rsuffix
     ixnamepairs = [ixnameleft, ixnameright]
@@ -23,7 +25,7 @@ if __name__ == '__main__':
     # Data Preparation
     # left = pd.read_csv(filepath_left, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
-    df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
+    df_train = pd.read_csv(filepath_training, nrows=nrows).set_index(ixnamepairs)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
     train_left, train_right, y_train = wookie.separatesides(df_train)
     test_left, test_right, y_test = wookie.separatesides(df_test)
@@ -34,18 +36,16 @@ if __name__ == '__main__':
                 'type': 'FreeText',
                 'stop_words': preprocessing.companystopwords,
                 'use_scores': ['tfidf', 'ngram'],
-                'threshold': 0.6,
+                'threshold': dem_treshold,
             },
             'street': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.streetstopwords,
-                'use_scores': ['tfidf', 'ngram', 'token'],
-                'threshold': 0.6
+                'threshold': dem_treshold
             },
             'city': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.citystopwords,
-                'use_scores': ['tfidf', 'ngram', 'fuzzy'],
                 'threshold': None
             },
             'duns': {'type': 'Id'},
@@ -61,6 +61,7 @@ if __name__ == '__main__':
         y_true=y_train,
         verbose=False
     )
+    print('\n', dedupe._scorenames, '\n')
 
     for s, x, y_true, in zip(['train', 'test'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
