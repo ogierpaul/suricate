@@ -11,17 +11,17 @@ _navalue_score = None
 
 
 class BaseSbsComparator(TransformerMixin):
-    def __init__(self, left='left', right='right', compfunc=None, *args, **kwargs):
+    def __init__(self, on_left='left', on_right='right', compfunc=None, *args, **kwargs):
         """
         base class for all transformers
         Args:
-            left (str):
-            right (str):
+            on_left (str):
+            on_right (str):
             compfunc (function): ['fuzzy', 'token', 'exact']
         """
         TransformerMixin.__init__(self)
-        self.left = left
-        self.right = right
+        self.left = on_left
+        self.right = on_right
         if compfunc is None:
             raise ValueError('comparison function not provided with function', compfunc)
         assert callable(compfunc)
@@ -29,24 +29,22 @@ class BaseSbsComparator(TransformerMixin):
 
     def transform(self, X):
         """
+        Apply the compfunc to the on_left and on_right column
         Args:
             X (pd.DataFrame):
 
         Returns:
             np.ndarray
         """
-        compfunc = self.compfunc
-        if not compfunc is None:
-            y = X.apply(
-                lambda r: compfunc(
-                    r.loc[self.left],
-                    r.loc[self.right]
-                ),
-                axis=1
-            ).values.reshape(-1, 1)
-            return y
-        else:
-            raise ValueError('compfunc is not defined')
+        y = X.apply(
+            lambda r: self.compfunc(
+                r.loc[self.left],
+                r.loc[self.right]
+            ),
+            axis=1
+        ).values.reshape(-1, 1)
+        return y
+
 
     def fit(self, *_):
         return self
@@ -88,12 +86,12 @@ class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
     Compare two columns of a dataframe with one another using functions from fuzzywuzzy library
     """
 
-    def __init__(self, comparator=None, left='left', right='right', *args, **kwargs):
+    def __init__(self, on_left, on_right, comparator=None, *args, **kwargs):
         """
         Args:
             comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token']
-            left (str): name of left column
-            right (str): name of right column
+            on_left (str): name of left column
+            on_right (str): name of right column
             *args:
             **kwargs:
         """
@@ -109,8 +107,8 @@ class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
         BaseSbsComparator.__init__(
             self,
             compfunc=compfunc,
-            left=left,
-            right=right,
+            on_left=on_left,
+            on_right=on_right,
             *args,
             **kwargs
         )
@@ -122,52 +120,77 @@ class PipeSbsComparator(TransformerMixin):
     Align several FuzzyWuzzyComparator
     Provided that the column are named:
     comp1 = PipeComparator(
-    scoreplan={
-        'name': ['exact', 'fuzzy', 'token'],
-        'street': ['exact', 'token'],
-        'duns': ['exact'],
-        'city': ['fuzzy'],
-        'postalcode': ['exact'],
-        'country_code':['exact']
-    }
-)
+        scoreplan={
+            'name': ['exact', 'fuzzy', 'token'],
+            'street': ['exact', 'token'],
+            'duns': ['exact'],
+            'city': ['fuzzy'],
+            'postalcode': ['exact'],
+            'country_code':['exact']
+        }
+    )
+    if no scoreplan is passed, (empty dict), returns an empty array
     """
 
-    def __init__(self, scoreplan):
+    def __init__(self, scoreplan, lsuffix='left', rsuffix='right', n_jobs=1, *args, **kwargs):
         """
 
         Args:
             scoreplan (dict): of type {'col': 'comparator'}
+            lsuffix (str): 'left'
+            rsuffix (str): 'right'
+            n_jobs (int)
         """
         TransformerMixin.__init__(self)
+        assert isinstance(scoreplan, dict)
         self.scoreplan = scoreplan
+        self.lsuffix = lsuffix
+        self.rsuffix = rsuffix
+        self._stages = list()
+        self._outcols = list()
+        for usedfield in self.scoreplan.keys():
+            left = '_'.join([usedfield, 'left'])
+            right = '_'.join([usedfield, 'right'])
+            for usedscore in self.scoreplan[usedfield]:
+                self._stages.append(
+                    FuzzyWuzzySbsComparator(on_left=left, on_right=right, comparator=usedscore)
+                )
+                self._outcols.append('_'.join([usedfield, usedscore]))
+        if len(self._stages) > 0:
+            self._pipe = make_union(n_jobs=n_jobs, *self._stages, *args, **kwargs)
+        else:
+            self._pipe = TransformerMixin()
+        pass
 
     def fit(self, *args, **kwargs):
+        """
+        Do nothing
+        Args:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
         return self
 
-    def transform(self, X, n_jobs=1, *args, **kwargs):
+    def transform(self, X, *args, **kwargs):
         """
-
+        Transform method
+        if no score plan passed return empty array
         Args:
             X (pd.DataFrame):
-            n_jobs (int): number of jobs
             *args:
             **kwargs:
 
         Returns:
             np.ndarray
         """
-        stages = []
-        for k in self.scoreplan.keys():
-            left = '_'.join([k, 'left'])
-            right = '_'.join([k, 'right'])
-            for v in self.scoreplan[k]:
-                stages.append(
-                    FuzzyWuzzySbsComparator(left=left, right=right, comparator=v)
-                )
-        pipe = make_union(n_jobs=n_jobs, *stages, *args, **kwargs)
-        res = pipe.fit_transform(X)
-
+        if len(self._stages) > 0:
+            res = self._pipe.fit_transform(X)
+        else:
+            # if no score plan passed return empty array
+            res = np.zeros(shape=(X.shape[0], 0))
         return res
 
 
@@ -241,7 +264,7 @@ def _evalprecisionrecall(y_true, y_pred):
     """
 
     Args:
-        y_pred (pd.DataFrame/pd.Series):
+        y_pred (pd.DataFrame/pd.Series): everything that is index is counted as true
         y_true (pd.Series):
 
     Returns:
@@ -249,6 +272,7 @@ def _evalprecisionrecall(y_true, y_pred):
     """
     true_pos = y_true.loc[y_true > 0]
     true_neg = y_true.loc[y_true == 0]
+    # EVERYTHING THAT IS CAUGHT BY Y_PRED IS CONSIDERED AS TRUE
     catched_pos = y_pred.loc[true_pos.index.intersection(y_pred.index)]
     catched_neg = y_pred.loc[y_pred.index.difference(catched_pos.index)]
     missed_pos = true_pos.loc[true_pos.index.difference(y_pred.index)]

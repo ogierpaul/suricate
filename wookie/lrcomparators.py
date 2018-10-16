@@ -6,12 +6,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
-# TO CHECK
-import wookie.comparators
 import wookie.preutils
+# TO CHECK
+import wookie.sbscomparators
 from wookie import connectors
 # noinspection PyProtectedMember
-from wookie.comparators import _evalprecisionrecall, _metrics
+from wookie.sbscomparators import _evalprecisionrecall, _metrics
 
 # TODO: initiate X_sbs when Pipeplan is None
 
@@ -179,19 +179,8 @@ class LrTokenComparator(BaseLrComparator):
         """
         newleft, newright = self._toseries(left=left, right=right)
         if addvocab in ['add', 'replace']:
-            # TODO: Check
-            try:
-                _tempabbefore = len(self._vocab)
-                _tempvocbefore = len(self.tokenizer.vocabulary_)
-            except:
-                _tempvocbefore = 0
-                _tempabbefore = 0
             self._vocab = _update_vocab(left=newleft, right=newright, vocab=self._vocab, addvocab=addvocab)
             self.tokenizer = self.tokenizer.fit(self._vocab)
-            _tempvocafter = len(self.tokenizer.vocabulary_)
-            _tempabafter = len(self._vocab)
-            print('vocab now: {}, {} lines added'.format(_tempabafter, _tempabafter - _tempabbefore))
-            print('vocabulary_ now: {}, {} lines added'.format(_tempvocafter, _tempvocafter - _tempvocbefore))
         return self
 
     def transform(self, left, right, addvocab='add', *args, **kwargs):
@@ -442,9 +431,9 @@ class LrDuplicateFinder:
         )
         self._connectcols = [con.outcol for con in self._lrcomparators]
         # Prepare the Pipe
-        dp_connectscores = wookie.comparators.DataPasser(on_cols=self._connectcols)
+        dp_connectscores = wookie.sbscomparators.DataPasser(on_cols=self._connectcols)
 
-        sbspipe = wookie.comparators.PipeSbsComparator(
+        sbspipe = wookie.sbscomparators.PipeSbsComparator(
             scoreplan=self._sbspipeplan
         )
         # noinspection PyTypeChecker
@@ -757,7 +746,9 @@ class LrDuplicateFinder:
             print('{} | Start pred'.format(pd.datetime.now()))
         newleft = self._prepare_data(self.prefunc(left))
         newright = self._prepare_data(self.prefunc(right))
-        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab)
+
+        self._pruning_fit_transform(left=newleft, right=newright, addvocab=addvocab)
+        X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
 
         # if we have results
         if X_sbs.shape[0] > 0:
@@ -825,16 +816,14 @@ class LrDuplicateFinder:
         y_pred.name = 'y_proba'
         return y_pred
 
-    def _evalpruning(self, left, right, pairs, addvocab='add', verbose=False):
+    def _evalpruning(self, left, right, y_true, addvocab='add', verbose=False):
         newleft = self._prepare_data(self.prefunc(left))
         newright = self._prepare_data(self.prefunc(right))
-        if isinstance(pairs, pd.DataFrame):
-            pairs = pairs['y_true']
-        y_train = pairs
+        if isinstance(y_true, pd.DataFrame):
+            y_true = y_true['y_true']
 
-        self._pruning_fit_transform(left=newleft, right=newright, addvocab=addvocab)
         X_sbs = self._connectscores(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
-        precision, recall = _evalprecisionrecall(y_true=y_train, y_pred=X_sbs)
+        precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
         return precision, recall
 
     def score(self, left, right, pairs, kind='accuracy'):
@@ -849,28 +838,28 @@ class LrDuplicateFinder:
             float
         """
         assert kind in ['accuracy', 'precision', 'recall', 'f1', 'all']
-        scores = self._scores(left=left, right=right, pairs=pairs)
+        scores = self._scores(left=left, right=right, y_true=pairs)
         if kind != 'all':
             return scores[kind]
         else:
             return scores
 
-    def _scores(self, left, right, pairs):
+    def _scores(self, left, right, y_true):
         """
 
         Args:
             left:
             right:
-            pairs:
+            y_true:
 
         Returns:
             dict
         """
         y_pred = self.predict(left=left, right=right)
         assert isinstance(y_pred, pd.Series)
-        if isinstance(pairs, pd.DataFrame):
-            pairs = pairs['y_true']
-        y_true = pairs
+        if isinstance(y_true, pd.DataFrame):
+            y_true = y_true['y_true']
+        y_true = y_true
         assert isinstance(y_true, pd.Series)
         scores = _metrics(y_true=y_true, y_pred=y_pred)
         return scores

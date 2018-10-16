@@ -196,3 +196,16 @@ def calc_existinggid(y_proba, refdata, ixnameleft='ix_left', ixnameright='ix_rig
     results = pd.concat([results, wg[[ixnameleft, gidname]]], axis=0, ignore_index=True)
     results = results.rename(columns={ixnameleft: ixname}).set_index(ixname)[gidname]
     return results
+
+
+def calc_goldenrecord(data, gidcol, fieldselector):
+    """
+
+    Args:
+        data:
+        gidcol:
+        fieldselector:
+
+    Returns:
+
+    """
