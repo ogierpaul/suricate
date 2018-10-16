@@ -974,7 +974,7 @@ class LrDuplicateFinder:
         y_pred.name = 'y_pred'
         return y_pred
 
-    def _evalpruning(self, left, right, y_true, addvocab='add', verbose=False):
+    def evalpruning(self, left, right, y_true, addvocab='add', verbose=False):
         newleft = self._prepare_data(self.prefunc(left))
         newright = self._prepare_data(self.prefunc(right))
         if isinstance(y_true, pd.DataFrame):
@@ -996,13 +996,13 @@ class LrDuplicateFinder:
             float
         """
         assert kind in ['accuracy', 'precision', 'recall', 'f1', 'all']
-        scores = self._scores(left=left, right=right, y_true=pairs)
+        scores = self.scores(left=left, right=right, y_true=pairs)
         if kind != 'all':
             return scores[kind]
         else:
             return scores
 
-    def _scores(self, left, right, y_true):
+    def scores(self, left, right, y_true):
         """
 
         Args:

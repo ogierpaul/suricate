@@ -2,9 +2,8 @@ import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier as Clf
 from sklearn.model_selection import train_test_split
 
-import wookie.lrcomparators
+import wookie
 from operations import companypreparation as preprocessing
-from wookie import connectors
 
 if __name__ == '__main__':
     # Variable definition
@@ -26,9 +25,9 @@ if __name__ == '__main__':
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training).set_index(ixnamepairs)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = connectors.separatesides(df_train)
-    test_left, test_right, y_test = connectors.separatesides(df_test)
-    dedupe = wookie.lrcomparators.LrDuplicateFinder(
+    train_left, train_right, y_train = wookie.separatesides(df_train)
+    test_left, test_right, y_test = wookie.separatesides(df_test)
+    dedupe = wookie.LrDuplicateFinder(
         prefunc=preprocessing.preparedf,
         scoreplan={
             'name': {
@@ -67,7 +66,7 @@ if __name__ == '__main__':
                              [y_train, y_test]):
         print('\n****************\n')
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
-        precision, recall = dedupe._evalpruning(left=x[0], right=x[1], y_true=y_true, verbose=False)
+        precision, recall = dedupe.evalpruning(left=x[0], right=x[1], y_true=y_true, verbose=False)
         print(
             '{} | Pruning score: precision: {:.2%}, recall: {:.2%}, on batch {}'.format(
                 pd.datetime.now(),
@@ -76,7 +75,7 @@ if __name__ == '__main__':
                 s
             )
         )
-        scores = dedupe._scores(left=x[0], right=x[1], y_true=y_true)
+        scores = dedupe.scores(left=x[0], right=x[1], y_true=y_true)
         print(
             '{} | Model score: precision: {:.2%}, recall: {:.2%}, on batch {}'.format(
                 pd.datetime.now(),
