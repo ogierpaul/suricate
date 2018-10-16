@@ -687,25 +687,25 @@ class LrDuplicateFinder:
                     else:
                         self._sbspipeplan[actualcolname].append(s2)
 
-                if self._stop_words.get(actualcolname) is not None:
-                    swcolname = actualcolname + '_' + self._suffixwosw
-                    self._scorenames[inputfield].append(
-                        '_'.join([swcolname, self._suffixngram])
-                    )
-                    self._scorenames[inputfield].append(
-                        '_'.join([swcolname, self._suffixtoken])
-                    )
-                    self._lrcomparators.append(LrTokenComparator(
-                        on=swcolname,
-                        ixname=self.ixname,
-                        lsuffix=self.lsuffix,
-                        rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixngram,
-                        vectorizermodel='tfidf',
-                        ngram_range=self._ngram_char,
-                        analyzer='char'
-                    ))
-                    self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
+            if self._stop_words.get(actualcolname) is not None:
+                swcolname = actualcolname + '_' + self._suffixwosw
+                self._scorenames[inputfield].append(
+                    '_'.join([swcolname, self._suffixngram])
+                )
+                self._scorenames[inputfield].append(
+                    '_'.join([swcolname, self._suffixtoken])
+                )
+                self._lrcomparators.append(LrTokenComparator(
+                    on=swcolname,
+                    ixname=self.ixname,
+                    lsuffix=self.lsuffix,
+                    rsuffix=self.rsuffix,
+                    scoresuffix=self._suffixngram,
+                    vectorizermodel='tfidf',
+                    ngram_range=self._ngram_char,
+                    analyzer='char'
+                ))
+                self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
 
         pass
 
