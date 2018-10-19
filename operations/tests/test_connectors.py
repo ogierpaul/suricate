@@ -2,14 +2,15 @@ from unittest import TestCase
 
 import pandas as pd
 
-from wookie.connectors import cartesian_join, separatesides
+from wookie.connectors import cartesian_join, separatesides, createsbs, showpairs
+from wookie.preutils import _ixnames
 
 ixname = 'myindex'
 lsuffix = 'left'
 rsuffix = 'right'
-ixnameleft = ixname + '_' + lsuffix
-ixnameright = ixname + '_' + rsuffix
-ixnamepairs = [ixnameleft, ixnameright]
+ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+)
 samplecol = 'name'
 
 left = pd.DataFrame(
@@ -39,6 +40,7 @@ sidebyside = pd.DataFrame(
 )
 
 
+
 class TestCartesian_join(TestCase):
     def test_cartesian_join(self):
         df = cartesian_join(left=left, right=right, lsuffix=lsuffix, rsuffix=rsuffix)
@@ -66,31 +68,58 @@ class TestSeparatesides(TestCase):
         newleft, newright, y_true = separatesides(
             df=sbs, lsuffix=lsuffix, rsuffix=rsuffix, y_true_col=y_true_col, ixname=ixname
         )
-        self.newleft = newleft
-        self.newright = newright
-        self.y_true = y_true
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixname = ixname
-        self.ixnameleft = self.ixname + '_' + self.lsuffix
-        self.ixnameright = self.ixname + '_' + self.rsuffix
+        ixnameleft, ixnameright, ixnamepairs = _ixnames(
+            ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+        )
 
         # Check all the cols in the right place & they have the expected number of rows
-        for sidedf, suffix in zip([self.newleft, self.newright], [self.lsuffix, self.rsuffix]):
+        for sidedf, suffix in zip([newleft, newright], [lsuffix, rsuffix]):
             oldcols = [c for c in sidebyside.columns if c[-len(suffix):] == suffix]
 
             for oldcol in oldcols:
                 newcol = oldcol[:-(len(suffix) + 1)]
                 assert newcol in sidedf.reset_index(drop=False).columns
-            tempixname = self.ixname + '_' + suffix
+            tempixname = ixname + '_' + suffix
             assert sbs.drop_duplicates(subset=[tempixname]).shape[0] == sidedf.shape[0]
             assert pd.Index(sbs[tempixname].drop_duplicates()).difference(sidedf.index).shape[0] == 0
 
         # check ix_pairs:
-        assert isinstance(self.y_true, pd.Series)
-        assert set(y_true.index.names) == {self.ixnameleft, self.ixnameright}
+        assert isinstance(y_true, pd.Series)
+        assert set(y_true.index.names) == set(ixnamepairs)
+        assert y_true.shape[0] == sbs.shape[0]
         pass
 
 
 def test_createsbs():
-    pass
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
+    newleft, newright, y_true = separatesides(
+        df=sidebyside, lsuffix=lsuffix, rsuffix=rsuffix, y_true_col='y_true', ixname=ixname
+    )
+    sbs = createsbs(pairs=y_true, left=newleft, right=newright, lsuffix=lsuffix, rsuffix=rsuffix, ixname=ixname)
+    assert isinstance(sbs, pd.DataFrame)
+    assert y_true.shape[0] == sbs.shape[0]
+    assert set(sbs.index.names) == set(ixnamepairs)
+
+
+def test_showpairs():
+    newleft, newright, y_true = separatesides(
+        df=sidebyside, lsuffix=lsuffix, rsuffix=rsuffix, y_true_col='y_true', ixname=ixname
+    )
+    pairs = y_true.loc[y_true == 1]
+    use_cols = [samplecol]
+    res = showpairs(pairs=pairs,
+                    left=newleft,
+                    right=newright,
+                    use_cols=use_cols,
+                    ixname=ixname,
+                    lsuffix=lsuffix,
+                    rsuffix=rsuffix)
+    assert isinstance(res, pd.DataFrame)
+    assert res.shape[0] == pairs.shape[0]
+    assert set(res.columns) == set(
+        [c + '_' + lsuffix for c in use_cols] + [
+            c + '_' + rsuffix for c in use_cols
+        ] + [pairs.name])
+    return res

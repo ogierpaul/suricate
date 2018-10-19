@@ -3,10 +3,12 @@ import unicodedata
 import numpy as np
 import pandas as pd
 
+from wookie.sbscomparators import _fuzzy_score
+
 _suffixexact = 'exact'
 _suffixtoken = 'token'
 _suffixfuzzy = 'fuzzy'
-from wookie.sbscomparators import _fuzzy_score
+
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
@@ -63,22 +65,22 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     if s.endswith(('.0')):
         s = s[:-2]
     ## Remove special chars
-    if not rmvchars is None:
+    if rmvchars is not None:
         for c in rmvchars:
             s = s.replace(c, '')
     if len(s) == 0:
         return None
     ## Remove bad words
-    if not rmvwords is None:
+    if rmvwords is not None:
         if s in rmvwords:
             return None
     ## when done fill with leading zeroes
-    if not zfill is None:
+    if zfill is not None:
         s = s.zfill(zfill)
     return s
 
 
-def _ixnames(ixname='ix', lsuffix='_left', rsuffix='right'):
+def _ixnames(ixname='ix', lsuffix='left', rsuffix='right'):
     """
 
     Args:
@@ -92,7 +94,8 @@ def _ixnames(ixname='ix', lsuffix='_left', rsuffix='right'):
     ixnameleft = '_'.join([ixname, lsuffix])
     ixnameright = '_'.join([ixname, rsuffix])
     ixnamepairs = [ixnameleft, ixnameright]
-    return ixnameleft, ixnameleft, ixnamepairs
+    return ixnameleft, ixnameright, ixnamepairs
+
 
 def lowerascii(s, lower=True):
     """
@@ -211,7 +214,7 @@ def rmvstopwords(myword, stop_words=None, ending_words=None):
         return None
     myword = lowerascii(myword)
     mylist = split(myword)
-    mylist = [m for m in mylist if not m in stop_words]
+    mylist = [m for m in mylist if m not in stop_words]
 
     if ending_words is not None:
         newlist = []

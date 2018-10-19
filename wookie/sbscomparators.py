@@ -45,7 +45,6 @@ class BaseSbsComparator(TransformerMixin):
         ).values.reshape(-1, 1)
         return y
 
-
     def fit(self, *_):
         return self
 
@@ -73,7 +72,7 @@ class DataPasser(TransformerMixin):
         Returns:
 
         """
-        if not self.on_cols is None:
+        if self.on_cols is not None:
             assert isinstance(X, pd.DataFrame)
             res = X[self.on_cols]
         else:

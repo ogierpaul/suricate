@@ -1,7 +1,6 @@
-import numpy as np
 import pandas as pd
 
-from wookie.preutils import addsuffix, rmvsuffix
+from wookie.preutils import addsuffix, rmvsuffix, _ixnames
 
 
 def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
@@ -108,19 +107,31 @@ def separatesides(df, lsuffix='left', rsuffix='right', y_true_col='y_true', ixna
     Returns:
         pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
     """
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
 
     def takeside(df, suffix, ixname):
+        """
+
+        Args:
+            df (pd.DataFrame):
+            suffix (str):
+            ixname (str):
+
+        Returns:
+
+        """
         new = df.copy().reset_index(drop=False)
         new = new[list(filter(lambda r: r[-len(suffix):] == suffix, new.columns))]
         new = rmvsuffix(new, suffix).drop_duplicates(subset=[ixname])
         new.set_index([ixname], inplace=True)
         return new
 
-    xleft = takeside(df, lsuffix, ixname=ixname)
-    xright = takeside(df, rsuffix, ixname=ixname)
-    pairs = df[y_true_col].set_index().copy(
+    xleft = takeside(df=df, suffix=lsuffix, ixname=ixname)
+    xright = takeside(df=df, suffix=rsuffix, ixname=ixname)
+    pairs = df.set_index(ixnamepairs).loc[:, y_true_col].copy(
     )
-    pairs.name = y_true_col
     return xleft, xright, pairs
 
 
@@ -139,9 +150,9 @@ def createsbs(pairs, left, right, use_cols=None, lsuffix='left', rsuffix='right'
     Returns:
         pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
     """
-    ixnameleft = ixname + '_' + lsuffix
-    ixnameright = ixname + '_' + rsuffix
-    ixnamepairs = [ixnameleft, ixnameright]
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
     if use_cols is None or len(use_cols) == 0:
         use_cols = left.columns.intersection(right.columns)
     xleft = left[use_cols].copy().reset_index(drop=False)
@@ -161,48 +172,7 @@ def createsbs(pairs, left, right, use_cols=None, lsuffix='left', rsuffix='right'
     return sbs
 
 
-def safeconcat(dfs, usecols):
-    """
-    Concatenate two dataframe vertically using the same columns
-    Checks that the indexes do not overlap
-    safeconcat([df1,df2], usecols ['name']
-    Args:
-        dfs (list): [df1, df2] list of two dataframe
-        usecols (list): list of column names
-
-    Returns:
-        pd.DataFrame {'ix': [cols]}
-    """
-    assert isinstance(dfs, list)
-    df1 = dfs[0]
-    assert isinstance(df1, pd.DataFrame)
-    df2 = dfs[1]
-    assert isinstance(df2, pd.DataFrame)
-
-    # Check that the two indexes are of the same type
-    for df in [df1, df2]:
-        if df.index.dtype != np.dtype('O') or df.index.dtype in [np.dtype('float64'), np.dtype('int32')]:
-            raise IndexError(
-                'Non-string index type {}: all indexes should be string'.format(
-                    type(df.index)
-                )
-            )
-
-    intersection = np.intersect1d(df1.index, df2.index)
-    if intersection.shape[0] > 0:
-        raise KeyError('The indexes of the two df overlap: {}'.format(intersection))
-    X = pd.concat(
-        [
-            df1[usecols],
-            df2[usecols]
-        ],
-        axis=0,
-        ignore_index=False
-    )
-    return X
-
-
-def showpairs(pairs, left, right, use_cols=None, filterzeroes=False):
+def showpairs(pairs, left, right, use_cols=None, ixname='ix', lsuffix='left', rsuffix='right', filterzeroes=False):
     """
     Like createsbs, but reorder the columns to compare left and right columns
     Args:
@@ -210,48 +180,31 @@ def showpairs(pairs, left, right, use_cols=None, filterzeroes=False):
         left (pd.DataFrame): {ix: [cols]}
         right (pd.DataFrame): {ix: [cols]}
         use_cols (list): [name, duns, ..]
+        ixname (str):
+        lsuffix (str):
+        rsuffix (str):
         filterzeroes (bool): 
 
     Returns:
         pd.DataFrame: {[ix_left, ix_right]: [name_left, name_right, duns_left, duns_right]}
     """
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
     if isinstance(pairs, pd.Series):
         xpairs = pd.DataFrame(pairs).copy()
     else:
         xpairs = pairs.copy()
     if use_cols is None:
         use_cols = left.columns.intersection(right.columns)
-    res = createsbs(pairs=xpairs, left=left, right=right, use_cols=use_cols)
+    res = createsbs(pairs=xpairs, left=left, right=right, use_cols=use_cols,
+                    ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
     displaycols = xpairs.columns.tolist()
     for c in use_cols:
-        displaycols.append(c + '_left')
-        displaycols.append(c + '_right')
+        displaycols.append(c + '_' + lsuffix)
+        displaycols.append(c + '_' + rsuffix)
     res = res[displaycols]
     return res
-
-
-def concattrainnew(left, right, trainsbs, transfunc):
-    """
-    Args:
-        left (pd.DataFrame): left data {ixname: [cols]}
-        right (pd.DataFrame): right data {ixname: [cols]}
-        trainsbs (pd.DataFrame): side_by_side analysis of the data \
-            [ixname_lsuffix, ixname_rsuffix, col_lsuffix, col_rsuffix]
-        transfunc (callable): preprocessing function
-
-    Returns:
-        pd.DataFrame, pd.DataFrame, pd.DataFrame: X_left {'ix': ['name']}, X_right, pairs {['ix_left', 'ix_right']: ['y_true']}
-    """
-
-    trainleft, trainright, pairs = separatesides(trainsbs)
-    newleft = transfunc(left)
-    newright = transfunc(right)
-    trainleft = transfunc(trainleft)
-    trainright = transfunc(trainright)
-    usecols = list(set(trainleft.columns).intersection(set(newleft.columns)))
-    X_left = safeconcat([trainleft, newleft], usecols=usecols)
-    X_right = safeconcat([trainright, newright], usecols=usecols)
-    return X_left, X_right, pairs
 
 
 def indexwithytrue(y_true, y_pred):

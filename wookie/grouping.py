@@ -8,8 +8,8 @@ class SingleGrouping:
                  dedupe,
                  data=None,
                  ixname='ix',
-                 lsuffix='_left',
-                 rsuffix='_right',
+                 lsuffix='left',
+                 rsuffix='right',
                  gidname='gid',
                  verbose=False):
         """
@@ -29,7 +29,7 @@ class SingleGrouping:
         self.dedupe = dedupe
         self.verbose = verbose
         self.gidname = gidname
-        if not data is None:
+        if data is not None:
             self.data = data
         else:
             self.data = pd.DataFrame()
@@ -42,6 +42,8 @@ class SingleGrouping:
 
         Args:
             data (pd.DataFrame):
+            n_batches (int): Number of batches
+            n_records (int): number of records in each batch
 
         Returns:
             pd.DataFrame
@@ -87,7 +89,7 @@ class SingleGrouping:
         return newrecord
 
     def _initcleandata(self):
-        if not self.gidname in self.data.columns or self.data[self.gidname].dropna().shape[0] == 0:
+        if self.gidname not in self.data.columns or self.data[self.gidname].dropna().shape[0] == 0:
             self.data[self.gidname] = None
             startix = self.data.index[0]
             y_proba = pd.DataFrame(
@@ -211,6 +213,7 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
     results = results.rename(columns={ixnameleft: ixname}).set_index(ixname)[gidname]
     return results
 
+
 def calc_goldenrecord(data, gidcol, fieldselector):
     """
     Calculate a golden record
@@ -262,6 +265,7 @@ def _checkvalue(r):
         return None
     else:
         return r2
+
 
 def _popularity(r, keep='first'):
     """
