@@ -259,7 +259,7 @@ class NeoConnector:
         self.name_cols = name_cols
         self.entity_cols = entity_cols
         self.location_cols = location_cols
-        assert isinstance(g, Graph)
+        assert isinstance(graph, Graph)
         self.graph = graph
         pass
 
