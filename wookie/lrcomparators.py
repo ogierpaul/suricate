@@ -7,7 +7,7 @@ from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
 from wookie.connectors import cartesian_join, createsbs, indexwithytrue
-from wookie.preutils import lowerascii, idtostr, rmvstopwords, _suffixexact, _suffixtoken, _suffixfuzzy
+from wookie.preutils import lowerascii, idtostr, rmvstopwords, _suffixexact, _suffixtoken, _suffixfuzzy, _ixnames
 # noinspection PyProtectedMember
 from wookie.sbscomparators import _evalprecisionrecall, _metrics, DataPasser, PipeSbsComparator
 
@@ -47,9 +47,9 @@ class BaseLrComparator(TransformerMixin):
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
         self.scoresuffix = scoresuffix
-        self.ixnameleft = '_'.join([self.ixname, self.lsuffix])
-        self.ixnameright = '_'.join([self.ixname, self.rsuffix])
-        self.ixnamepairs = [self.ixnameleft, self.ixnameright]
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+            ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
+        )
         self.store_threshold = store_threshold
         self.outcol = '_'.join([self.on, self.scoresuffix])
         pass
@@ -332,9 +332,9 @@ class LrPruningConnector:
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
-        self.ixnameleft = '_'.join([self.ixname, self.lsuffix])
-        self.ixnameright = '_'.join([self.ixname, self.rsuffix])
-        self.ixnamepairs = [self.ixnameleft, self.ixnameright]
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+            ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
+        )
         if pruning_thresholds is not None:
             assert isinstance(pruning_thresholds, dict)
             self.pruning_thresholds = pruning_thresholds
@@ -518,9 +518,9 @@ class LrDuplicateFinder:
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
         # Derive the new column names
-        self._ixnameleft = '_'.join([self.ixname, self.lsuffix])
-        self._ixnameright = '_'.join([self.ixname, self.rsuffix])
-        self._ixnamepairs = [self._ixnameleft, self._ixnameright]
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+            ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
+        )
         self._suffixascii = 'ascii'
         self._suffixwosw = 'wostopwords'
         self._suffixid = 'cleaned'
@@ -922,7 +922,7 @@ class LrDuplicateFinder:
                 index=pd.MultiIndex(
                     levels=[[], []],
                     labels=[[], []],
-                    names=self._ixnamepairs
+                    names=self.ixnamepairs
                 ),
                 columns=[0, 1]
             )
@@ -930,14 +930,14 @@ class LrDuplicateFinder:
         # add a case for missing lefts
         if addmissingleft is True:
             missing_lefts = newleft.index.difference(
-                X_sbs.index.get_level_values(self._ixnameleft)
+                X_sbs.index.get_level_values(self.ixnameleft)
             )
             missing_lefts = pd.MultiIndex.from_product(
                 [
                     missing_lefts,
                     [None]
                 ],
-                names=self._ixnamepairs
+                names=self.ixnamepairs
             )
             missing_lefts = pd.DataFrame(index=missing_lefts, columns=[0, 1])
             # Because those matches were not found: 100% probability of not being a match, 0% proba of being a match
@@ -947,7 +947,7 @@ class LrDuplicateFinder:
 
         assert isinstance(df_pred, pd.DataFrame)
         assert set(df_pred.columns) == {0, 1}
-        assert df_pred.index.names == self._ixnamepairs
+        assert df_pred.index.names == self.ixnamepairs
         return df_pred
 
     def predict(self, left, right, addvocab='add', verbose=False, addmissingleft=False):
@@ -1082,9 +1082,9 @@ def _transform_tkscore(left,
     right = right.dropna().copy()
     assert isinstance(left, pd.Series)
     assert isinstance(right, pd.Series)
-    ixnameleft = ixname + '_' + lsuffix
-    ixnameright = ixname + '_' + rsuffix
-    ixnamepairs = [ixnameleft, ixnameright]
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
     # If we cannot find a single value we return blank
     if left.shape[0] == 0 or right.shape[0] == 0:
         ix = pd.MultiIndex(levels=[[], []],

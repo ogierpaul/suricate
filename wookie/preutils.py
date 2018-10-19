@@ -78,6 +78,22 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     return s
 
 
+def _ixnames(ixname='ix', lsuffix='_left', rsuffix='right'):
+    """
+
+    Args:
+        ixname (str): 'ix'
+        lsuffix (str): 'left'
+        rsuffix (str): 'right'
+
+    Returns:
+        str, str, list(): 'ix_left', 'ix_right', ['ix_left', 'ix_right']
+    """
+    ixnameleft = '_'.join([ixname, lsuffix])
+    ixnameright = '_'.join([ixname, rsuffix])
+    ixnamepairs = [ixnameleft, ixnameright]
+    return ixnameleft, ixnameleft, ixnamepairs
+
 def lowerascii(s, lower=True):
     """
     Normalize to the ascii format

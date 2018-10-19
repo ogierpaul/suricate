@@ -1,6 +1,6 @@
 import pandas as pd
 
-from wookie.preutils import concatenate_names
+from wookie.preutils import concatenate_names, _ixnames
 
 
 class SingleGrouping:
@@ -33,9 +33,9 @@ class SingleGrouping:
             self.data = data
         else:
             self.data = pd.DataFrame()
-        self._ixnameleft = self.ixname + self.lsuffix
-        self._ixnameright = self.ixname + self.rsuffix
-        self._ixnamepairs = [self._ixnameleft, self._ixnameright]
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+            ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
+        )
 
     def launchdedupe(self, data, n_batches=None, n_records=3):
         """
@@ -92,8 +92,8 @@ class SingleGrouping:
             startix = self.data.index[0]
             y_proba = pd.DataFrame(
                 {
-                    self._ixnameleft: [startix],
-                    self._ixnameright: [None],
+                    self.ixnameleft: [startix],
+                    self.ixnameright: [None],
                     'y_proba': [0]
                 }
             )
@@ -159,9 +159,9 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
         else:
             return r.iloc[0]
 
-    ixnameleft = '_'.join([ixname, lsuffix])
-    ixnameright = '_'.join([ixname, rsuffix])
-    ixnamepairs = [ixnameleft, ixnameright]
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
 
     if isinstance(y_proba, pd.Series):
         y_proba = pd.DataFrame(y_proba).reset_index(drop=False)

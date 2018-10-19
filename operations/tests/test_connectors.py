@@ -57,7 +57,6 @@ class TestCartesian_join(TestCase):
             assert newname in df.columns
 
         # assert sidebyside == df
-        print(df)
         pass
 
 
@@ -86,4 +85,12 @@ class TestSeparatesides(TestCase):
             tempixname = self.ixname + '_' + suffix
             assert sbs.drop_duplicates(subset=[tempixname]).shape[0] == sidedf.shape[0]
             assert pd.Index(sbs[tempixname].drop_duplicates()).difference(sidedf.index).shape[0] == 0
+
+        # check ix_pairs:
+        assert isinstance(self.y_true, pd.Series)
+        assert set(y_true.index.names) == {self.ixnameleft, self.ixnameright}
         pass
+
+
+def test_createsbs():
+    pass
