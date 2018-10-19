@@ -63,7 +63,7 @@ if __name__ == '__main__':
     )
     print('\n', dedupe._scorenames, '\n')
 
-    for s, x, y_true, in zip(['train', 'test'], [[train_left, train_right], [test_left, test_right]],
+    for s, x, y_true, in zip(['train', 'tests'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
         print('\n****************\n')
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))

@@ -67,7 +67,7 @@ if __name__ == '__main__':
     # # precision, recall = model._evalscore(left=train_left, right=train_right, y_true=y_train)
     # # # y_pred = con.transform(left=train_left, right=train_right, addvocab='add')
     # # # y_pred.loc[y_pred > 0] = 1
-    for s, x, y_true, in zip(['train', 'test'], [[train_left, train_right], [test_left, test_right]],
+    for s, x, y_true, in zip(['train', 'tests'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
         precision, recall = model.evalscore(left=x[0], right=x[1], y_true=y_true)

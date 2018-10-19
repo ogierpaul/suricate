@@ -167,15 +167,15 @@ def concatenate_names(m):
     var1 = ' '.join(filter(lambda c: not pd.isnull(c), m)).split(' ')
     if len(var1) == 0:
         return None
-    res = var1[0]
-    for ix in range(1, len(var1)):
+    val_tokens = var1[:1]
+    for new_token in var1[1:]:
         # Compare fuzzy matching score with already concatenated string
-        rnew = var1[ix]
-        score = _fuzzy_score(res, rnew)
-        if pd.isnull(score) or score < 0.9:
+        score = max(map(lambda vtk: _fuzzy_score(new_token, vtk), val_tokens))
+        if pd.isnull(score) or score <= 0.8:
             # if score is less than threshold add it
-            res = ' '.join([res, rnew])
-    return res
+            val_tokens.append(new_token)
+    new_str = ' '.join(val_tokens)
+    return new_str
 
 
 def rmvstopwords(myword, stop_words=None, ending_words=None):
@@ -291,7 +291,7 @@ def rmvsuffix(df, suffix):
     Rmv a suffix to each of the dataframe column
     Args:
         df (pd.DataFrame):
-        suffix (str):
+        suffix (str): 'left' (not _left) for coherency with the rest of the module
 
     Returns:
         pd.DataFrame
@@ -305,7 +305,7 @@ def rmvsuffix(df, suffix):
             zip(
                 df.columns,
                 map(
-                    lambda r: r[:-len(suffix)],
+                    lambda r: r[:-(len(suffix) + 1)],
                     df.columns
                 ),
 

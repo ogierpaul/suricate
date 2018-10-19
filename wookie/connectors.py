@@ -4,12 +4,12 @@ import pandas as pd
 from wookie.preutils import addsuffix, rmvsuffix
 
 
-def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
+def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
     """
 
     Args:
-        left_df (pd.DataFrame): table 1
-        right_df (pd.DataFrame): table 2
+        left (pd.DataFrame): table 1
+        right (pd.DataFrame): table 2
         lsuffix (str):
         rsuffix (str):
 
@@ -40,8 +40,8 @@ def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
         """
         rename the columns with a suffix, including the index
         Args:
-            df (pd.DataFrame):
-            suffix (str):
+            df (pd.DataFrame): {'ix':['name']}
+            suffix (str): 'left'
 
         Returns:
             pd.DataFrame
@@ -63,7 +63,11 @@ def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
         assert isinstance(suffix, str)
         assert isinstance(df, pd.DataFrame)
         df_new = df.copy()
-        df_new.index.name = 'index'
+        if df.index.name is None:
+            ixname = 'index'
+        else:
+            ixname = df.index.name
+        df_new.index.name = ixname
         df_new.reset_index(drop=False, inplace=True)
         cols = df_new.columns
         mydict = dict(
@@ -77,12 +81,12 @@ def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
 
     # hack to create a column name unknown to both df1 and df2
     tempcolname = 'f1b3'
-    while tempcolname in left_df.columns or tempcolname in right_df.columns:
+    while tempcolname in left.columns or tempcolname in right.columns:
         tempcolname += 'f'
 
     # create a new df1 with renamed cols
-    df1new = rename_with_suffix(left_df, lsuffix)
-    df2new = rename_with_suffix(right_df, rsuffix)
+    df1new = rename_with_suffix(left, lsuffix)
+    df2new = rename_with_suffix(right, rsuffix)
     df1new[tempcolname] = 0
     df2new[tempcolname] = 0
     dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
@@ -91,14 +95,14 @@ def cartesian_join(left_df, right_df, lsuffix='left', rsuffix='right'):
     return dfnew
 
 
-def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname='ix'):
+def separatesides(df, lsuffix='left', rsuffix='right', y_true_col='y_true', ixname='ix'):
     """
     Separate a side by side training table into the left table, the right table, and the list of pairs
     Args:
         df (pd.DataFrame): side by side dataframe {['ix_left', 'ix_right'] :['name_left', 'name_right']}
-        lsuffix (str): left suffix
-        rsuffix (str): right suffix
-        y_true (str): name of y_true column
+        lsuffix (str): left suffix 'left'
+        rsuffix (str): right suffix 'right'
+        y_true_col (str): name of y_true column
         ixname (str): name in index column
 
     Returns:
@@ -114,9 +118,9 @@ def separatesides(df, lsuffix='_left', rsuffix='_right', y_true='y_true', ixname
 
     xleft = takeside(df, lsuffix, ixname=ixname)
     xright = takeside(df, rsuffix, ixname=ixname)
-    pairs = df[y_true].copy(
+    pairs = df[y_true_col].copy(
     )
-    pairs.name = y_true
+    pairs.name = y_true_col
     return xleft, xright, pairs
 
 
@@ -198,7 +202,7 @@ def safeconcat(dfs, usecols):
     return X
 
 
-def showpairs(pairs, left, right, use_cols=None):
+def showpairs(pairs, left, right, use_cols=None, filterzeroes=False):
     """
     Like createsbs, but reorder the columns to compare left and right columns
     Args:
@@ -206,6 +210,7 @@ def showpairs(pairs, left, right, use_cols=None):
         left (pd.DataFrame): {ix: [cols]}
         right (pd.DataFrame): {ix: [cols]}
         use_cols (list): [name, duns, ..]
+        filterzeroes (bool): 
 
     Returns:
         pd.DataFrame: {[ix_left, ix_right]: [name_left, name_right, duns_left, duns_right]}

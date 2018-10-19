@@ -115,9 +115,9 @@ class SingleGrouping:
         results = calc_existinggid(
             y_proba=y_proba,
             refdata=refdata,
-            ixnameleft=self._ixnameleft,
-            ixnameright=self._ixnameright,
-            ixname='ix',
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix,
             gidname=self.gidname
         )
         # update refdata
@@ -211,7 +211,6 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
     results = results.rename(columns={ixnameleft: ixname}).set_index(ixname)[gidname]
     return results
 
-
 def calc_goldenrecord(data, gidcol, fieldselector):
     """
     Calculate a golden record
@@ -224,27 +223,45 @@ def calc_goldenrecord(data, gidcol, fieldselector):
     Returns:
         pd.DataFrame
     """
-    possiblemethods = ['popularity', 'first', 'last', 'concat']
-
     gb = data.groupby(by=[gidcol])
     df = pd.DataFrame(index=data['gid'].unique())
     for inputfield in fieldselector.keys():
         method = fieldselector[inputfield]
-        if method == 'popularity':
-            df[inputfield] = gb[inputfield].apply(lambda r: _popularity(r, keep='first'))
-        elif method == 'first':
-            df[inputfield] = gb[inputfield].apply(lambda r: _byorder(r, keep='first'))
-        elif method == 'last':
-            df[inputfield] = gb[inputfield].apply(lambda r: _byorder(r, keep='last'))
-        elif method == 'concat':
-            df[inputfield] = gb[inputfield].apply(lambda r: _smartconcat(r))
-        else:
-            raise ValueError(
-                '{} | for field {} : method {} not in {}'.format(
-                    pd.datetime.now, inputfield, method, possiblemethods)
-            )
+        df[inputfield] = gb[inputfield].apply(lambda r: _agginfo(r, method=method))
     return df
 
+
+def _agginfo(r, method):
+    """
+
+    Args:
+        r:
+        method:
+
+    Returns:
+        scalar
+    """
+    possiblemethods = ['popularity', 'first', 'last', 'concat']
+    r2 = _checkvalue(r)
+    if r2 is None:
+        return None
+    else:
+        if method == 'popularity':
+            return _popularity(r2, keep='first')
+        elif method in ['first', 'last']:
+            return _byorder(r2, keep=method)
+        elif method == 'concat':
+            return _smartconcat(r2)
+        else:
+            raise ValueError('method {} not in possiblemethods {}'.format(method, possiblemethods))
+
+
+def _checkvalue(r):
+    r2 = r.dropna()
+    if r2.shape[0] == 0:
+        return None
+    else:
+        return r2
 
 def _popularity(r, keep='first'):
     """
@@ -258,10 +275,8 @@ def _popularity(r, keep='first'):
     Returns:
         scalar
     """
-    r2 = r.dropna()
-    if r2.shape[0] is None:
-        return None
-    vc = r2.value_counts()
+
+    vc = r.value_counts()
     if vc.iloc[0] > 1:
         return vc.index[0]
     else:
