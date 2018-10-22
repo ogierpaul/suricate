@@ -4,19 +4,23 @@ from sklearn.model_selection import train_test_split
 
 import wookie
 from operations import companypreparation as preprocessing
+from wookie.preutils import _ixnames
 
 if __name__ == '__main__':
     # Variable definition
     ## indexes
     ixname = 'ix'
-    lsuffix = '_left'
-    rsuffix = '_right'
-    n_estimators = 5
+    lsuffix = 'left'
+    rsuffix = 'right'
+    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixname=ixname,
+        lsuffix=lsuffix,
+        rsuffix=rsuffix
+    )
+    n_estimators = 500
     dem_treshold = 0.5
     nrows = None
-    ixnameleft = ixname + lsuffix
-    ixnameright = ixname + rsuffix
-    ixnamepairs = [ixnameleft, ixnameright]
+
     ## File path
     filepath_left = '/Users/paulogier/81-GithubPackages/wookie/operations/data/left.csv'
     filepath_right = '/Users/paulogier/81-GithubPackages/wookie/operations/data/right.csv'
@@ -35,7 +39,6 @@ if __name__ == '__main__':
             'name': {
                 'type': 'FreeText',
                 'stop_words': preprocessing.companystopwords,
-                'use_scores': ['tfidf', 'ngram'],
                 'threshold': dem_treshold,
             },
             'street': {
@@ -48,9 +51,18 @@ if __name__ == '__main__':
                 'stop_words': preprocessing.citystopwords,
                 'threshold': None
             },
-            'duns': {'type': 'Id'},
-            'postalcode': {'type': 'Code'},
-            'countrycode': {'type': 'Category'}
+            'duns': {
+                'type': 'Id',
+                'threshold': 1.0
+            },
+            'postalcode': {
+                'type': 'FreeText',
+                'threshold': None
+            },
+            'countrycode': {
+                'type': 'Id',
+                'threshold': None
+            }
         },
         estimator=Clf(n_estimators=n_estimators),
         verbose=False

@@ -130,8 +130,7 @@ def separatesides(df, lsuffix='left', rsuffix='right', y_true_col='y_true', ixna
 
     xleft = takeside(df=df, suffix=lsuffix, ixname=ixname)
     xright = takeside(df=df, suffix=rsuffix, ixname=ixname)
-    pairs = df.set_index(ixnamepairs).loc[:, y_true_col].copy(
-    )
+    pairs = df.loc[:, y_true_col].copy()
     return xleft, xright, pairs
 
 

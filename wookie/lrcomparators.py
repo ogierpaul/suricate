@@ -12,7 +12,9 @@ from wookie.preutils import lowerascii, idtostr, rmvstopwords, _suffixexact, _su
 from wookie.sbscomparators import _evalprecisionrecall, _metrics, DataPasser, PipeSbsComparator
 
 _tfidf_store_threshold_value = 0.5
-
+_namescoreplan_freetext = 'FreeText'
+_namescoreplan_id = 'Exact'
+_namescoreplan_threshold = 'threshold'
 
 class BaseLrComparator(TransformerMixin):
     """
@@ -532,9 +534,7 @@ class LrDuplicateFinder:
         # From score plan initiate the list of columns
         self._usedcols = scoreplan.keys()
         self._id_cols = list()
-        self._code_cols = list()
-        self._text_cols = list()
-        self._cat_cols = list()
+        self._freetext_cols = list()
         self._connectcols = list()
         # Initiate the list of values used for the FreeTextAnalyszs
         self._stop_words = dict()
@@ -600,49 +600,31 @@ class LrDuplicateFinder:
         # actualcolname 'name_ascii' or 'duns_cleaned'
         # If the field is not free text
 
-        if scoretype in ['Id', 'Category', 'Code']:
+        if scoretype == _namescoreplan_id:
             actualcolname = '_'.join([inputfield, self._suffixid])
             self._scorenames[inputfield] = ['_'.join([actualcolname, self._suffixexact])]
-            if scoretype == 'Id':
-                # This score is calculated via Left-Right Id Comparator
-                self._id_cols.append(actualcolname)
-                self._lrcomparators.append(LrIdComparator(
-                    on=actualcolname,
-                    ixname=self.ixname,
-                    lsuffix=self.lsuffix,
-                    rsuffix=self.rsuffix,
-                    scoresuffix=self._suffixexact
-                ))
-                if self.scoreplan[inputfield].get('threshold') is not None:
-                    self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get('threshold')
-                else:
-                    self._pruning_thresholds[actualcolname] = 1.0
+            # This score is calculated via Left-Right Id Comparator
+            self._id_cols.append(actualcolname)
+            self._lrcomparators.append(LrIdComparator(
+                on=actualcolname,
+                ixname=self.ixname,
+                lsuffix=self.lsuffix,
+                rsuffix=self.rsuffix,
+                scoresuffix=self._suffixexact
+            ))
+            if self.scoreplan[inputfield].get(_namescoreplan_threshold) is not None:
+                self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get(_namescoreplan_threshold)
             else:
-                self._sbspipeplan[actualcolname] = [self._suffixexact]
-                if scoretype == 'Category':
-                    self._cat_cols.append(actualcolname)
-                elif scoretype == 'Code':
-                    self._code_cols.append(actualcolname)
-                    self._scorenames[inputfield].append('_'.join([actualcolname, self._suffixngram]))
-                    self._lrcomparators.append(LrTokenComparator(
-                        on=actualcolname,
-                        ixname=self.ixname,
-                        lsuffix=self.lsuffix,
-                        rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixexact,
-                        vectorizermodel='cv',
-                        ngram_range=self._ngram_char,
-                        analyzer='char'
-                    ))
-        elif scoretype == 'FreeText':
+                self._pruning_thresholds[actualcolname] = 1.0
+        elif scoretype == _namescoreplan_freetext:
             actualcolname = '_'.join([inputfield, self._suffixascii])
-            self._text_cols.append(actualcolname)
+            self._freetext_cols.append(actualcolname)
             self._scorenames[inputfield] = list()
             if self.scoreplan[inputfield].get('stop_words') is not None:
                 self._stop_words[actualcolname] = self.scoreplan[inputfield].get('stop_words')
-            if self.scoreplan[inputfield].get('threshold') is not None:
-                assert self.scoreplan[inputfield].get('threshold') <= 1.0
-            self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get('threshold')
+            if self.scoreplan[inputfield].get(_namescoreplan_threshold) is not None:
+                assert self.scoreplan[inputfield].get(_namescoreplan_threshold) <= 1.0
+            self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get(_namescoreplan_threshold)
             if self.scoreplan[inputfield].get('use_scores') is None:
                 use_scores = [
                     self._suffixtfidf,

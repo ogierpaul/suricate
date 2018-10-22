@@ -287,7 +287,7 @@ def addsuffix(df, suffix):
 
     Examples:
         df.columns = ['name', 'age']
-        addsuffix(df, '_left').columns = ['name_left', 'age_left']
+        addsuffix(df, 'left').columns = ['name_left', 'age_left']
     """
     df = df.copy().rename(
         columns=dict(
