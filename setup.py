@@ -13,6 +13,7 @@ setup(name='wookie',
           'pandas',
           'numpy',
           'fuzzywuzzy',
-          'pytest'
+          'pytest',
+          'dask'
       ],
       zip_safe=False)

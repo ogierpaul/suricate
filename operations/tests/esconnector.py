@@ -6,8 +6,7 @@ import pandas as pd
 import psycopg2 as pg
 
 from wookie.connectors import addsuffix
-from wookie.lrcomparators import _namescoreplan_freetext, _namescoreplan_id
-from wookie.preutils import _ixnames
+from wookie.preutils import _ixnames, name_freetext, name_exact
 
 
 def parallelize(data, func, n_jobs=2):
@@ -57,7 +56,7 @@ class EsDfQuery:
             if pd.isnull(record[inputfield]) is False:
                 scoretype = self.scoreplan[inputfield]['type']
                 subquery = dict()
-                if scoretype == _namescoreplan_freetext:
+                if scoretype == name_freetext:
                     subquery = {
                         "match": {
                             inputfield: {
@@ -67,7 +66,7 @@ class EsDfQuery:
                             }
                         }
                     }
-                elif scoretype == _namescoreplan_id:
+                elif scoretype == name_exact:
                     subquery = {
                         "match": {
                             inputfield: {
@@ -76,8 +75,8 @@ class EsDfQuery:
                         }
                     }
                 else:
-                    raise ValueError('scoretype {} differs from [{}, {}]'.format(scoretype, _namescoreplan_id,
-                                                                                 _namescoreplan_freetext))
+                    raise ValueError('scoretype {} differs from [{}, {}]'.format(scoretype, name_exact,
+                                                                                 name_freetext))
                 subqueries.append(subquery)
         mquery = {
             "size": self.max_hits,

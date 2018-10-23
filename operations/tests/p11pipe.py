@@ -1,9 +1,8 @@
 import pandas as pd
-from sklearn.ensemble import GradientBoostingClassifier as Clf
 from sklearn.model_selection import train_test_split
 
-import wookie
-from operations import companypreparation as preprocessing
+from wookie import connectors
+from wookie.lrcomparators import LrDuplicateFinder
 from wookie.preutils import _ixnames
 
 if __name__ == '__main__':
@@ -17,9 +16,41 @@ if __name__ == '__main__':
         lsuffix=lsuffix,
         rsuffix=rsuffix
     )
-    n_estimators = 500
+    n_estimators = 5
     dem_treshold = 0.5
     nrows = None
+    scoreplan_origin = {
+        'name': {
+            'type': 'FreeText',
+            'stop_words': ['gmbh'],
+            'threshold': dem_treshold
+        },
+        'street': {
+            'type': 'FreeText',
+            'stop_words': ['avenue'],
+            'threshold': dem_treshold,
+            'use_scores': ['ngram']
+        },
+        'city': {
+            'type': 'FreeText',
+            'stop_words': ['cedex'],
+            'threshold': None,
+            'use_scores': ['fuzzy']
+        },
+        'duns': {
+            'type': 'Exact',
+            'threshold': 1.0
+        },
+        'postalcode': {
+            'type': 'FreeText',
+            'threshold': None,
+            'use_scores': ['token']
+        },
+        'countrycode': {
+            'type': 'Exact',
+            'threshold': None
+        }
+    }
 
     ## File path
     filepath_left = '/Users/paulogier/81-GithubPackages/wookie/operations/data/left.csv'
@@ -31,49 +62,22 @@ if __name__ == '__main__':
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training, nrows=nrows).set_index(ixnamepairs)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = wookie.separatesides(df_train)
-    test_left, test_right, y_test = wookie.separatesides(df_test)
-    dedupe = wookie.LrDuplicateFinder(
-        prefunc=preprocessing.preparedf,
-        scoreplan={
-            'name': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.companystopwords,
-                'threshold': dem_treshold,
-            },
-            'street': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.streetstopwords,
-                'threshold': dem_treshold
-            },
-            'city': {
-                'type': 'FreeText',
-                'stop_words': preprocessing.citystopwords,
-                'threshold': None
-            },
-            'duns': {
-                'type': 'Id',
-                'threshold': 1.0
-            },
-            'postalcode': {
-                'type': 'FreeText',
-                'threshold': None
-            },
-            'countrycode': {
-                'type': 'Id',
-                'threshold': None
-            }
-        },
-        estimator=Clf(n_estimators=n_estimators),
-        verbose=False
+    train_left, train_right, y_train = connectors.separatesides(df_train)
+    test_left, test_right, y_test = connectors.separatesides(df_test)
+
+    dedupe = LrDuplicateFinder(
+        scoreplan=scoreplan_origin,
+        verbose=True,
+        n_jobs=2
     )
+
     dedupe.fit(
         left=train_left,
         right=train_right,
         y_true=y_train,
-        verbose=False
+        verbose=True
     )
-    print('\n', dedupe._scorenames, '\n')
+    print('\n', sorted(dedupe.cols_scorer), '\n')
 
     for s, x, y_true, in zip(['train', 'tests'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):

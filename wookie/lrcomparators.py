@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
@@ -6,15 +8,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
-from wookie.connectors import cartesian_join, createsbs, indexwithytrue
-from wookie.preutils import lowerascii, idtostr, rmvstopwords, _suffixexact, _suffixtoken, _suffixfuzzy, _ixnames
+from wookie.connectors import cartesian_join, createsbs, indexwithytrue, metrics, evalprecisionrecall
+from wookie.preutils import lowerascii, idtostr, rmvstopwords, datapasser, \
+    suffixexact, suffixtoken, suffixfuzzy, _ixnames, \
+    name_freetext, name_exact, name_pruning_threshold, \
+    name_stop_words, name_usescores
+
+suffix_ngram = 'ngram'
+suffix_tfdif = 'tfidf'
+
 # noinspection PyProtectedMember
-from wookie.sbscomparators import _evalprecisionrecall, _metrics, DataPasser, PipeSbsComparator
+from wookie.sbscomparators import DataPasser, PipeSbsComparator
 
 _tfidf_store_threshold_value = 0.5
-_namescoreplan_freetext = 'FreeText'
-_namescoreplan_id = 'Exact'
-_namescoreplan_threshold = 'threshold'
+
 
 class BaseLrComparator(TransformerMixin):
     """
@@ -29,7 +36,8 @@ class BaseLrComparator(TransformerMixin):
                  lsuffix='left',
                  rsuffix='right',
                  scoresuffix='score',
-                 store_threshold=0.0
+                 store_threshold=0.0,
+                 n_jobs=2
                  ):
         """
 
@@ -40,6 +48,7 @@ class BaseLrComparator(TransformerMixin):
             rsuffix (str):
             scoresuffix (str): score suffix: the outputvector has the name on + '_' + scoresuffix
             store_threshold (float): threshold to use to store the relevance score
+            n_jobs (float): number of parallel jobs
         """
         TransformerMixin.__init__(self)
         if on is None:
@@ -54,6 +63,7 @@ class BaseLrComparator(TransformerMixin):
         )
         self.store_threshold = store_threshold
         self.outcol = '_'.join([self.on, self.scoresuffix])
+        self.n_jobs = n_jobs
         pass
 
     def _toseries(self, left, right):
@@ -127,7 +137,7 @@ class BaseLrComparator(TransformerMixin):
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
-        precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
         return precision, recall
 
 
@@ -234,7 +244,7 @@ class LrTokenComparator(BaseLrComparator):
         return score
 
 
-class LrIdComparator(BaseLrComparator):
+class LrExactComparator(BaseLrComparator):
     def __init__(self,
                  on,
                  scoresuffix='exact',
@@ -308,42 +318,148 @@ class LrPruningConnector:
     """
 
     def __init__(self,
-                 lrcomparators,
+                 scoreplan,
+                 prefunc=None,
                  ixname='ix',
                  lsuffix='left',
-                 rsuffix='right',
-                 pruning_thresholds=None):
+                 rsuffix='right'):
         """
         Not on the pruning_threshold:
             if the value is None, that means you do not use this similarity score as the basis for further analysis
 
         Args:
-            lrcomparators (list): list of LrComparator
+            scoreplan (dict): list of LrComparator,
+            prefunc (callable)
             ixname (str): 'ix'
             lsuffix (str): 'left'
             rsuffix (str): 'right'
-            pruning_thresholds (dict): {'name':0.6, 'city':None}
         Examples:
             pruning_thresholds: {'name':0.6, 'city':None}: only pairs with similarity on name >= 0.6 will be kept
             pruning_thresholds: {'name':0.6, 'city':05}: only pairs with similarity on name >= 0.6 \
                 or similarity on 'city' >=0.5 will be kept
 
         """
-        self.lrconnectors = lrcomparators
-        self.outcols = [tk.outcol for tk in self.lrconnectors]
+        if prefunc is not None:
+            assert callable(prefunc)
+        else:
+            prefunc = datapasser
+        self.prefunc = prefunc
+        self.scoreplan = deepcopy(scoreplan)
+        # Define column names
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
         self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
             ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
         )
-        if pruning_thresholds is not None:
-            assert isinstance(pruning_thresholds, dict)
-            self.pruning_thresholds = pruning_thresholds
-        else:
-            self.pruning_thresholds = dict()
+        self._suffixascii = 'ascii'
+        self._suffixwosw = 'wostopwords'
+        self._suffixid = 'cleaned'
+        self._suffixexact = suffixexact
+        self._suffixtoken = suffixtoken
+        self.suffix_tfidf = suffix_tfdif
+        self.suffix_ngram = suffix_ngram
+        self._suffixfuzzy = suffixfuzzy
+
+        # From score plan initiate the list of columns
+        self.cols_used = scoreplan.keys()
+        self.cols_exact = list()
+        self.cols_freetext = list()
+        self.outcols = list()
+        # Initiate the list of values used for the LrConnectors
+        self.stop_words = dict()
+        self.pruning_thresholds = dict()
+        self._lrcomparators = list()
+        self._scorenames = dict()
+        self._ngram_char = (1, 2)
+        self._ngram_word = (1, 1)
+        self._vecmodel_cv = CountVectorizer
+        self._vecmodel_tfidf = TfidfVectorizer
+
+        for inputfield in self.cols_used:
+            self._initscoreplan(actualcolname=inputfield)
+
+        self.outcols = [tk.outcol for tk in self._lrcomparators]
 
         pass
+
+    def _initscoreplan(self, actualcolname):
+        """
+        Routine to initiate the class
+        Dig into the code to understand.
+        Args:
+            actualcolname (str):
+
+        Returns:
+            None
+        """
+        scoretype = self.scoreplan[actualcolname]['type']
+        # inputfield: 'name'
+        # actualcolname 'name_ascii' or 'duns_cleaned'
+        # If the field is not free text
+
+        if scoretype == name_exact:
+            self._scorenames[actualcolname] = ['_'.join([actualcolname, self._suffixexact])]
+            # This score is calculated via Left-Right Id Comparator
+            self.cols_exact.append(actualcolname)
+            self._lrcomparators.append(LrExactComparator(
+                on=actualcolname,
+                ixname=self.ixname,
+                lsuffix=self.lsuffix,
+                rsuffix=self.rsuffix,
+                scoresuffix=self._suffixexact
+            ))
+            if self.scoreplan[actualcolname].get(name_pruning_threshold) is not None:
+                self.pruning_thresholds[actualcolname] = self.scoreplan[actualcolname].get(
+                    name_pruning_threshold)
+        elif scoretype == name_freetext:
+            self.cols_freetext.append(actualcolname)
+            self._scorenames[actualcolname] = list()
+            if self.scoreplan[actualcolname].get(name_stop_words) is not None:
+                self.stop_words[actualcolname] = self.scoreplan[actualcolname].get(name_stop_words)
+            if self.scoreplan[actualcolname].get(name_pruning_threshold) is not None:
+                self.pruning_thresholds[actualcolname] = self.scoreplan[actualcolname].get(name_pruning_threshold)
+            if self.scoreplan[actualcolname].get(name_usescores) is None:
+                use_scores = [
+                    self.suffix_tfidf,
+                    self.suffix_ngram
+                ]
+            else:
+                use_scores = self.scoreplan[actualcolname].get(name_usescores)
+            # Loop through use_scores
+            for s2 in use_scores:
+                self._scorenames[actualcolname].append(
+                    '_'.join([actualcolname, s2])
+                )
+                if s2 == self.suffix_tfidf:
+                    self._lrcomparators.append(LrTokenComparator(
+                        on=actualcolname,
+                        ixname=self.ixname,
+                        lsuffix=self.lsuffix,
+                        rsuffix=self.rsuffix,
+                        scoresuffix=self.suffix_tfidf,
+                        vectorizermodel='tfidf',
+                        ngram_range=self._ngram_word,
+                        analyzer='word',
+                        stop_words=self.stop_words.get(actualcolname)
+                    ))
+                elif s2 == self.suffix_ngram:
+                    self._lrcomparators.append(LrTokenComparator(
+                        on=actualcolname,
+                        ixname=self.ixname,
+                        lsuffix=self.lsuffix,
+                        rsuffix=self.rsuffix,
+                        scoresuffix=self.suffix_ngram,
+                        vectorizermodel='tfidf',
+                        ngram_range=self._ngram_char,
+                        analyzer='char',
+                        stop_words=self.stop_words.get(actualcolname)
+                    ))
+
+    def fit_transform(self, left, right):
+        self.fit()
+        X_scores = self.transform(left=left, right=right)
+        return X_scores
 
     def transform(self, left, right, addvocab='add', verbose=False):
         """
@@ -363,14 +479,18 @@ class LrPruningConnector:
                                  labels=[[], []],
                                  names=self.ixnamepairs
                                  )
-        for con in self.lrconnectors:
-            assert isinstance(con, BaseLrComparator)
-            transfo_score = con.transform(left=left, right=right, addvocab=addvocab)
-            scores[con.outcol] = transfo_score
+        for lrcomparator in self._lrcomparators:
+            assert isinstance(lrcomparator, BaseLrComparator)
+            transfo_score = lrcomparator.transform(left=left, right=right, addvocab=addvocab)
+            scores[lrcomparator.outcol] = transfo_score
             assert transfo_score.index.names == ix_taken.names
-            if self.pruning_thresholds.get(con.on) is not None:
+            # TODO : here
+            temp_ths = self.pruning_thresholds.get(lrcomparator.on)
+            temp_on_col = lrcomparator.on
+            temp_mytype = lrcomparator.scoresuffix
+            if self.pruning_thresholds.get(lrcomparator.on) is not None:
                 ix_taken = ix_taken.union(
-                    transfo_score.loc[transfo_score >= self.pruning_thresholds[con.on]].index
+                    transfo_score.loc[transfo_score >= self.pruning_thresholds[lrcomparator.on]].index
                 )
             del transfo_score
 
@@ -419,7 +539,7 @@ class LrPruningConnector:
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
-        precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
         if verbose:
             print(
                 '{} | LrPruningConnector score: precision: {:.2%}, recall: {:.2%}'.format(
@@ -457,20 +577,23 @@ class LrDuplicateFinder:
     def __init__(self,
                  scoreplan,
                  prefunc=None,
-                 estimator=None,
+                 classifier=None,
                  ixname='ix',
                  lsuffix='left',
                  rsuffix='right',
-                 verbose=False):
+                 verbose=False,
+                 n_jobs=1
+                 ):
         """
         Args:
             scoreplan (dict):
             prefunc (callable): preprocessing function. Add features to the data. Default lambda df: df
-            estimator (BaseEstimator): Sklearn Estimator, Default RandomForest()
+            classifier (BaseEstimator): Sklearn Estimator Classifier, Default RandomForest()
             ixname (str): 'ix'
             lsuffix (str): 'left'
             rsuffix (str): 'right'
             verbose (bool)
+            n_jobs (int)
         Examples:
                 dedupe = wookie.lrcomparators.LrDuplicateFinder(
                     prefunc=preprocessing.preparedf,
@@ -500,25 +623,25 @@ class LrDuplicateFinder:
                     estimator=GradientBoostingClassifier()
                 )
         """
-        if estimator is not None:
-            assert issubclass(type(estimator), BaseEstimator)
-            self.estimator = estimator
-        else:
-            self.estimator = RandomForestClassifier()
-
         if prefunc is not None:
             assert callable(prefunc)
         else:
-            def passdata(df):
-                return df
-
-            prefunc = passdata
+            prefunc = datapasser
         self.prefunc = prefunc
         assert isinstance(scoreplan, dict)
-        self.scoreplan = scoreplan
+        self.scoreplan = deepcopy(scoreplan)
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
+        self.n_jobs = n_jobs
+        self.verbose = verbose
+
+        if classifier is not None:
+            assert issubclass(type(classifier), BaseEstimator)
+            self.estimator = classifier
+        else:
+            self.estimator = RandomForestClassifier(n_jobs=self.n_jobs)
+
         # Derive the new column names
         self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
             ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
@@ -526,169 +649,105 @@ class LrDuplicateFinder:
         self._suffixascii = 'ascii'
         self._suffixwosw = 'wostopwords'
         self._suffixid = 'cleaned'
-        self._suffixexact = _suffixexact
-        self._suffixtoken = _suffixtoken
-        self._suffixtfidf = 'tfidf'
-        self._suffixfuzzy = _suffixfuzzy
-        self._suffixngram = 'ngram'
-        # From score plan initiate the list of columns
-        self._usedcols = scoreplan.keys()
-        self._id_cols = list()
-        self._freetext_cols = list()
-        self._connectcols = list()
-        # Initiate the list of values used for the FreeTextAnalyszs
-        self._stop_words = dict()
-        self._pruning_thresholds = dict()
-        self._lrcomparators = list()
-        self._scorenames = dict()
-        self._sbspipeplan = dict()
-        self._ngram_char = (1, 2)
-        self._ngram_word = (1, 1)
-        self._vecmodel_cv = CountVectorizer
-        self._vecmodel_tfidf = TfidfVectorizer
-        self.verbose = verbose
+        self._suffixexact = suffixexact
+        self._suffixtoken = suffixtoken
+
+        self._suffixfuzzy = suffixfuzzy
+
+        # Enrich the score plan to pass on to the lrmodel
+        self._usedcols = list(self.scoreplan.keys())
+        self.stop_words = dict()
+        self.scoreplan_lr = dict()
+        self.scoreplan_sbs = dict()
+        self._init_lrscoreplan()
+        self._init_sbsscoreplan()
+
         # Initiate for subclass the scikit-learn pipeline
-        self._skmodel = BaseEstimator()
+        self.model_sk = BaseEstimator()
         # Loop through the score plan
-        for inputfield in self._usedcols:
-            self._initscoreplan(inputfield=inputfield)
-        self.lrmodel = LrPruningConnector(
-            lrcomparators=self._lrcomparators,
+        self.model_lr = LrPruningConnector(
+            scoreplan=self.scoreplan_lr,
+            prefunc=None,
             ixname=self.ixname,
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix,
-            pruning_thresholds=self._pruning_thresholds
         )
-        self._connectcols = [con.outcol for con in self._lrcomparators]
-        self._sbscols = list(self._sbspipeplan.keys())
-        # Prepare the Pipe
-        dp_connectscores = DataPasser(on_cols=self._connectcols)
+        self.cols_lrconnect = self.model_lr.outcols
 
-        sbspipe = PipeSbsComparator(
-            scoreplan=self._sbspipeplan
+        self.model_sbs = PipeSbsComparator(
+            scoreplan=self.scoreplan_sbs,
+            n_jobs=self.n_jobs
         )
+        self.cols_sbs = self.model_sbs.outcols
+        # Prepare the Pipe
+        self.model_dp = DataPasser(on_cols=self.cols_lrconnect)
+
         # noinspection PyTypeChecker
-        scorer = make_union(
+        self.model_scorer = make_union(
             *[
-                sbspipe,
-                dp_connectscores
+                self.model_sbs,
+                self.model_dp
             ]
         )
+        self.cols_scorer = self.cols_lrconnect + self.cols_sbs
         ## Estimator
-        imp = Imputer()
-        self._skmodel = make_pipeline(
+        self.imp = Imputer()
+        self.model_sk = make_pipeline(
             *[
-                scorer,
-                imp,
+                self.model_scorer,
+                self.imp,
                 self.estimator
             ]
         )
+
         pass
 
-    def _initscoreplan(self, inputfield):
+    def _init_lrscoreplan(self):
         """
         Routine to initiate the class
         Dig into the code to understand.
         Args:
-            inputfield (str):
 
         Returns:
             None
         """
-        scoretype = self.scoreplan[inputfield]['type']
-        # inputfield: 'name'
-        # actualcolname 'name_ascii' or 'duns_cleaned'
-        # If the field is not free text
+        self.scoreplan_lr = deepcopy(self.scoreplan)
+        for inputfield in self.scoreplan:
+            scoretype = self.scoreplan[inputfield]['type']
+            # inputfield: 'name'
+            # actualcolname 'name_ascii' or 'duns_cleaned'
+            # If the field is not free text
 
-        if scoretype == _namescoreplan_id:
-            actualcolname = '_'.join([inputfield, self._suffixid])
-            self._scorenames[inputfield] = ['_'.join([actualcolname, self._suffixexact])]
-            # This score is calculated via Left-Right Id Comparator
-            self._id_cols.append(actualcolname)
-            self._lrcomparators.append(LrIdComparator(
-                on=actualcolname,
-                ixname=self.ixname,
-                lsuffix=self.lsuffix,
-                rsuffix=self.rsuffix,
-                scoresuffix=self._suffixexact
-            ))
-            if self.scoreplan[inputfield].get(_namescoreplan_threshold) is not None:
-                self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get(_namescoreplan_threshold)
-            else:
-                self._pruning_thresholds[actualcolname] = 1.0
-        elif scoretype == _namescoreplan_freetext:
-            actualcolname = '_'.join([inputfield, self._suffixascii])
-            self._freetext_cols.append(actualcolname)
-            self._scorenames[inputfield] = list()
-            if self.scoreplan[inputfield].get('stop_words') is not None:
-                self._stop_words[actualcolname] = self.scoreplan[inputfield].get('stop_words')
-            if self.scoreplan[inputfield].get(_namescoreplan_threshold) is not None:
-                assert self.scoreplan[inputfield].get(_namescoreplan_threshold) <= 1.0
-            self._pruning_thresholds[actualcolname] = self.scoreplan[inputfield].get(_namescoreplan_threshold)
-            if self.scoreplan[inputfield].get('use_scores') is None:
-                use_scores = [
-                    self._suffixtfidf,
-                    self._suffixngram,
-                    self._suffixfuzzy,
-                    self._suffixtoken
-                ]
-            else:
-                use_scores = self.scoreplan[inputfield].get('use_scores')
-            # Loop through use_scores
-            for s2 in use_scores:
-                self._scorenames[inputfield].append(
-                    '_'.join([actualcolname, s2])
-                )
-                if s2 == self._suffixtfidf:
-                    self._lrcomparators.append(LrTokenComparator(
-                        on=actualcolname,
-                        ixname=self.ixname,
-                        lsuffix=self.lsuffix,
-                        rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixtfidf,
-                        vectorizermodel='tfidf',
-                        ngram_range=self._ngram_word,
-                        analyzer='word',
-                        stop_words=self._stop_words.get(actualcolname)
-                    ))
-                elif s2 == self._suffixngram:
-                    self._lrcomparators.append(LrTokenComparator(
-                        on=actualcolname,
-                        ixname=self.ixname,
-                        lsuffix=self.lsuffix,
-                        rsuffix=self.rsuffix,
-                        scoresuffix=self._suffixngram,
-                        vectorizermodel='tfidf',
-                        ngram_range=self._ngram_char,
-                        analyzer='char',
-                        stop_words=self._stop_words.get(actualcolname)
-                    ))
-                elif s2 in [self._suffixtoken, self._suffixfuzzy]:
-                    if self._sbspipeplan.get(actualcolname) is None:
-                        self._sbspipeplan[actualcolname] = [s2]
-                    else:
-                        self._sbspipeplan[actualcolname].append(s2)
+            if scoretype == name_exact:
+                # Rename column name with cleaned suffix
+                actualcolname = '_'.join([inputfield, self._suffixid])
+                self.scoreplan_lr[actualcolname] = self.scoreplan_lr.pop(inputfield)
+            elif scoretype == name_freetext:
+                # Rename column name with cleaned suffix
+                actualcolname = '_'.join([inputfield, self._suffixascii])
+                self.scoreplan_lr[actualcolname] = self.scoreplan_lr.pop(inputfield)
+                # add the case on stop_words
+                if self.scoreplan[inputfield].get(name_stop_words) is not None:
+                    swcolname = actualcolname + '_' + self._suffixwosw
+                    self.scoreplan_lr[swcolname] = self.scoreplan_lr[actualcolname].copy()
+                    self.scoreplan_lr[swcolname][name_usescores] = ['ngram']
+                    self.scoreplan_lr[swcolname][name_stop_words] = None
+                    self.stop_words[actualcolname] = self.scoreplan[inputfield].get(name_stop_words)
+        pass
 
-            if self._stop_words.get(actualcolname) is not None:
-                swcolname = actualcolname + '_' + self._suffixwosw
-                self._scorenames[inputfield].append(
-                    '_'.join([swcolname, self._suffixngram])
-                )
-                self._scorenames[inputfield].append(
-                    '_'.join([swcolname, self._suffixtoken])
-                )
-                self._lrcomparators.append(LrTokenComparator(
-                    on=swcolname,
-                    ixname=self.ixname,
-                    lsuffix=self.lsuffix,
-                    rsuffix=self.rsuffix,
-                    scoresuffix=self._suffixngram,
-                    vectorizermodel='tfidf',
-                    ngram_range=self._ngram_char,
-                    analyzer='char'
-                ))
-                self._sbspipeplan[actualcolname + '_' + self._suffixwosw] = [self._suffixtoken]
-
+    def _init_sbsscoreplan(self):
+        self.scoreplan_sbs = deepcopy(self.scoreplan_lr)
+        for actualcolname in self.scoreplan_lr:
+            scoretype = self.scoreplan_lr[actualcolname]['type']
+            # inputfield: 'name'
+            # actualcolname 'name_ascii' or 'duns_cleaned'
+            # If the field is not free text
+            if scoretype == name_exact:
+                # Remove exact ids already taken into account via the lridcomparator
+                del self.scoreplan_sbs[actualcolname]
+            elif scoretype == name_freetext:
+                # DO NOTHING
+                pass
         pass
 
     def _prepare_data(self, df):
@@ -710,10 +769,10 @@ class LrDuplicateFinder:
             if scoretype == 'FreeText':
                 actualcolname = '_'.join([inputfield, self._suffixascii])
                 new[actualcolname] = new[inputfield].apply(lowerascii)
-                if actualcolname in self._stop_words.keys():
+                if actualcolname in self.stop_words.keys():
                     colnamewosw = '_'.join([actualcolname, self._suffixwosw])
                     new[colnamewosw] = new[actualcolname].apply(
-                        lambda r: rmvstopwords(r, stop_words=self._stop_words[actualcolname])
+                        lambda r: rmvstopwords(r, stop_words=self.stop_words[actualcolname])
                     )
             else:
                 actualcolname = '_'.join([inputfield, self._suffixid])
@@ -739,8 +798,8 @@ class LrDuplicateFinder:
         Returns:
             pd.DataFrame {[ix_left, ix_right]: [scores]}
         """
-        X_scores = self.lrmodel.transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
-        assert set(X_scores.columns.tolist()) == set(self._connectcols)
+        X_scores = self.model_lr.transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
+        assert set(X_scores.columns.tolist()) == set(self.cols_lrconnect)
         return X_scores
 
     def _lr_to_sbs(self, left, right, addvocab='add', verbose=False):
@@ -756,13 +815,13 @@ class LrDuplicateFinder:
         Returns:
             pd.DataFrame:  {[ix_left, ix_right]: [scores, 'name_left', 'name_right']}
         """
-        X_scores = self.lrmodel.transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
-        assert set(X_scores.columns.tolist()) == set(self._connectcols)
+        X_scores = self.model_lr.transform(left=left, right=right, addvocab=addvocab, verbose=verbose)
+        assert set(X_scores.columns.tolist()) == set(self.cols_lrconnect)
         X_sbs = createsbs(
             pairs=X_scores,
             left=left,
             right=right,
-            use_cols=self._sbscols,
+            use_cols=self.model_sbs.usecols,
             ixname=self.ixname,
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix
@@ -810,7 +869,7 @@ class LrDuplicateFinder:
             )
 
         if verbose:
-            precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
+            precision, recall = evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
             print('{} | Pruning score: precision: {:.2%}, recall: {:.2%}'.format(pd.datetime.now(), precision, recall))
 
         # Redefine X_sbs and y_true to have a common index
@@ -821,7 +880,7 @@ class LrDuplicateFinder:
         X_sbs = X_sbs.loc[ix_common]
 
         # Fit the ScikitLearn Model
-        self._skmodel.fit(X_sbs, y_true)
+        self.model_sk.fit(X_sbs, y_true)
 
         if verbose:
             scores = self.score(left=left, right=right, pairs=y_true, kind='all')
@@ -893,7 +952,7 @@ class LrDuplicateFinder:
 
         # if we have results
         if X_sbs.shape[0] > 0:
-            df_pred = self._skmodel.predict_proba(X_sbs)
+            df_pred = self.model_sk.predict_proba(X_sbs)
             df_pred = pd.DataFrame(
                 df_pred,
                 index=X_sbs.index
@@ -963,7 +1022,7 @@ class LrDuplicateFinder:
             y_true = y_true['y_true']
 
         X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
-        precision, recall = _evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
+        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
         return precision, recall
 
     def score(self, left, right, pairs, kind='accuracy'):
@@ -1001,7 +1060,7 @@ class LrDuplicateFinder:
             y_true = y_true['y_true']
         y_true = y_true
         assert isinstance(y_true, pd.Series)
-        scores = _metrics(y_true=y_true, y_pred=y_pred)
+        scores = metrics(y_true=y_true, y_pred=y_pred)
         return scores
 
 

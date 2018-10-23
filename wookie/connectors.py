@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from wookie.preutils import addsuffix, rmvsuffix, _ixnames
 
@@ -254,3 +255,59 @@ def _analyzeerrors(y_true, y_pred, rmvsameindex=True, ixnameleft='ix_left', ixna
         pairs = pairs[pairs[ixnameleft] != pairs[ixnameright]]
         pairs.set_index(ixnamepairs, inplace=True)
     return pairs
+
+
+def metrics(y_true, y_pred):
+    y_pred2 = indexwithytrue(y_true=y_true, y_pred=y_pred)
+    scores = dict()
+    scores['accuracy'] = accuracy_score(y_true=y_true, y_pred=y_pred2)
+    scores['precision'] = precision_score(y_true=y_true, y_pred=y_pred2)
+    scores['recall'] = recall_score(y_true=y_true, y_pred=y_pred2)
+    scores['f1'] = f1_score(y_true=y_true, y_pred=y_pred2)
+    return scores
+
+
+def evalprecisionrecall(y_true, y_pred):
+    """
+
+    Args:
+        y_pred (pd.DataFrame/pd.Series): everything that is index is counted as true
+        y_true (pd.Series):
+
+    Returns:
+        float, float: precision and recall
+    """
+    true_pos = y_true.loc[y_true > 0]
+    true_neg = y_true.loc[y_true == 0]
+    # EVERYTHING THAT IS CAUGHT BY Y_PRED IS CONSIDERED AS TRUE
+    catched_pos = y_pred.loc[true_pos.index.intersection(y_pred.index)]
+    catched_neg = y_pred.loc[y_pred.index.difference(catched_pos.index)]
+    missed_pos = true_pos.loc[true_pos.index.difference(y_pred.index)]
+    assert true_pos.shape[0] + true_neg.shape[0] == y_true.shape[0]
+    assert catched_pos.shape[0] + catched_neg.shape[0] == y_pred.shape[0]
+    assert catched_pos.shape[0] + missed_pos.shape[0] == true_pos.shape[0]
+    recall = catched_pos.shape[0] / true_pos.shape[0]
+    precision = catched_pos.shape[0] / y_pred.shape[0]
+    return precision, recall
+
+
+def evalpred(y_true, y_pred, verbose=True, namesplit=None):
+    if namesplit is None:
+        sset = ''
+    else:
+        sset = 'for set {}'.format(namesplit)
+    precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+    if verbose:
+        print(
+            '{} | Pruning score: precision: {:.2%}, recall: {:.2%} {}'.format(
+                pd.datetime.now(), precision, recall, sset
+            )
+        )
+    scores = metrics(y_true=y_true, y_pred=y_pred)
+    if verbose:
+        print(
+            '{} | Model score: precision: {:.2%}, recall: {:.2%} {}'.format(
+                pd.datetime.now(), scores['precision'], scores['recall'], sset
+            )
+        )
+    return scores

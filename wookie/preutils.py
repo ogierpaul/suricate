@@ -2,12 +2,17 @@ import unicodedata
 
 import numpy as np
 import pandas as pd
+from fuzzywuzzy.fuzz import ratio as simpleratio, partial_token_set_ratio as tokenratio
 
-from wookie.sbscomparators import _fuzzy_score
-
-_suffixexact = 'exact'
-_suffixtoken = 'token'
-_suffixfuzzy = 'fuzzy'
+suffixexact = 'exact'
+suffixtoken = 'token'
+suffixfuzzy = 'fuzzy'
+name_freetext = 'FreeText'
+name_exact = 'Exact'
+name_pruning_threshold = 'threshold'
+name_usescores = 'use_scores'
+name_stop_words = 'stop_words'
+navalue_score = None
 
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
@@ -61,9 +66,11 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     ## remove leading zeroes
     if rmvlzeroes is True:
         s = s.lstrip('0')
+
     # remove trailing zero decimals
-    if s.endswith(('.0')):
+    if s.endswith('.0'):
         s = s[:-2]
+
     ## Remove special chars
     if rmvchars is not None:
         for c in rmvchars:
@@ -189,7 +196,7 @@ def concatenate_names(m):
     val_tokens = var1[:1]
     for new_token in var1[1:]:
         # Compare fuzzy matching score with already concatenated string
-        score = max(map(lambda vtk: _fuzzy_score(new_token, vtk), val_tokens))
+        score = max(map(lambda vtk: fuzzy_score(new_token, vtk), val_tokens))
         if pd.isnull(score) or score <= 0.8:
             # if score is less than threshold add it
             val_tokens.append(new_token)
@@ -239,7 +246,7 @@ navalues = [
 ]
 
 
-def _chkixdf(df, ixname='ix'):
+def chkixdf(df, ixname='ix'):
     """
     Check that the dataframe does not already have a column of the name ixname
     And checks that the index name is ixname
@@ -333,3 +340,81 @@ def rmvsuffix(df, suffix):
     )
     assert isinstance(df, pd.DataFrame)
     return df
+
+
+def datapasser(df):
+    """
+    Do nothing
+    Args:
+        df (pd.DataFrame):
+
+    Returns:
+        pd.DataFrame
+    """
+    return df
+
+
+def valid_inputs(left, right):
+    """
+    takes two inputs and return True if none of them is null, or False otherwise
+    Args:
+        left: first object (scalar)
+        right: second object (scalar)
+
+    Returns:
+        bool
+    """
+    if any(pd.isnull([left, right])):
+        return False
+    else:
+        return True
+
+
+def exact_score(left, right):
+    """
+    Checks if the two values are equali
+    Args:
+        left (object): object number 1
+        right (object): object number 2
+
+    Returns:
+        float
+    """
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        return float(left == right)
+
+
+def fuzzy_score(left, right):
+    """
+    return ratio score of fuzzywuzzy
+    Args:
+        left (str): string number 1
+        right (str): string number 2
+
+    Returns:
+        float
+    """
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        s = (simpleratio(left, right) / 100)
+    return s
+
+
+def token_score(left, right):
+    """
+    return the token_set_ratio score of fuzzywuzzy
+    Args:
+        left (str): string number 1
+        right (str): string number 2
+
+    Returns:
+        float
+    """
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        s = tokenratio(left, right) / 100
+    return s
