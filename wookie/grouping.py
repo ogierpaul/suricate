@@ -1,6 +1,6 @@
 import pandas as pd
 
-from wookie.preutils import concatenate_names, _ixnames
+from wookie.preutils import concatenate_names, concatixnames
 
 
 class SingleGrouping:
@@ -33,7 +33,7 @@ class SingleGrouping:
             self.data = data
         else:
             self.data = pd.DataFrame()
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
             ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
         )
 
@@ -161,7 +161,7 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
         else:
             return r.iloc[0]
 
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
 

@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-from wookie.preutils import addsuffix, rmvsuffix, _ixnames
+from wookie.preutils import addsuffix, rmvsuffix, concatixnames
 
 
 def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
@@ -108,7 +108,7 @@ def separatesides(df, lsuffix='left', rsuffix='right', y_true_col='y_true', ixna
     Returns:
         pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
     """
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
 
@@ -150,7 +150,7 @@ def createsbs(pairs, left, right, use_cols=None, lsuffix='left', rsuffix='right'
     Returns:
         pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
     """
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
     if use_cols is None or len(use_cols) == 0:
@@ -188,7 +188,7 @@ def showpairs(pairs, left, right, use_cols=None, ixname='ix', lsuffix='left', rs
     Returns:
         pd.DataFrame: {[ix_left, ix_right]: [name_left, name_right, duns_left, duns_right]}
     """
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
     if isinstance(pairs, pd.Series):
@@ -267,7 +267,7 @@ def metrics(y_true, y_pred):
     return scores
 
 
-def evalprecisionrecall(y_true, y_pred):
+def evalrecall(y_true, y_pred):
     """
 
     Args:
@@ -296,7 +296,7 @@ def evalpred(y_true, y_pred, verbose=True, namesplit=None):
         sset = ''
     else:
         sset = 'for set {}'.format(namesplit)
-    precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+    precision, recall = evalrecall(y_true=y_true, y_pred=y_pred)
     if verbose:
         print(
             '{} | Pruning score: precision: {:.2%}, recall: {:.2%} {}'.format(

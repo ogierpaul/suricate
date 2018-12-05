@@ -3,12 +3,12 @@ from unittest import TestCase
 import pandas as pd
 
 from wookie.connectors import cartesian_join, separatesides, createsbs, showpairs
-from wookie.preutils import _ixnames
+from wookie.preutils import concatixnames
 
 ixname = 'myindex'
 lsuffix = 'left'
 rsuffix = 'right'
-ixnameleft, ixnameright, ixnamepairs = _ixnames(
+ixnameleft, ixnameright, ixnamepairs = concatixnames(
     ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
 )
 samplecol = 'name'
@@ -68,7 +68,7 @@ class TestSeparatesides(TestCase):
         newleft, newright, y_true = separatesides(
             df=sbs, lsuffix=lsuffix, rsuffix=rsuffix, y_true_col=y_true_col, ixname=ixname
         )
-        ixnameleft, ixnameright, ixnamepairs = _ixnames(
+        ixnameleft, ixnameright, ixnamepairs = concatixnames(
             ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
         )
 
@@ -91,7 +91,7 @@ class TestSeparatesides(TestCase):
 
 
 def test_createsbs():
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
     newleft, newright, y_true = separatesides(

@@ -87,7 +87,7 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     return s
 
 
-def _ixnames(ixname='ix', lsuffix='left', rsuffix='right'):
+def concatixnames(ixname='ix', lsuffix='left', rsuffix='right'):
     """
 
     Args:

@@ -8,9 +8,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
-from wookie.connectors import cartesian_join, createsbs, indexwithytrue, metrics, evalprecisionrecall
+from wookie.connectors import cartesian_join, createsbs, indexwithytrue, metrics, evalrecall
 from wookie.preutils import lowerascii, idtostr, rmvstopwords, datapasser, \
-    suffixexact, suffixtoken, suffixfuzzy, _ixnames, \
+    suffixexact, suffixtoken, suffixfuzzy, concatixnames, \
     name_freetext, name_exact, name_pruning_threshold, \
     name_stop_words, name_usescores
 
@@ -58,7 +58,7 @@ class BaseLrComparator(TransformerMixin):
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
         self.scoresuffix = scoresuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
             ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
         )
         self.store_threshold = store_threshold
@@ -137,7 +137,7 @@ class BaseLrComparator(TransformerMixin):
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
-        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+        precision, recall = evalrecall(y_true=y_true, y_pred=y_pred)
         return precision, recall
 
 
@@ -349,7 +349,7 @@ class LrPruningConnector:
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
             ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
         )
         self._suffixascii = 'ascii'
@@ -484,16 +484,38 @@ class LrPruningConnector:
             transfo_score = lrcomparator.transform(left=left, right=right, addvocab=addvocab)
             scores[lrcomparator.outcol] = transfo_score
             assert transfo_score.index.names == ix_taken.names
-            # TODO : here
-            temp_ths = self.pruning_thresholds.get(lrcomparator.on)
-            temp_on_col = lrcomparator.on
-            temp_mytype = lrcomparator.scoresuffix
+            v_pairs_after = None
+            v_newpairs = None
+            v_possiblepairs = None
+            v_pairs_matched = None
+            v_pairs_before = None
+
+            if verbose is True:
+                v_pairs_before = len(ix_taken)
             if self.pruning_thresholds.get(lrcomparator.on) is not None:
+                v_pairs_matched = len(transfo_score.loc[transfo_score >= self.pruning_thresholds.get(lrcomparator.on)])
                 ix_taken = ix_taken.union(
                     transfo_score.loc[transfo_score >= self.pruning_thresholds[lrcomparator.on]].index
                 )
-            del transfo_score
+            else:
+                v_pairs_matched = 0
 
+            if verbose is True:
+                v_pairs_after = len(ix_taken)
+                v_newpairs = v_pairs_after - v_pairs_before
+                v_pairs_before = v_pairs_after
+                v_possiblepairs = left.shape[0] * right.shape[0]
+                print(
+                    '{} | for score {}_{} with threshold of {}: pairs over ths: {:.2%}, new pairs added: {:.2%}'.format(
+                        pd.datetime.now(),
+                        lrcomparator.on,
+                        lrcomparator.scoresuffix,
+                        self.pruning_thresholds.get(lrcomparator.on),
+                        v_pairs_matched / v_possiblepairs,
+                        v_newpairs / v_possiblepairs
+                    ))
+
+            del transfo_score
         X_scores = pd.DataFrame(index=ix_taken)
         for k in scores.keys():
             X_scores[k] = scores[k].loc[ix_taken.intersection(scores[k].index)]
@@ -502,12 +524,12 @@ class LrPruningConnector:
         if X_scores.shape[1] == 0:
             X_scores = cartesian_join(left[[]], right[[]])
         if verbose is True:
-            possiblepairs = left.shape[0] * right.shape[0]
+            v_possiblepairs = left.shape[0] * right.shape[0]
             actualpairs = X_scores.shape[0]
-            compression = int(possiblepairs / actualpairs)
+            compression = int(v_possiblepairs / actualpairs)
             print(
-                '{} | Pruning compression factor of {} on {} possibles pairs'.format(
-                    pd.datetime.now(), compression, possiblepairs
+                '{} | Pruning compression factor of {} on {} possibles pairs\n'.format(
+                    pd.datetime.now(), compression, v_possiblepairs
                 )
             )
         return X_scores
@@ -539,7 +561,7 @@ class LrPruningConnector:
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
-        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+        precision, recall = evalrecall(y_true=y_true, y_pred=y_pred)
         if verbose:
             print(
                 '{} | LrPruningConnector score: precision: {:.2%}, recall: {:.2%}'.format(
@@ -643,7 +665,7 @@ class LrDuplicateFinder:
             self.estimator = RandomForestClassifier(n_jobs=self.n_jobs)
 
         # Derive the new column names
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = _ixnames(
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
             ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
         )
         self._suffixascii = 'ascii'
@@ -869,9 +891,8 @@ class LrDuplicateFinder:
             )
 
         if verbose:
-            precision, recall = evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
+            precision, recall = evalrecall(y_true=y_true, y_pred=X_sbs)
             print('{} | Pruning score: precision: {:.2%}, recall: {:.2%}'.format(pd.datetime.now(), precision, recall))
-
         # Redefine X_sbs and y_true to have a common index
         ix_common = y_true.index.intersection(
             X_sbs.index
@@ -883,7 +904,8 @@ class LrDuplicateFinder:
         self.model_sk.fit(X_sbs, y_true)
 
         if verbose:
-            scores = self.score(left=left, right=right, pairs=y_true, kind='all')
+            y_pred = pd.Series(self.model_sk.predict(X_sbs), index=X_sbs.index)
+            scores = metrics(y_true=y_true, y_pred=y_pred)
             assert isinstance(scores, dict)
             print(
                 '{} | Estimator score: precision: {:.2%}, recall: {:.2%}'.format(
@@ -1022,7 +1044,7 @@ class LrDuplicateFinder:
             y_true = y_true['y_true']
 
         X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
-        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
+        precision, recall = evalrecall(y_true=y_true, y_pred=X_sbs)
         return precision, recall
 
     def score(self, left, right, pairs, kind='accuracy'):
@@ -1123,7 +1145,7 @@ def _transform_tkscore(left,
     right = right.dropna().copy()
     assert isinstance(left, pd.Series)
     assert isinstance(right, pd.Series)
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
     # If we cannot find a single value we return blank

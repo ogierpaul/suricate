@@ -57,16 +57,24 @@ if __name__ == '__main__':
     #     strip_accents='ascii',
     #     store_threshold=0.2
     # )
-    conlist = [con1]
+    scoreplan = {
+        'name': {
+            'type': 'FreeText',
+            'threshold': 0.5
+        },
+        'street': {
+            'type': 'FreeText',
+            'threshold': 0.5
+        },
+        'duns': {
+            'type': 'Exact',
+            'threshold': 1.0
+        }
+    }
     model = lrcomparators.LrPruningConnector(
-        lrcomparators=conlist,
-        pruning_thresholds={'name': 0.5, 'street': 0.6, 'duns': 1.0}
+        scoreplan=scoreplan
     )
-    # X_scores = model.transform(left=train_left, right=train_right, verbose=True)
-    # X_scores = model.transform(left=test_left, right=test_right, verbose=True)
-    # # precision, recall = model._evalscore(left=train_left, right=train_right, y_true=y_train)
-    # # # y_pred = con.transform(left=train_left, right=train_right, addvocab='add')
-    # # # y_pred.loc[y_pred > 0] = 1
+
     for s, x, y_true, in zip(['train', 'tests'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))

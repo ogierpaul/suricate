@@ -14,6 +14,7 @@ setup(name='wookie',
           'numpy',
           'fuzzywuzzy',
           'pytest',
-          'dask'
+          'dask',
+          'elasticsearch'
       ],
       zip_safe=False)

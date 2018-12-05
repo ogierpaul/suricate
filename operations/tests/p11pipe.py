@@ -1,9 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from operations import companypreparation as preprocessing
 from wookie import connectors
 from wookie.lrcomparators import LrDuplicateFinder
-from wookie.preutils import _ixnames
+from wookie.preutils import concatixnames
 
 if __name__ == '__main__':
     # Variable definition
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     ixname = 'ix'
     lsuffix = 'left'
     rsuffix = 'right'
-    ixnameleft, ixnameright, ixnamepairs = _ixnames(
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname,
         lsuffix=lsuffix,
         rsuffix=rsuffix
@@ -22,20 +23,18 @@ if __name__ == '__main__':
     scoreplan_origin = {
         'name': {
             'type': 'FreeText',
-            'stop_words': ['gmbh'],
+            'stop_words': preprocessing.companystopwords,
             'threshold': dem_treshold
         },
         'street': {
             'type': 'FreeText',
-            'stop_words': ['avenue'],
+            'stop_words': preprocessing.streetstopwords,
             'threshold': dem_treshold,
-            'use_scores': ['ngram']
         },
         'city': {
             'type': 'FreeText',
-            'stop_words': ['cedex'],
+            'stop_words': preprocessing.citystopwords,
             'threshold': None,
-            'use_scores': ['fuzzy']
         },
         'duns': {
             'type': 'Exact',
@@ -44,7 +43,7 @@ if __name__ == '__main__':
         'postalcode': {
             'type': 'FreeText',
             'threshold': None,
-            'use_scores': ['token']
+            'use_scores': ['fuzzy']
         },
         'countrycode': {
             'type': 'Exact',
@@ -67,8 +66,9 @@ if __name__ == '__main__':
 
     dedupe = LrDuplicateFinder(
         scoreplan=scoreplan_origin,
+        prefunc=preprocessing.preparedf,
         verbose=True,
-        n_jobs=2
+        n_jobs=4
     )
 
     dedupe.fit(
