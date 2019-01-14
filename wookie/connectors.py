@@ -4,6 +4,11 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from wookie.preutils import addsuffix, rmvsuffix, concatixnames
 
 
+# Module Description
+## This module is about connecting two sources (one called 'left', one called 'right')
+## And creating a side-by-side array of the different features
+
+
 def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
     """
 

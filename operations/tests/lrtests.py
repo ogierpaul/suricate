@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+import wookie.tokenizers
 from wookie import connectors, lrcomparators
 
 if __name__ == '__main__':
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     df_train, df_test = train_test_split(df_train, train_size=0.7)
     train_left, train_right, y_train = connectors.separatesides(df_train)
     test_left, test_right, y_test = connectors.separatesides(df_test)
-    con1 = lrcomparators.LrTokenComparator(
+    con1 = wookie.tokenizers.LrTokenComparator(
         on='name',
         ixname=ixname,
         lsuffix=lsuffix,
