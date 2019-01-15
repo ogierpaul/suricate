@@ -14,5 +14,5 @@ class CartesianConnector(DFConnector):
 
     def transform(self):
         newindex = pd.MultiIndex.from_product([self.leftdf.index, self.rightdf.index], names=self.ixnamepairs)
-        score = pd.Series(index=newindex, name=self.outcol).fillna(1.0)
+        score = pd.Series(index=newindex, name=self.outcol).fillna(1)
         return score

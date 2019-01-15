@@ -26,6 +26,20 @@ class ExactConnector(DFConnector):
         return self
 
     def transform(self):
+        newleft, newright = self._todf(left=self.leftdf, right=self.rightdf)
+        score = pd.merge(
+            left=newleft.reset_index(drop=False),
+            right=newright.reset_index(drop=False),
+            left_on=self.on,
+            right_on=self.on,
+            how='inner',
+            suffixes=['_' + self.lsuffix, '_' + self.rsuffix]
+        )
+        score = score[self.ixnamepairs].set_index(self.ixnamepairs)
+        score[self.outcol] = 1
+        score = score[self.outcol]
+        return score
+
 
 
 class LrExactComparator(DFConnector):
