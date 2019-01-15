@@ -1,7 +1,7 @@
 import pandas as pd
 
-from wookie.preutils import fuzzy_score
-from wookie.sbscomparators import BaseSbsComparator
+from wookie.base import BaseSbsComparator
+from wookie.comparators.sidebyside import fuzzy_score
 
 nrows = None
 sbs = pd.read_csv(

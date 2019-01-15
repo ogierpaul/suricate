@@ -7,9 +7,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
-from wookie import LrTokenComparator
+from wookie import createsbs, LrExactComparator
 from wookie.base import BaseLrComparator
-from wookie.connectors import cartesian_join, createsbs, indexwithytrue, metrics, evalrecall
+from wookie.comparators.leftright.tokenizers import LrTokenComparator
+from wookie.connectors.dataframes.base import indexwithytrue, metrics, evalprecisionrecall, cartesian_join
 from wookie.preutils import lowerascii, idtostr, rmvstopwords, datapasser, \
     suffixexact, suffixtoken, suffixfuzzy, concatixnames, \
     name_freetext, name_exact, name_pruning_threshold, \
@@ -20,69 +21,6 @@ suffix_tfdif = 'tfidf'
 
 # noinspection PyProtectedMember
 from wookie.sbscomparators import DataPasser, PipeSbsComparator
-
-
-class LrExactComparator(BaseLrComparator):
-    def __init__(self,
-                 on,
-                 scoresuffix='exact',
-                 ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
-                 store_threshold=1.0,
-                 **kwargs):
-        """
-
-        Args:
-            on (str): column to compare
-            scoresuffix (str): name of the suffix added to the column name for the score name
-            ixname: 'ix'
-            lsuffix (str): 'left'
-            rsuffix (str): 'right'
-            store_threshold(flat): variable above which the similarity score is stored
-            **kwargs:
-        """
-        BaseLrComparator.__init__(self,
-                                  ixname=ixname,
-                                  lsuffix=lsuffix,
-                                  rsuffix=rsuffix,
-                                  on=on,
-                                  scoresuffix=scoresuffix,
-                                  store_threshold=store_threshold
-                                  )
-
-    def fit(self, left=None, right=None, *args, **kwargs):
-        """
-        # Do nothing
-        Args:
-            left (pd.Series/pd.DataFrame):
-            right (pd.Series/pd.DataFrame):
-        Returns:
-            self
-        """
-        return self
-
-    def transform(self, left, right, *args, **kwargs):
-        """
-        Args:
-            left (pd.Series/pd.DataFrame): {'ix':['duns', ...]}
-            right (pd.Series/pd.DataFrame):
-        Returns:
-            pd.Series: {['ix_left', 'ix_right']: 'duns_exact'}
-        """
-        newleft, newright = self._todf(left=left, right=right)
-        score = pd.merge(
-            left=newleft.reset_index(drop=False),
-            right=newright.reset_index(drop=False),
-            left_on=self.on,
-            right_on=self.on,
-            how='inner',
-            suffixes=['_' + self.lsuffix, '_' + self.rsuffix]
-        )
-        score = score[self.ixnamepairs].set_index(self.ixnamepairs)
-        score[self.outcol] = 1
-        score = score[self.outcol]
-        return score
 
 
 class LrPruningConnector:
@@ -339,7 +277,7 @@ class LrPruningConnector:
         # assert hasattr(self, 'transform') and callable(getattr(self, 'transform'))
         # noinspection
         y_pred = self.transform(left=left, right=right)
-        precision, recall = evalrecall(y_true=y_true, y_pred=y_pred)
+        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
         if verbose:
             print(
                 '{} | LrPruningConnector score: precision: {:.2%}, recall: {:.2%}'.format(
@@ -349,7 +287,6 @@ class LrPruningConnector:
                 )
             )
         return precision, recall
-
 
 class LrDuplicateFinder:
     """
@@ -669,7 +606,7 @@ class LrDuplicateFinder:
             )
 
         if verbose:
-            precision, recall = evalrecall(y_true=y_true, y_pred=X_sbs)
+            precision, recall = evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
             print('{} | Pruning score: precision: {:.2%}, recall: {:.2%}'.format(pd.datetime.now(), precision, recall))
         # Redefine X_sbs and y_true to have a common index
         ix_common = y_true.index.intersection(
@@ -822,7 +759,7 @@ class LrDuplicateFinder:
             y_true = y_true['y_true']
 
         X_sbs = self._lr_to_sbs(left=newleft, right=newright, addvocab=addvocab, verbose=verbose)
-        precision, recall = evalrecall(y_true=y_true, y_pred=X_sbs)
+        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=X_sbs)
         return precision, recall
 
     def score(self, left, right, pairs, kind='accuracy'):

@@ -5,6 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from wookie.base import BaseLrComparator
 from wookie.preutils import concatixnames
 
+_tfidf_store_threshold_value = 0.5
 
 def _update_vocab(left, right, vocab=None, addvocab='add'):
     """
@@ -37,7 +38,7 @@ def _update_vocab(left, right, vocab=None, addvocab='add'):
     if addvocab == 'keep':
         return _check_vocab(vocab)
     else:
-        new = (left.dropna().tolist() + right.tolist()).copy()
+        new = (left.dropna().tolist() + right.dropna().tolist()).copy()
         if addvocab == 'replace':
             return new
         else:
@@ -103,10 +104,6 @@ def _transform_tkscore(left,
         score = score[score[scorename] >= threshold]
     score = score[scorename]
     return score
-
-
-_tfidf_store_threshold_value = 0.5
-
 
 class LrTokenComparator(BaseLrComparator):
     def __init__(self, vectorizermodel='tfidf',

@@ -1,4 +1,5 @@
-from wookie.connectors import showpairs, separatesides, createsbs
-from wookie.lrcomparators import LrDuplicateFinder, LrPruningConnector, LrExactComparator
-from wookie.sbscomparators import PipeSbsComparator, FuzzyWuzzySbsComparator, DataPasser
-from wookie.tokenizers import LrTokenComparator
+# from wookie.sbscomparators import PipeSbsComparator, DataPasser
+#
+# from wookie.connectors.dataframes.base import separatesides, createsbs, showpairs
+# from wookie.connectors.dataframes.lrcomparators import LrDuplicateFinder, LrPruningConnector
+# from wookie.connectors.dataframes.exact import LrExactComparator

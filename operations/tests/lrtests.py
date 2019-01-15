@@ -1,8 +1,9 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-import wookie.tokenizers
-from wookie import connectors, lrcomparators
+import wookie.connectors.dataframes.base
+import wookie.connectors.dataframes.cartesianconnector
+from wookie.connectors.dataframes import lrcomparators
 
 if __name__ == '__main__':
     # Variable definition
@@ -25,9 +26,9 @@ if __name__ == '__main__':
     df_train = pd.read_csv(filepath_training, dtype=str).set_index(ixnamepairs)
     df_train['y_true'] = df_train['y_true'].astype(float)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = connectors.separatesides(df_train)
-    test_left, test_right, y_test = connectors.separatesides(df_test)
-    con1 = wookie.tokenizers.LrTokenComparator(
+    train_left, train_right, y_train = wookie.connectors.dataframes.base.separatesides(df_train)
+    test_left, test_right, y_test = wookie.connectors.dataframes.base.separatesides(df_test)
+    con1 = wookie.leftright.tokenizers.LrTokenComparator(
         on='name',
         ixname=ixname,
         lsuffix=lsuffix,

@@ -1,9 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+import wookie.connectors.dataframes.base
+import wookie.connectors.dataframes.cartesianconnector
 from operations import companypreparation as preprocessing
-from wookie import connectors
-from wookie.lrcomparators import LrDuplicateFinder
+from wookie.connectors.dataframes.lrcomparators import LrDuplicateFinder
 from wookie.preutils import concatixnames
 
 if __name__ == '__main__':
@@ -61,8 +62,8 @@ if __name__ == '__main__':
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training, nrows=nrows).set_index(ixnamepairs)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = connectors.separatesides(df_train)
-    test_left, test_right, y_test = connectors.separatesides(df_test)
+    train_left, train_right, y_train = wookie.connectors.dataframes.base.separatesides(df_train)
+    test_left, test_right, y_test = wookie.connectors.dataframes.base.separatesides(df_test)
 
     dedupe = LrDuplicateFinder(
         scoreplan=scoreplan_origin,

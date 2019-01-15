@@ -2,7 +2,8 @@ from unittest import TestCase
 
 import pandas as pd
 
-from wookie.connectors import cartesian_join, separatesides, createsbs, showpairs
+from wookie import separatesides, createsbs, showpairs
+from wookie.connectors.dataframes.base import cartesian_join
 from wookie.preutils import concatixnames
 
 ixname = 'myindex'

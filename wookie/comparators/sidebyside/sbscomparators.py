@@ -1,83 +1,12 @@
-import dask.dataframe as dd
+import numpy as np
 import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_union
 
+from wookie.comparators.sidebyside import FuzzyWuzzySbsComparator
 from wookie.preutils import suffixexact, suffixtoken, suffixfuzzy, name_freetext, name_exact, \
-    exact_score, fuzzy_score, token_score, name_usescores
-
-
-class BaseSbsComparator(TransformerMixin):
-    def __init__(self, on_left='left', on_right='right', compfunc=None, n_jobs=1, *args, **kwargs):
-        """
-        base class for all transformers
-        Args:
-            on_left (str):
-            on_right (str):
-            compfunc (callable): ['fuzzy', 'token', 'exact']
-            n_jobs (int): number of parallel jobs. If n_jobs>1, will call the dask dataframe API
-        """
-        TransformerMixin.__init__(self)
-        self.left = on_left
-        self.right = on_right
-        if compfunc is None:
-            raise ValueError('comparison function not provided with function', compfunc)
-        assert callable(compfunc)
-        self.compfunc = compfunc
-        self.n_jobs = n_jobs
-
-    def transform(self, X):
-        """
-        Apply the compfunc to the on_left and on_right column
-        Args:
-            X (pd.DataFrame):
-
-        Returns:
-            np.ndarray
-        """
-        if self.n_jobs == 1:
-            return self._stransform(X)
-        else:
-            return self._ptransform(X)
-
-    def _stransform(self, X):
-        """
-        Pandas apply function on rows (axis=1).
-        Args:
-            X (pd.DataFrame):
-
-        Returns:
-            np.array
-        """
-        y = X.apply(
-            lambda r: self.compfunc(
-                r.loc[self.left],
-                r.loc[self.right]
-            ),
-            axis=1
-        ).values.reshape(-1, 1)
-        return y
-
-    def _ptransform(self, X):
-        """
-        Use of dask dataframe API to parall
-        Args:
-            X:
-
-        Returns:
-
-        """
-        y = dd.from_pandas(
-            X.reset_index(drop=True),
-            npartitions=self.n_jobs
-        ).map_partitions(
-            func=self.transform
-        )
-        return y
-
-    def fit(self, *_):
-        return self
+    name_usescores
 
 
 class DataPasser(TransformerMixin):
@@ -109,40 +38,6 @@ class DataPasser(TransformerMixin):
         else:
             res = X
         return res
-
-
-class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
-    """
-    Compare two columns of a dataframe with one another using functions from fuzzywuzzy library
-    """
-
-    def __init__(self, on_left, on_right, comparator=None, *args, **kwargs):
-        """
-        Args:
-            comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token']
-            on_left (str): name of left column
-            on_right (str): name of right column
-            *args:
-            **kwargs:
-        """
-        if comparator == 'exact':
-            compfunc = exact_score
-        elif comparator == 'fuzzy':
-            compfunc = fuzzy_score
-        elif comparator == 'token':
-            compfunc = token_score
-        else:
-            raise ValueError('compfunc value not understood: {}'.format(comparator),
-                             "must be one of those: ['exact', 'fuzzy', 'token']")
-        BaseSbsComparator.__init__(
-            self,
-            compfunc=compfunc,
-            on_left=on_left,
-            on_right=on_right,
-            *args,
-            **kwargs
-        )
-        pass
 
 
 class PipeSbsComparator(TransformerMixin):
