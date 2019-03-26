@@ -1,11 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-import wookie.connectors.dataframes.base
-import wookie.connectors.dataframes.cartesianconnector
+import wookie.obsolete
 from operations import companypreparation as preprocessing
-from wookie.connectors.dataframes.lrcomparators import LrDuplicateFinder
 from wookie.preutils import concatixnames
+from wookie.wrappers.temp_lrcomparators import LrDuplicateFinder
 
 if __name__ == '__main__':
     # Variable definition
@@ -62,8 +61,8 @@ if __name__ == '__main__':
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training, nrows=nrows).set_index(ixnamepairs)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = wookie.connectors.dataframes.base.separatesides(df_train)
-    test_left, test_right, y_test = wookie.connectors.dataframes.base.separatesides(df_test)
+    train_left, train_right, y_train = wookie.obsolete.separatesides(df_train)
+    test_left, test_right, y_test = wookie.obsolete.separatesides(df_test)
 
     dedupe = LrDuplicateFinder(
         scoreplan=scoreplan_origin,
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     )
     print('\n', sorted(dedupe.cols_scorer), '\n')
 
-    for s, x, y_true, in zip(['train', 'tests'], [[train_left, train_right], [test_left, test_right]],
+    for s, x, y_true, in zip(['train', 'tests_old'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
         print('\n****************\n')
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))

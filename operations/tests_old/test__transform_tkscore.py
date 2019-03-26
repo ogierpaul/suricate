@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 import pandas as pd
-
-from wookie.comparators.leftright.tokenizers import LrTokenComparator
 from wookie.connectors.dataframes.base import cartesian_join
+
+from wookie.obsolete.tokenizers import LrTokenComparator
 
 left = pd.read_csv('/Users/paulogier/81-GithubPackages/wookie/operations/data/left.csv', index_col=0)
 right = pd.read_csv('/Users/paulogier/81-GithubPackages/wookie/operations/data/right.csv', index_col=0)

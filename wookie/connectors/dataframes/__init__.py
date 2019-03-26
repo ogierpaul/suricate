@@ -1,1 +1,0 @@
-from wookie.connectors.dataframes.cartesianconnector import CartesianConnector

@@ -6,11 +6,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
+from wookie.connectors.dataframes.base import cartesian_join
 
 from wookie import createsbs, LrExactComparator
-from wookie.base import BaseLrComparator
-from wookie.comparators.leftright.tokenizers import LrTokenComparator
-from wookie.connectors.dataframes.base import indexwithytrue, metrics, evalprecisionrecall, cartesian_join
+from wookie.obsolete import indexwithytrue, metrics, evalprecisionrecall
+from wookie.obsolete.tokenizers import LrTokenComparator, BaseLrComparator
 from wookie.preutils import lowerascii, idtostr, rmvstopwords, datapasser, \
     suffixexact, suffixtoken, suffixfuzzy, concatixnames, \
     name_freetext, name_exact, name_pruning_threshold, \

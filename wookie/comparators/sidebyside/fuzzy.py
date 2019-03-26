@@ -1,10 +1,12 @@
 import pandas as pd
-from fuzzywuzzy.fuzz import ratio as simpleratio, partial_token_set_ratio as tokenratio
+from fuzzywuzzy.fuzz import ratio as simpleratio, token_sort_ratio as tokenratio
 from sklearn.base import TransformerMixin
 
-from wookie.base import BaseSbsComparator
+from wookie.comparators.sidebyside.base import BaseSbsComparator
 from wookie.preutils import navalue_score
 
+
+# TODO: Prio medium : add other comparison functions
 
 class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
     """
@@ -23,7 +25,7 @@ class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
         if comparator == 'exact':
             compfunc = exact_score
         elif comparator == 'fuzzy':
-            compfunc = fuzzy_score
+            compfunc = simple_score
         elif comparator == 'token':
             compfunc = token_score
         else:
@@ -40,7 +42,7 @@ class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
         pass
 
 
-def fuzzy_score(left, right):
+def simple_score(left, right):
     """
     return ratio score of fuzzywuzzy
     Args:

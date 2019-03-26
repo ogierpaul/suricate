@@ -9,6 +9,9 @@ from wookie.preutils import suffixexact, suffixtoken, suffixfuzzy, name_freetext
     name_usescores
 
 
+# TODO: Warning: This class might be obsolete / Do not use
+
+
 class DataPasser(TransformerMixin):
     """
     This dont do anything, just pass the data on selected columns

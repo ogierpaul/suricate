@@ -1,9 +1,8 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-import wookie.connectors.dataframes.base
-import wookie.connectors.dataframes.cartesianconnector
-from wookie.connectors.dataframes import lrcomparators
+import wookie.obsolete
+from wookie.wrappers import temp_lrcomparators
 
 if __name__ == '__main__':
     # Variable definition
@@ -26,8 +25,8 @@ if __name__ == '__main__':
     df_train = pd.read_csv(filepath_training, dtype=str).set_index(ixnamepairs)
     df_train['y_true'] = df_train['y_true'].astype(float)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = wookie.connectors.dataframes.base.separatesides(df_train)
-    test_left, test_right, y_test = wookie.connectors.dataframes.base.separatesides(df_test)
+    train_left, train_right, y_train = wookie.obsolete.separatesides(df_train)
+    test_left, test_right, y_test = wookie.obsolete.separatesides(df_test)
     con1 = wookie.leftright.tokenizers.LrTokenComparator(
         on='name',
         ixname=ixname,
@@ -73,11 +72,11 @@ if __name__ == '__main__':
             'threshold': 1.0
         }
     }
-    model = lrcomparators.LrPruningConnector(
+    model = temp_lrcomparators.LrPruningConnector(
         scoreplan=scoreplan
     )
 
-    for s, x, y_true, in zip(['train', 'tests'], [[train_left, train_right], [test_left, test_right]],
+    for s, x, y_true, in zip(['train', 'tests_old'], [[train_left, train_right], [test_left, test_right]],
                              [y_train, y_test]):
         print('{} | Starting pred on batch {}'.format(pd.datetime.now(), s))
         precision, recall = model.evalscore(left=x[0], right=x[1], y_true=y_true)
