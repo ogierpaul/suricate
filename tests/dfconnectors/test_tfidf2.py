@@ -1,43 +1,6 @@
-import pandas as pd
-import pytest
 from sklearn.pipeline import make_union
 
 from wookie.pandasconnectors.vectorizer import VectorizerConnector2, VectorizerConnector
-from wookie.preutils import concatixnames
-
-n_lines = 200
-
-
-@pytest.fixture
-def ix_names():
-    ixname = 'ix'
-    lsuffix = 'left'
-    rsuffix = 'right'
-    ixnameleft, ixnameright, ixnamepairs = concatixnames(
-        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
-    )
-    names = dict()
-    names['ixname'] = ixname
-    names['ixnameleft'] = ixnameleft
-    names['ixnameright'] = ixnameright
-    names['ixnamepairs'] = ixnamepairs
-    names['lsuffix'] = lsuffix
-    names['rsuffix'] = rsuffix
-    return names
-
-
-@pytest.fixture
-def df_left():
-    left = pd.read_csv('/Users/paulogier/81-GithubPackages/wookie/operations/data/left.csv', index_col=0,
-                       dtype=str).sample(n_lines)
-    return left
-
-
-@pytest.fixture
-def df_right():
-    right = pd.read_csv('/Users/paulogier/81-GithubPackages/wookie/operations/data/right.csv', index_col=0,
-                        dtype=str).sample(n_lines)
-    return right
 
 
 def test_loaddata(ix_names, df_left, df_right):

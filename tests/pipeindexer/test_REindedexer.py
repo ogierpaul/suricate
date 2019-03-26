@@ -1,4 +1,3 @@
-from wookie.pandasconnectors import VectorizerConnector, ExactConnector, FuzzyConnector
 import pandas as pd
 from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.metrics import accuracy_score
@@ -7,6 +6,7 @@ from sklearn.preprocessing import Imputer
 
 from wookie.pandasconnectors import VectorizerConnector, ExactConnector, FuzzyConnector
 
+y_train = 0
 
 def test_pipeline(ix_names, df_left, df_right, df_sbs):
     y_true = df_sbs['y_true']

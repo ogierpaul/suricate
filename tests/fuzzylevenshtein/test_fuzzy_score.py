@@ -1,4 +1,3 @@
-import pandas as pd
 import pytest
 from fuzzywuzzy.fuzz import WRatio, QRatio, ratio, partial_token_sort_ratio
 
@@ -16,19 +15,6 @@ def myscores():
         'wookie_token': token_score
     }
     return s
-
-
-@pytest.fixture
-def mymatches():
-    matches = [
-        ['hello world', 'hello big world'],
-        ['hello world', 'holy grail'],
-        ['hello world', None],
-        ['hello world', 'HELLO! world']
-    ]
-    df = pd.DataFrame(matches)
-    df.columns = ['left', 'right']
-    return df
 
 
 def test_simplescore(mymatches, myscores):

@@ -1,28 +1,7 @@
 import pandas as pd
-import pytest
 from sklearn.pipeline import make_union
 
 from wookie.pandasconnectors import VectorizerConnector, FuzzyConnector
-
-
-@pytest.fixture
-def df_circus():
-    left = pd.DataFrame(
-        {
-            'name': [
-                'hello world',
-                'hello big world',
-                'holy grail',
-                'holy moly'
-            ]
-        }
-    )
-    left.index.name = 'ix'
-    right = left.copy()
-    right['ix'] = pd.Series(['a', 'b', 'c', 'd'], index=right.index)
-    right.set_index('ix', drop=True, inplace=True)
-    X = [left, right]
-    return X
 
 
 def test_makeunionperso(ix_names, df_circus):
