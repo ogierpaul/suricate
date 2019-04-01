@@ -8,9 +8,9 @@ from wookie.pandasconnectors import VectorizerConnector, ExactConnector, FuzzyCo
 
 y_train = 0
 
-def test_pipeline(ix_names, df_left, df_right, df_sbs):
+
+def test_pipeline(ix_names, df_X, df_sbs):
     y_true = df_sbs['y_true']
-    df_X = [df_left, df_right]
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         ExactConnector(on='name'),
@@ -26,9 +26,8 @@ def test_pipeline(ix_names, df_left, df_right, df_sbs):
     pass
 
 
-def test_pipeline2(ix_names, df_left, df_right, df_sbs):
+def test_pipeline2(ix_names, df_X, df_sbs):
     y_true = df_sbs['y_true']
-    df_X = [df_left, df_right]
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         ExactConnector(on='name'),
