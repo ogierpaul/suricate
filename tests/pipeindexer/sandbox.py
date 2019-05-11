@@ -64,7 +64,8 @@ def transform(X, on_ix=None, as_series=False):
         if isinstance(X, pd.DataFrame) or isinstance(X, pd.Series):
             return X.loc[on_ix]
         elif isinstance(X, np.ndarray):
-            on_ix =
+            # TO BE DEFINED
+            on_ix = None
             return X[on_ix]
         else:
             raise TypeError(
