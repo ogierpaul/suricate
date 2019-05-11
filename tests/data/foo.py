@@ -65,7 +65,7 @@ def df_right(ix_names):
 
 
 @pytest.fixture
-def df_X(df_left=df_left, df_right=df_right):
+def df_X(ixnames, df_left, df_right):
     """
     initiate an array with two values, two sample dataframes left and right
     [df_left, df_right]

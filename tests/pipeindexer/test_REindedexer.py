@@ -5,11 +5,13 @@ from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
 from wookie.pandasconnectors import VectorizerConnector, ExactConnector, FuzzyConnector
+from wookie.pipeline.ytrueindexer import LrIndexTransformer as Indexer
+from ..data.bar import ix_names, df_X, df_sbs
 
 y_train = 0
 
 
-def test_pipeline(ix_names, df_X, df_sbs):
+def test_pipeline(ix_names=ix_names, df_X=df_X, df_sbs=df_sbs):
     y_true = df_sbs['y_true']
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
@@ -26,7 +28,7 @@ def test_pipeline(ix_names, df_X, df_sbs):
     pass
 
 
-def test_pipeline2(ix_names, df_X, df_sbs):
+def test_pipeline2(ix_names=ix_names, df_X=df_X, df_sbs=df_sbs):
     y_true = df_sbs['y_true']
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
@@ -37,6 +39,29 @@ def test_pipeline2(ix_names, df_X, df_sbs):
     clf = Classifier()
     pipe = make_pipeline(*[
         scorer, imp, clf
+    ])
+    pipe.fit(X=df_X, y=y_true)
+    y_pred = pipe.predict(X=df_X)
+    print(accuracy_score(y_true=y_true, y_pred=y_pred))
+    pass
+
+
+# THIS LAST TEST FAILED AND I NEED TO REBUILD A NEW METHOD
+# I HAVE A K.O because the output of a pipeline is a np.ndarray
+# but my indexer has an index
+# I cannot a posteriori link the nump.ndarray (X_score) with the y_true index
+def test_pipeline3(ix_names=ix_names, df_X=df_X, df_sbs=df_sbs):
+    y_true = df_sbs['y_true'].sample(4)
+    scorer = make_union(*[
+        VectorizerConnector(on='name', analyzer='char'),
+        ExactConnector(on='name'),
+        FuzzyConnector(on='name')
+    ])
+    imp = Imputer()
+    clf = Classifier()
+    ixr = Indexer()
+    pipe = make_pipeline(*[
+        scorer, ixr, imp, clf
     ])
     pipe.fit(X=df_X, y=y_true)
     y_pred = pipe.predict(X=df_X)
