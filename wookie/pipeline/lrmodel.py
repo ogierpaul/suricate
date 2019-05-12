@@ -7,7 +7,7 @@ from wookie.preutils import concatixnames, createmultiindex, addsuffix
 
 class LrModel(ClassifierMixin):
     def __init__(self,
-                 scorer,
+                 transformer,
                  classifier,
                  ixname='ix',
                  lsuffix='left',
@@ -16,7 +16,7 @@ class LrModel(ClassifierMixin):
         """
 
         Args:
-            scorer (TransformerMixin):
+            transformer (TransformerMixin):
             classifier (ClassifierMixin):
             ixname (str):
             lsuffix (str):
@@ -34,7 +34,7 @@ class LrModel(ClassifierMixin):
             rsuffix=self.rsuffix
         )
         self.fitted = False
-        self.scorer = scorer
+        self.transformer = transformer
         self.classifier = classifier
         pass
 
@@ -48,7 +48,7 @@ class LrModel(ClassifierMixin):
         Returns:
             self
         '''
-        X_score = self.scorer.fit_transform(X=X, y=None)
+        X_score = self.transformer.fit_transform(X=X, y=None)
         X_slice = self.reindex(X=X, X_score=X_score, y=y)
         self.classifier.fit(X=X_slice, y=y)
         return self
@@ -84,15 +84,15 @@ class LrModel(ClassifierMixin):
             return X
 
     def predict(self, X):
-        X_score = self.scorer.transform(X=X)
+        X_score = self.transformer.transform(X=X)
         return self.classifier.predict(X=X_score)
 
     def predict_proba(self, X):
-        X_score = self.scorer.transform(X=X)
+        X_score = self.transformer.transform(X=X)
         return self.classifier.predict_proba(X=X_score)
 
     def score(self, X, y, sampleweight=None):
-        X_score = self.scorer.transform(X=X)
+        X_score = self.transformer.transform(X=X)
         X_slice = self.reindex(X=X, X_score=X_score, y=y)
         return self.classifier.score(X=X_slice, y=y, sample_weight=sampleweight)
 

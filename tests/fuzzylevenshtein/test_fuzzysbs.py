@@ -1,4 +1,4 @@
-from wookie.comparators import FuzzyWuzzySbsComparator
+from wookie.sbsdftransformers import FuzzyWuzzySbsComparator
 
 
 def test_cclr(df_circus, circus_sbs):

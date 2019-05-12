@@ -16,7 +16,7 @@ X = [left, right]
 
 
 def test_lrmodel():
-    scorer = make_union(*[
+    transformer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='street', analyzer='char'),
         ExactConnector(on='countrycode'),
@@ -24,8 +24,8 @@ def test_lrmodel():
         ExactConnector(on='duns')
     ])
     imp = Imputer()
-    scorer = make_pipeline(*[scorer, imp])
+    transformer = make_pipeline(*[transformer, imp])
     clf = Classifier()
-    mypipe = LrModel(scorer=scorer, classifier=clf)
+    mypipe = LrModel(transformer=transformer, classifier=clf)
     mypipe.fit(X=X, y=y)
     print(mypipe.score(X=X, y=y))

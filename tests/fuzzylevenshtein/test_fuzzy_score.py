@@ -1,7 +1,7 @@
 import pytest
 from fuzzywuzzy.fuzz import WRatio, QRatio, ratio, partial_token_sort_ratio
 
-from wookie.comparators.fuzzy import simple_score, token_score
+from wookie.sbsdftransformers.fuzzy import simple_score, token_score
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 import pandas as pd
 from sklearn.pipeline import make_union, make_pipeline, Pipeline
-from wookie.comparators import FuzzyWuzzySbsComparator
 
 from wookie.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
+from wookie.sbsdftransformers import FuzzyWuzzySbsComparator
 
 
 # TODO: this test is to test the possibility of having Left -Right sbsdftransformers followed by Left-Right Fuzzy comparator
