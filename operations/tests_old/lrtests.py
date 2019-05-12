@@ -1,8 +1,8 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-import wookie.obsolete
-from wookie.wrappers import temp_lrcomparators
+import wookie.preutils
+from wookie.obsolete import temp_lrcomparators
 
 if __name__ == '__main__':
     # Variable definition
@@ -25,8 +25,8 @@ if __name__ == '__main__':
     df_train = pd.read_csv(filepath_training, dtype=str).set_index(ixnamepairs)
     df_train['y_true'] = df_train['y_true'].astype(float)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = wookie.obsolete.separatesides(df_train)
-    test_left, test_right, y_test = wookie.obsolete.separatesides(df_test)
+    train_left, train_right, y_train = wookie.preutils.separatesides(df_train)
+    test_left, test_right, y_test = wookie.preutils.separatesides(df_test)
     con1 = wookie.leftright.tokenizers.LrTokenComparator(
         on='name',
         ixname=ixname,

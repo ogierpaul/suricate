@@ -326,3 +326,27 @@ class LrTokenComparator(BaseLrComparator):
             outcol=self.outcol
         )
         return score
+
+
+# KO for Knowledge Management
+def pruning_score(self, X, y_true):
+    """
+    compression: defined by the number of possible pairs divided by the number of actual pairs
+    precision and recall : depends on y_true
+    Args:
+        y_true: list of pairs in the index
+
+    Returns:
+        dict: ['compression', 'precision', 'recall']
+    """
+    score = dict()
+    y_pred = self.transform(X=X, y=y_true, as_series=True)
+    score['compression'] = (X[0].shape[0] * X[1].shape[0]) / y_pred.shape[0]
+    precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
+    score['precision'] = precision
+    score['recall'] = recall
+    return score
+
+# score = connector.pruning_score(X=df_X, y_true=df_sbs['y_true'])
+# print(score)
+# assert isinstance(score, dict)

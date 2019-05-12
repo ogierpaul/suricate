@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from wookie.pandasconnectors import CartDataPasser
+from wookie.lrdftransformers import CartesianDataPasser
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def df_circus():
 
 @pytest.fixture
 def circus_sbs(df_circus):
-    cc = CartDataPasser(ixname='ix', lsuffix='left', rsuffix='right', on='name')
+    cc = CartesianDataPasser(ixname='ix', lsuffix='left', rsuffix='right', on='name')
     X_sbs = cc.transform(X=df_circus)
     return X_sbs
 

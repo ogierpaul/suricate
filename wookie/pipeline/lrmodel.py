@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin, ClassifierMixin
 
-from wookie.preutils import concatixnames
+from wookie.preutils import concatixnames, createmultiindex, addsuffix
 
 
 class LrModel(ClassifierMixin):
@@ -69,10 +69,7 @@ class LrModel(ClassifierMixin):
         Returns:
             np.ndarray: Slice of X_score
         '''
-        self.all_ix = pd.MultiIndex.from_product(
-            [X[0].index, X[1].index],
-            names=self.ixnamepairs
-        )
+        self.all_ix = createmultiindex(X=X, names=self.ixnamepairs)
         if isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
             return pd.DataFrame(data=X_score, index=self.all_ix).loc[y.index]
         elif isinstance(y, np.ndarray):
@@ -98,3 +95,49 @@ class LrModel(ClassifierMixin):
         X_score = self.scorer.transform(X=X)
         X_slice = self.reindex(X=X, X_score=X_score, y=y)
         return self.classifier.score(X=X_slice, y=y, sample_weight=sampleweight)
+
+    def return_pairs(self, X):
+        return pd.Series(
+            index=createmultiindex(X=X, names=self.ixnamepairs),
+            data=self.predict(X)
+        )
+
+    def show_pairs(self, X, y=None, use_cols=None):
+        """
+        Create a side by side table from a list of pairs (as a DataFrame)
+        Args:
+            X
+            y (pd.DataFrame/pd.Series): of the form {['ix_left', 'ix_right']:['y_true']}
+            use_cols (list): columns to use
+
+        Returns:
+            pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
+        """
+        left = X[0]
+        right = X[1]
+
+        if y is None:
+            xpairs = pd.DataFrame(index=createmultiindex(X=X, names=self.ixnamepairs))
+        elif isinstance(y, pd.DataFrame):
+            xpairs = y.copy()
+        else:
+            assert isinstance(y, pd.Series)
+            xpairs = pd.DataFrame(y.copy())
+
+        xpairs = xpairs.reset_index(drop=False)
+
+        if use_cols is None or len(use_cols) == 0:
+            use_cols = left.columns.intersection(right.columns)
+        xleft = left[use_cols].copy().reset_index(drop=False)
+        xright = right[use_cols].copy().reset_index(drop=False)
+        xleft = addsuffix(xleft, self.lsuffix).set_index(self.ixnameleft)
+        xright = addsuffix(xright, self.rsuffix).set_index(self.ixnameright)
+
+        sbs = xpairs.join(
+            xleft, on=self.ixnameleft, how='left'
+        ).join(
+            xright, on=self.ixnameright, how='left'
+        ).set_index(
+            self.ixnamepairs
+        )
+        return sbs

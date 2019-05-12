@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from wookie.pandasconnectors import VectorizerConnector, FuzzyConnector
+from wookie.lrdftransformers import VectorizerConnector, FuzzyConnector
 
 
 def test_makeunionperso(ix_names, df_circus):

@@ -1,1 +1,0 @@
-from wookie.comparators.sidebyside.fuzzy import FuzzyWuzzySbsComparator

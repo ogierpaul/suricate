@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.pipeline import make_union
-from wookie.connectors.dataframes import VectorizerConnector, FuzzyConnector
+from wookie.dbconnectors.dataframes import VectorizerConnector, FuzzyConnector
 
 from wookie.preutils import concatixnames
 
@@ -35,6 +35,6 @@ pipe = make_union(*stages)
 pipe.fit(X=df_X)
 scores = pipe.transform(X=df_X)
 alldata = pd.DataFrame(scores, index=stages[0]._getindex(X=df_X), columns=[c.outcol for c in stages])
-alldata2 = stages[0].showpairs(X=df_X, y=alldata, use_cols=['name'])
+alldata2 = stages[0].show_pairs(X=df_X, y=alldata, use_cols=['name'])
 alldata.to_csv('/Users/paulogier/81-GithubPackages/wookie/operations/data/namecomparison3.csv', index=True,
                encoding='utf-8')

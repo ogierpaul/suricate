@@ -4,7 +4,7 @@ import elasticsearch
 import pandas as pd
 import psycopg2 as pg
 
-from wookie.connectors import addsuffix
+from wookie.dbconnectors import addsuffix
 from wookie.preutils import concatixnames, name_freetext, name_exact
 
 ixname = 'ix'

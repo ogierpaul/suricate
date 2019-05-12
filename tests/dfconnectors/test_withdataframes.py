@@ -1,6 +1,6 @@
 from sklearn.pipeline import make_union
 
-from wookie.pandasconnectors import VectorizerConnector, ExactConnector
+from wookie.lrdftransformers import VectorizerConnector, ExactConnector
 
 
 def test_loaddata(ix_names, df_left, df_right):

@@ -1,10 +1,12 @@
 import pandas as pd
+from wookie.comparators.fuzzy import token_score, simple_score
 
-from wookie.comparators.sidebyside.fuzzy import token_score, simple_score
-from wookie.pandasconnectors.base import DFConnector
+from wookie.lrdftransformers.base import LrDfTransformerMixin
 
 
-class FuzzyConnector(DFConnector):
+# FOR FUTURE STEPS
+# ENRICH THE NUMBER OF FUNCTIONS
+class FuzzyConnector(LrDfTransformerMixin):
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
                  scoresuffix='fuzzy', ratio='simple', **kwargs):
         """
@@ -18,8 +20,8 @@ class FuzzyConnector(DFConnector):
             ratio (str): ['simple' , 'token']
             **kwargs:
         """
-        DFConnector.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                             scoresuffix=scoresuffix + '_' + ratio, **kwargs)
+        LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
+                                      scoresuffix=scoresuffix + '_' + ratio, **kwargs)
         self.on = on
         assert ratio in ['simple', 'token']
         if ratio == 'simple':

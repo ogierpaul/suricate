@@ -4,7 +4,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
 
-from wookie.pandasconnectors import VectorizerConnector, ExactConnector, FuzzyConnector
+from wookie.lrdftransformers import VectorizerConnector, ExactConnector, FuzzyConnector
 from wookie.pipeline import LrModel
 from ..data.bar import ix_names, df_X, df_sbs
 

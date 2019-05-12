@@ -1,11 +1,11 @@
 import pandas as pd
 from sklearn.pipeline import make_union, make_pipeline, Pipeline
-
 from wookie.comparators import FuzzyWuzzySbsComparator
-from wookie.pandasconnectors import VectorizerConnector, ExactConnector, CartDataPasser
+
+from wookie.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
 
 
-# TODO: this test is to test the possibility of having Left -Right comparators followed by Left-Right Fuzzy comparator
+# TODO: this test is to test the possibility of having Left -Right sbsdftransformers followed by Left-Right Fuzzy comparator
 
 
 def test_loaddata(ix_names, df_left, df_right):
@@ -26,7 +26,7 @@ def test_lrsbs(df_left, df_right):
     ]
     lr_score = make_union(*lr_stages)
 
-    cc = CartDataPasser()
+    cc = CartesianDataPasser()
     assert isinstance(cc.transform(X=df_X), pd.DataFrame)
 
     sbs_stages = [

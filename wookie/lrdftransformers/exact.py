@@ -1,9 +1,12 @@
 import pandas as pd
 
-from wookie.pandasconnectors.base import DFConnector
+from wookie.lrdftransformers.base import LrDfTransformerMixin
 
 
-class ExactConnector(DFConnector):
+class ExactConnector(LrDfTransformerMixin):
+    '''
+    This class returns the cartesian product
+    '''
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right', scoresuffix='exact', **kwargs):
         """
 
@@ -16,8 +19,8 @@ class ExactConnector(DFConnector):
         Returns
             pd.Series
         """
-        DFConnector.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                             scoresuffix=scoresuffix, **kwargs)
+        LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
+                                      scoresuffix=scoresuffix, **kwargs)
         pass
 
     def _transform(self, X, on_ix=None):

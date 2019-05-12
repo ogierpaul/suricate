@@ -351,3 +351,50 @@ def datapasser(df):
         pd.DataFrame
     """
     return df
+
+
+def createmultiindex(X, names=set(['ix_left', 'ix_right'])):
+    return pd.MultiIndex.from_product(
+        [X[0].index, X[1].index],
+        names=names
+    )
+
+
+def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='y_true'):
+    """
+    Separate a side by side training table into the left table, the right table, and the list of pairs
+    Args:
+        df (pd.DataFrame): side by side dataframe {['ix_left', 'ix_right'] :['name_left', 'name_right']}
+        lsuffix (str): left suffix 'left'
+        rsuffix (str): right suffix 'right'
+        y_true_col (str): name of y_true column
+        ixname (str): name in index column
+
+    Returns:
+        pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
+    """
+    ixnameleft, ixnameright, ixnamepairs = concatixnames(
+        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    )
+
+    def takeside(df, suffix, ixname):
+        """
+
+        Args:
+            df (pd.DataFrame):
+            suffix (str):
+            ixname (str):
+
+        Returns:
+
+        """
+        new = df.copy().reset_index(drop=False)
+        new = new[list(filter(lambda r: r[-len(suffix):] == suffix, new.columns))]
+        new = rmvsuffix(new, suffix).drop_duplicates(subset=[ixname])
+        new.set_index([ixname], inplace=True)
+        return new
+
+    xleft = takeside(df=df, suffix=lsuffix, ixname=ixname)
+    xright = takeside(df=df, suffix=rsuffix, ixname=ixname)
+    pairs = df.loc[:, y_true_col].copy()
+    return xleft, xright, pairs

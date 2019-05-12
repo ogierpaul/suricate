@@ -1,6 +1,6 @@
 from sklearn.pipeline import make_union
 
-from wookie.pandasconnectors.vectorizer import VectorizerConnector2, VectorizerConnector
+from wookie.lrdftransformers.vectorizer import _VectorizerConnector2_temp, VectorizerConnector
 
 
 def test_loaddata(ix_names, df_left, df_right):
@@ -14,8 +14,8 @@ def test_tfidf2(df_left, df_right):
     df_X = [df_left, df_right]
     expected_shape = df_left.shape[0] * df_right.shape[0]
     stages = [
-        VectorizerConnector2(on='name', analyzer='char', pruning=False),
-        VectorizerConnector2(on='street', analyzer='char', pruning=False),
+        _VectorizerConnector2_temp(on='name', analyzer='char', pruning=False),
+        _VectorizerConnector2_temp(on='street', analyzer='char', pruning=False),
     ]
     scorer = make_union(*stages)
     scorer.fit(X=df_X)

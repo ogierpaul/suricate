@@ -1,14 +1,8 @@
-import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
-from sklearn.pipeline import make_union
 
-from wookie.obsolete import evalprecisionrecall
-from wookie.preutils import concatixnames, addsuffix
+from wookie.preutils import concatixnames, addsuffix, createmultiindex
 
-
-# TODO: remove the pruning_ths / use the y in .transform
-# Not to self: do not see the problem yet / What is this function?
 
 def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
     """
@@ -101,22 +95,16 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
     return dfnew
 
 
-class DFConnector(TransformerMixin):
+class LrDfTransformerMixin(TransformerMixin):
     def __init__(self, on=None, ixname='ix',
-                 lsuffix='left', rsuffix='right', scoresuffix='score',
-                 n_jobs=1, pruning_ths=None, **kwargs):
+                 lsuffix='left', rsuffix='right', scoresuffix='score', **kwargs):
         """
-
         Args:
-            left (pd.DataFrame):
-            right (pd.DataFrame):
-            ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            ixname (str): name of the index, default 'ix'
+            lsuffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_left'
+            rsuffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
             on (str): name of the column on which to do the join
-            scoresuffix (str): name of the score suffix
-            n_jobs (int):
-            pruning_ths (float): return only the pairs which have a score greater than the store_ths.
+            scoresuffix (str): suffix to be attached to the on column name
         """
         self.ixname = ixname
         self.lsuffix = lsuffix
@@ -128,12 +116,10 @@ class DFConnector(TransformerMixin):
         )
         self.on = on
         self.scoresuffix = scoresuffix
-        if self.on == None:
+        if self.on is None:
             self.outcol = self.scoresuffix
         else:
             self.outcol = self.on + '_' + self.scoresuffix
-        self.n_jobs = n_jobs
-        self.pruning_ths = pruning_ths
         self.fitted = False
         pass
 
@@ -141,7 +127,7 @@ class DFConnector(TransformerMixin):
         """
         Return the cartesian product index of both dataframes
         Args:
-            X:
+            X (list): [df_left, df_right]
             y (pd.Series/pd.DataFrame/pd.MultiIndex): dummy, not used
 
         Returns:
@@ -152,19 +138,17 @@ class DFConnector(TransformerMixin):
         elif isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
             return y.index
         elif y is None:
-            ix = pd.MultiIndex.from_product(
-                [X[0].index, X[1].index],
-                names=self.ixnamepairs
-            )
+            ix = createmultiindex(X=X, names=self.ixnamepairs)
             return ix
         else:
             print('index, series or dataframe or None expected')
             return y
 
-    def showpairs(self, X, y=None, use_cols=None):
+    def show_pairs(self, X, y=None, use_cols=None):
         """
         Create a side by side table from a list of pairs (as a DataFrame)
         Args:
+            X (list): of the form [df_left, df_right]
             y (pd.DataFrame/pd.Series): of the form {['ix_left', 'ix_right']:['y_true']}
             use_cols (list): columns to use
 
@@ -220,26 +204,16 @@ class DFConnector(TransformerMixin):
         assert isinstance(right, pd.DataFrame)
         ix = self._getindex(X=X, y=y)
         score = self._transform(X=X, on_ix=ix)
-        test_remove_pruningths = False
-        # TODO: REMOVE FEATURE FLIPPING
-        if test_remove_pruningths:
-            # This code here leads to bug
-            commonindex = score.index.intersection(ix)
-            # y_pred.loc[commonindex] = score[commonindex]
-            return score
-        else:
-            if self.pruning_ths is None:
-                y_pred = pd.Series(
-                    index=ix,
-                    name=self.outcol
-                )
-                commonindex = score.index.intersection(y_pred.index)
-                y_pred.loc[commonindex] = score[commonindex]
-            else:
-                y_pred = score.loc[score >= self.pruning_ths]
-            if as_series is False:
-                y_pred = y_pred.values.reshape(-1, 1)
-            return y_pred
+        y_pred = pd.Series(
+            index=ix,
+            name=self.outcol
+        )
+        commonindex = score.index.intersection(y_pred.index)
+        y_pred.loc[commonindex] = score[commonindex]
+        if as_series is False:
+            # Return array of values
+            y_pred = y_pred.values.reshape(-1, 1)
+        return y_pred
 
     def _transform(self, X, on_ix=None):
         """
@@ -252,24 +226,6 @@ class DFConnector(TransformerMixin):
             pd.Series()
         """
         return pd.Series(index=on_ix)
-
-    def pruning_score(self, X, y_true):
-        """
-        compression: defined by the number of possible pairs divided by the number of actual pairs
-        precision and recall : depends on y_true
-        Args:
-            y_true: list of pairs in the index
-
-        Returns:
-            dict: ['compression', 'precision', 'recall']
-        """
-        score = dict()
-        y_pred = self.transform(X=X, y=y_true, as_series=True)
-        score['compression'] = (X[0].shape[0] * X[1].shape[0]) / y_pred.shape[0]
-        precision, recall = evalprecisionrecall(y_true=y_true, y_pred=y_pred)
-        score['precision'] = precision
-        score['recall'] = recall
-        return score
 
     def _toseries(self, left, right, on_ix):
         """
@@ -339,22 +295,3 @@ class DFConnector(TransformerMixin):
             newright = newright.loc[on_ix.levels[1].intersection(newright.index)]
             newright.index.name = self.ixname
             return newleft, newright
-
-
-class DfFeatureUnion(DFConnector):
-    def __init__(self, stages, *args, **kwargs):
-        DFConnector.__init__(self, args, kwargs)
-        self.stages = stages
-
-    def _fit(self, X=None, y=None):
-        return self
-
-    def transform(self, X, y=None, as_series=False):
-        if as_series is False:
-            pipe = make_union(*self.stages)
-            return pipe.transform(X=X)
-        else:
-            df = pd.DataFrame(index=self._getindex(X=X, y=y))
-            for con in self.stages:
-                df[con.outcol] = con.transform(X=X, y=y, as_series=True)
-            return df

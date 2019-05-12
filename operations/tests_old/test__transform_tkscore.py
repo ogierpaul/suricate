@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import pandas as pd
-from wookie.connectors.dataframes.base import cartesian_join
+from wookie.dbconnectors.dataframes.base import cartesian_join
 
 from wookie.obsolete.tokenizers import LrTokenComparator
 

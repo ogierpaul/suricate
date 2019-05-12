@@ -2,16 +2,26 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from wookie.pandasconnectors.base import DFConnector
+from wookie.lrdftransformers.base import LrDfTransformerMixin
 from wookie.preutils import concatixnames
 
 
 # HERE I HAVE VERSION 2 in try to optimize performance
 
-class VectorizerConnector(DFConnector):
-    def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
-                 scoresuffix='vec', vecmodel='tfidf', ngram_range=(1, 2), n_jobs=1,
-                 stop_words=None, strip_accents='ascii', analyzer='word', addvocab='add', **kwargs):
+class VectorizerConnector(LrDfTransformerMixin):
+    def __init__(self,
+                 on,
+                 ixname='ix',
+                 lsuffix='left',
+                 rsuffix='right',
+                 scoresuffix='vec',
+                 vecmodel='tfidf',
+                 ngram_range=(1, 2),
+                 stop_words=None,
+                 strip_accents='ascii',
+                 analyzer='word',
+                 addvocab='add',
+                 **kwargs):
         """
 
         Args:
@@ -35,9 +45,13 @@ class VectorizerConnector(DFConnector):
             pruning (bool)
         """
 
-        DFConnector.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                             n_jobs=n_jobs, scoresuffix=scoresuffix + '_' + analyzer,
-                             **kwargs)
+        LrDfTransformerMixin.__init__(self,
+                                      ixname=ixname,
+                                      lsuffix=lsuffix,
+                                      rsuffix=rsuffix,
+                                      on=on,
+                                      scoresuffix=scoresuffix + '_' + analyzer,
+                                      **kwargs)
         self._vocab = list()
         self.analyzer = analyzer
         self.ngram_range = ngram_range
@@ -95,7 +109,7 @@ class VectorizerConnector(DFConnector):
         return score
 
 
-class VectorizerConnector2(DFConnector):
+class _VectorizerConnector2_temp(LrDfTransformerMixin):
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
                  scoresuffix='vec', vecmodel='tfidf', ngram_range=(1, 2), n_jobs=1,
                  stop_words=None, strip_accents='ascii', analyzer='word', addvocab='add', **kwargs):
@@ -122,9 +136,9 @@ class VectorizerConnector2(DFConnector):
             pruning (bool)
         """
 
-        DFConnector.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                             n_jobs=n_jobs, scoresuffix=scoresuffix + '_' + analyzer,
-                             **kwargs)
+        LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
+                                      n_jobs=n_jobs, scoresuffix=scoresuffix + '_' + analyzer,
+                                      **kwargs)
         self._vocab = list()
         self.analyzer = analyzer
         self.ngram_range = ngram_range
@@ -173,7 +187,7 @@ class VectorizerConnector2(DFConnector):
         ix = self._getindex(X=X, y=on_ix)
         # newleft, newright = self._toseries(left=X[0], right=X[1], on_ix = ix)
         # Fit
-        score = _transform_tkscore2(
+        score = _transform_tkscore2_temp(
             left=X[0][self.on],
             right=X[1][self.on],
             vectorizer=self.vectorizer,
@@ -227,13 +241,13 @@ def _update_vocab(left, right, vocab=None, addvocab='add'):
                 return new
 
 
-def _transform_tkscore2(left,
-                        right,
-                        vectorizer,
-                        ixname='ix',
-                        lsuffix='left',
-                        rsuffix='right',
-                        outcol='score'):
+def _transform_tkscore2_temp(left,
+                             right,
+                             vectorizer,
+                             ixname='ix',
+                             lsuffix='left',
+                             rsuffix='right',
+                             outcol='score'):
     """
     Args:
         left (pd.Series):

@@ -6,7 +6,7 @@ import pandas as pd
 import psycopg2 as pg
 from wookie.lrcomparators import _namescoreplan_freetext, _namescoreplan_id
 
-from wookie.connectors import addsuffix
+from wookie.dbconnectors import addsuffix
 from wookie.preutils import _ixnames
 
 

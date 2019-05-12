@@ -1,10 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-import wookie.obsolete
+import wookie.preutils
 from operations import companypreparation as preprocessing
+from wookie.obsolete.temp_lrcomparators import LrDuplicateFinder
 from wookie.preutils import concatixnames
-from wookie.wrappers.temp_lrcomparators import LrDuplicateFinder
 
 if __name__ == '__main__':
     # Variable definition
@@ -61,8 +61,8 @@ if __name__ == '__main__':
     # right = pd.read_csv(filepath_right, sep=',', encoding='utf-8', dtype=str, nrows=50).set_index(ixname)
     df_train = pd.read_csv(filepath_training, nrows=nrows).set_index(ixnamepairs)
     df_train, df_test = train_test_split(df_train, train_size=0.7)
-    train_left, train_right, y_train = wookie.obsolete.separatesides(df_train)
-    test_left, test_right, y_test = wookie.obsolete.separatesides(df_test)
+    train_left, train_right, y_train = wookie.preutils.separatesides(df_train)
+    test_left, test_right, y_test = wookie.preutils.separatesides(df_test)
 
     dedupe = LrDuplicateFinder(
         scoreplan=scoreplan_origin,

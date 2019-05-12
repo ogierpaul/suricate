@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from wookie.pandasconnectors import CartesianConnector, ExactConnector, \
-    VectorizerConnector, FuzzyConnector, DFConnector, cartesian_join, Indexer, CartDataPasser
+from wookie.lrdftransformers import CartesianLr, ExactConnector, \
+    VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
 
 
 def test_fixtures_init(ix_names, df_left, df_right, df_sbs):
@@ -20,7 +20,7 @@ def test_dfconnector(ix_names, df_X):
     ixnamepairs = ix_names['ixnamepairs']
     lsuffix = ix_names['lsuffix']
     rsuffix = ix_names['rsuffix']
-    connector = DFConnector(
+    connector = LrDfTransformerMixin(
         ixname=ixname,
         lsuffix=lsuffix,
         rsuffix=rsuffix,
@@ -32,7 +32,7 @@ def test_dfconnector(ix_names, df_X):
     goodmatches = pd.Series(index=pd.MultiIndex.from_arrays([[0, 1, 1], [0, 1, 2]], names=ixnamepairs),
                             name='y_true').fillna(1)
     for y in goodmatches, pd.DataFrame(goodmatches):
-        sbs = connector.showpairs(y=y, X=df_X)
+        sbs = connector.show_pairs(y=y, X=df_X)
         assert isinstance(sbs, pd.DataFrame)
     print('\n test_dfconnector successful', '\n\n')
 
@@ -67,7 +67,7 @@ def test_cartesian(ix_names, df_X, df_sbs):
     ixname = ix_names['ixname']
     lsuffix = ix_names['lsuffix']
     rsuffix = ix_names['rsuffix']
-    connector = CartesianConnector(
+    connector = CartesianLr(
         ixname=ixname,
         lsuffix=lsuffix,
         rsuffix=rsuffix
@@ -78,12 +78,9 @@ def test_cartesian(ix_names, df_X, df_sbs):
     right = df_X[1]
     assert y.shape[0] == left.shape[0] * right.shape[0]
     assert y.sum() == left.shape[0] * right.shape[0]
-    sbs = connector.showpairs(X=df_X)
+    sbs = connector.show_pairs(X=df_X)
     assert sbs.shape[0] == left.shape[0] * right.shape[0]
     print(sbs)
-    score = connector.pruning_score(X=df_X, y_true=df_sbs['y_true'])
-    print(score)
-    assert isinstance(score, dict)
     print('\n test_cartesian successful', '\n\n')
 
 
@@ -101,11 +98,8 @@ def test_exact(ix_names, df_X, df_sbs):
     ## Show side by side
     y = connector.transform(X=df_X)
     assert np.nansum(y) == 2
-    sbs = connector.showpairs(X=df_X)
+    sbs = connector.show_pairs(X=df_X)
 
-    score = connector.pruning_score(X=df_X, y_true=df_sbs['y_true'])
-    print(score)
-    assert isinstance(score, dict)
     connector = ExactConnector(
         on='name',
         ixname=ixname,
@@ -132,7 +126,7 @@ def test_tfidf(ix_names, df_X):
     )
     pairs = connector.transform(X=df_X)
     assert pairs.shape[0] == 9
-    sbs = connector.showpairs(X=df_X)
+    sbs = connector.show_pairs(X=df_X)
     print(sbs)
     connector.pruning_ths = None
     assert connector.transform(X=df_X).shape[0] == 9
@@ -227,7 +221,7 @@ def test_indexer(ix_names, df_X, df_sbs):
 
 
 def test_cartdatapasser(df_X):
-    dp = CartDataPasser()
+    dp = CartesianDataPasser()
     out = dp.transform(X=df_X)
     assert out.shape[0] == df_X[0].shape[0] * df_X[1].shape[0]
     for c in df_X[0].columns:

@@ -1,1 +1,1 @@
-from wookie.pipeline.lr_comparator import LrModel
+from wookie.pipeline.lrmodel import LrModel

@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import Imputer
-from wookie.connectors.dataframes.base import cartesian_join
+from wookie.dbconnectors.dataframes.base import cartesian_join
 
 from wookie import createsbs, LrExactComparator
 from wookie.obsolete import indexwithytrue, metrics, evalprecisionrecall
