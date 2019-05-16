@@ -4,7 +4,7 @@ from sklearn.base import TransformerMixin
 from wookie.preutils import concatixnames, addsuffix, createmultiindex
 
 
-def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
+def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
     """
 
     Args:
@@ -12,6 +12,7 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
         right (pd.DataFrame): table 2
         lsuffix (str):
         rsuffix (str):
+        on_ix (MultiIndex):
 
     Returns:
         pd.DataFrame
@@ -79,20 +80,42 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right'):
         df_new.rename(columns=mydict, inplace=True)
         return df_new
 
-    # hack to create a column name unknown to both df1 and df2
-    tempcolname = 'f1b3'
-    while tempcolname in left.columns or tempcolname in right.columns:
-        tempcolname += 'f'
+    if on_ix is None:
+        # hack to create a column name unknown to both df1 and df2
+        tempcolname = 'f1b3'
+        while tempcolname in left.columns or tempcolname in right.columns:
+            tempcolname += 'f'
 
-    # create a new df1 with renamed cols
-    df1new = rename_with_suffix(left, lsuffix)
-    df2new = rename_with_suffix(right, rsuffix)
-    df1new[tempcolname] = 0
-    df2new[tempcolname] = 0
-    dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
-    del df1new, df2new, tempcolname
+        # create a new df1 with renamed cols
+        df1new = rename_with_suffix(left, lsuffix)
+        df2new = rename_with_suffix(right, rsuffix)
+        df1new[tempcolname] = 0
+        df2new[tempcolname] = 0
+        dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
+        del df1new, df2new, tempcolname
 
-    return dfnew
+        return dfnew
+    else:
+        ixname = left.index.name
+        ixnameleft = ixname + '_' + lsuffix
+        ixnameright = ixname + '_' + rsuffix
+        df = pd.DataFrame(
+            index=on_ix
+        ).reset_index(
+            drop=False
+        ).join(
+            rename_with_suffix(left, lsuffix),
+            on=ixnameleft,
+            how='left'
+        ).join(
+            rename_with_suffix(right, rsuffix),
+            on=ixnameright,
+            how='left'
+        ).set_index(
+            [ixnameleft, ixnameright],
+            drop=True
+        )
+        return df
 
 
 class LrDfTransformerMixin(TransformerMixin):

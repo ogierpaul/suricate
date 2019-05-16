@@ -1,9 +1,9 @@
 import pandas as pd
 from fuzzywuzzy.fuzz import ratio as simpleratio, token_sort_ratio as tokenratio
 from sklearn.base import TransformerMixin
-from wookie.comparators.base import BaseSbsComparator
 
 from wookie.preutils import navalue_score
+from wookie.sbsdftransformers.base import BaseSbsComparator
 
 
 # TODO: Prio medium : add other comparison functions
