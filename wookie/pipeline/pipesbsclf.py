@@ -4,7 +4,7 @@ from sklearn.base import TransformerMixin, ClassifierMixin
 from wookie.preutils import concatixnames
 
 
-class SbsModel(ClassifierMixin):
+class PipeSbsClf(ClassifierMixin):
     def __init__(self,
                  transformer,
                  classifier,

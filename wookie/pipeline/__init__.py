@@ -1,3 +1,3 @@
-from wookie.pipeline.lrmodel import LrModel
-from wookie.pipeline.pruningmodel import PruningModel
-from wookie.pipeline.sbsmodel import SbsModel
+from wookie.pipeline.pipelrclf import PipeLrClf
+from wookie.pipeline.pipesbsclf import PipeSbsClf
+from wookie.pipeline.pruninglrsbsclf import PruningLrSbsClf

@@ -5,7 +5,7 @@ from sklearn.base import TransformerMixin, ClassifierMixin
 from wookie.preutils import concatixnames, createmultiindex, addsuffix
 
 
-class LrModel(ClassifierMixin):
+class PipeLrClf(ClassifierMixin):
     def __init__(self,
                  transformer,
                  classifier,

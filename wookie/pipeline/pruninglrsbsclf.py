@@ -3,12 +3,12 @@ import pandas as pd
 from sklearn.base import ClassifierMixin
 
 from wookie.lrdftransformers import cartesian_join
-from wookie.pipeline.lrmodel import LrModel
-from wookie.pipeline.sbsmodel import SbsModel
+from wookie.pipeline.pipelrclf import PipeLrClf
+from wookie.pipeline.pipesbsclf import PipeSbsClf
 from wookie.preutils import concatixnames, createmultiindex
 
 
-class PruningModel(ClassifierMixin):
+class PruningLrSbsClf(ClassifierMixin):
     def __init__(self,
                  lrmodel,
                  sbsmodel,
@@ -19,8 +19,8 @@ class PruningModel(ClassifierMixin):
         """
 
         Args:
-            lrmodel (LrModel): LrModel
-            sbsmodel (SbsModel): SbSModel
+            lrmodel (PipeLrClf): LrModel
+            sbsmodel (PipeSbsClf): SbSModel
             ixname (str):
             lsuffix (str):
             rsuffix (str):
