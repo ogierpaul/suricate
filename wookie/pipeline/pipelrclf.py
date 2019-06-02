@@ -50,7 +50,8 @@ class PipeLrClf(ClassifierMixin):
         '''
         X_score = self.transformer.fit_transform(X=X, y=None)
         X_slice = self.reindex(X=X, X_score=X_score, y=y)
-        self.classifier.fit(X=X_slice, y=y)
+        commonindex = X_slice.index.intersection(y.index)
+        self.classifier.fit(X=X_slice.loc[commonindex], y=y.loc[commonindex])
         return self
 
     def reindex(self, X, X_score, y=None):
@@ -69,9 +70,10 @@ class PipeLrClf(ClassifierMixin):
         Returns:
             np.ndarray: Slice of X_score
         '''
-        self.all_ix = createmultiindex(X=X, names=self.ixnamepairs)
         if isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
-            return pd.DataFrame(data=X_score, index=self.all_ix).loc[y.index]
+            X_score = pd.DataFrame(X_score, index=createmultiindex(X=X, names=self.ixnamepairs))
+            commonindex = X_score.index.intersection(y.index)
+            return X_score.loc[commonindex]
         elif isinstance(y, np.ndarray):
             if len(y) != X_score.shape[0]:
                 raise IndexError(
@@ -94,7 +96,8 @@ class PipeLrClf(ClassifierMixin):
     def score(self, X, y, sampleweight=None):
         X_score = self.transformer.transform(X=X)
         X_slice = self.reindex(X=X, X_score=X_score, y=y)
-        return self.classifier.score(X=X_slice, y=y, sample_weight=sampleweight)
+        commonindex = X_slice.index.intersection(y.index)
+        return self.classifier.score(X=X_slice, y=y.loc[commonindex], sample_weight=sampleweight)
 
     def return_pairs(self, X):
         return pd.Series(

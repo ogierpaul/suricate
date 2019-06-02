@@ -3,6 +3,7 @@ from sklearn.base import TransformerMixin
 
 from wookie.lrdftransformers import LrDfTransformerMixin
 from wookie.lrdftransformers.base import cartesian_join
+from wookie.preutils import concatixnames
 
 
 class CartesianLr(LrDfTransformerMixin):
@@ -21,7 +22,7 @@ class CartesianLr(LrDfTransformerMixin):
         return score
 
 
-class CartesianDataPasser(TransformerMixin):
+class CartesianDataPasser(LrDfTransformerMixin):
     '''
     THIS CLASS IS NOT A DF CONNECTOR BUT A TRANSFORMER MIXIN
     It returns the cartesian join of the two dataframes with all their columns
@@ -31,9 +32,14 @@ class CartesianDataPasser(TransformerMixin):
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix
+        )
 
-    def fit(self, X=None, y=None):
+    def _fit(self, X=None, y=None):
         return self
 
-    def transform(self, X, y=None):
+    def _transform(self, X, y=None):
         return cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)

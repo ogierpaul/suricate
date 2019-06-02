@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -262,36 +263,23 @@ def _transform_tkscore2_temp(left,
         pd.Series
     """
     scorename = outcol
-    left = left.dropna()
-    right = right.dropna()
     assert isinstance(left, pd.Series)
     assert isinstance(right, pd.Series)
+    tkr = vectorizer.transform(np.where(pd.isnull(right.values), '', right.values))
+    tkl = vectorizer.transform(np.where(pd.isnull(left.values), '', left.values))
+    score = cosine_similarity(tkl, tkr).reshape(-1, 1).flatten()
+
     ixnameleft, ixnameright, ixnamepairs = concatixnames(
         ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
     )
+    y = pd.Series(index=
+    # TODO: write index)
     # If we cannot find a single value we return blank
     if left.shape[0] == 0 or right.shape[0] == 0:
-        ix = pd.MultiIndex(levels=[[], []],
-                           labels=[[], []],
-                           names=ixnamepairs
-                           )
+        ix =
         r = pd.Series(index=ix, name=scorename)
         return r
-    left_tfidf = vectorizer.transform(left)
-    right_tfidf = vectorizer.transform(right)
-    X = pd.DataFrame(
-        cosine_similarity(left_tfidf, right_tfidf),
-        columns=right.index
-    )
-    X[ixnameleft] = left.index
-    score = pd.melt(
-        X,
-        id_vars=ixnameleft,
-        var_name=ixnameright,
-        value_name=scorename
-    ).set_index(
-        ixnamepairs
-    )
+
     return score[scorename]
 
 

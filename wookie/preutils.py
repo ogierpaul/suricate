@@ -141,7 +141,7 @@ def rmv_end_list(w, mylist):
     return w
 
 
-sepvalues = [' ', ',', '/', '-', ':', "'", '(', ')', '|', '°', '!', '\n', '_', '.']
+sepvalues = (' ', ',', '/', '-', ':', "'", '(', ')', '|', '°', '!', '\n', '_', '.')
 
 
 def split(mystring, seplist=sepvalues):
@@ -173,8 +173,7 @@ def split(mystring, seplist=sepvalues):
 def concatenate_names(m):
     """
     This small function concatenate the different company names found across the names columns of SAP (name1, name2..)
-    It takes the name found in the first column. If the name in the second column adds information to the first,
-    it concatenates. And it continues like this for the other columns
+    It takes the name found in the first column.
     Args:
         m (list): list of strings
     Returns:
@@ -185,7 +184,7 @@ def concatenate_names(m):
     name3='ex-batman'
     name4='kapis code 3000'
     concatenate_names([name1,name2,name3,name4]):
-        'KNIGHT FRANK (SA) PTY LTD ex-batman kapis code 3000
+        'KNIGHT FRANK (SA) PTY LTD KNIGHT FRANK ex-batman kapis code 3000
     """
     # Remove na values
     # Remove na values
@@ -194,11 +193,7 @@ def concatenate_names(m):
         return None
     val_tokens = var1[:1]
     for new_token in var1[1:]:
-        # Compare fuzzy matching score with already concatenated string
-        score = max(map(lambda vtk: fuzzy_score(new_token, vtk), val_tokens))
-        if pd.isnull(score) or score <= 0.8:
-            # if score is less than threshold add it
-            val_tokens.append(new_token)
+        val_tokens.append(new_token)
     new_str = ' '.join(val_tokens)
     return new_str
 
@@ -353,7 +348,7 @@ def datapasser(df):
     return df
 
 
-def createmultiindex(X, names=set(['ix_left', 'ix_right'])):
+def createmultiindex(X, names=('ix_left', 'ix_right')):
     return pd.MultiIndex.from_product(
         [X[0].index, X[1].index],
         names=names
@@ -373,10 +368,8 @@ def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='
     Returns:
         pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
     """
-    ixnameleft, ixnameright, ixnamepairs = concatixnames(
-        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
-    )
 
+    # noinspection PyShadowingNames,PyShadowingNames
     def takeside(df, suffix, ixname):
         """
 

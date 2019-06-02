@@ -226,29 +226,29 @@ class LrDfTransformerMixin(TransformerMixin):
         assert isinstance(left, pd.DataFrame)
         assert isinstance(right, pd.DataFrame)
         ix = self._getindex(X=X, y=y)
-        score = self._transform(X=X, on_ix=ix)
+        score = self._transform(X=X, y=ix)
         y_pred = pd.Series(
             index=ix,
             name=self.outcol
         )
         commonindex = score.index.intersection(y_pred.index)
-        y_pred.loc[commonindex] = score[commonindex]
+        y_pred.loc[commonindex] = score.loc[commonindex]
         if as_series is False:
             # Return array of values
             y_pred = y_pred.values.reshape(-1, 1)
         return y_pred
 
-    def _transform(self, X, on_ix=None):
+    def _transform(self, X, y=None):
         """
 
         Args:
             X:
-            on_ix:
+            y:
 
         Returns:
             pd.Series()
         """
-        return pd.Series(index=on_ix)
+        return pd.Series(index=y)
 
     def _toseries(self, left, right, on_ix):
         """

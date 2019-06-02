@@ -10,23 +10,27 @@ filepath_training = '/Users/paulogier/81-GithubPackages/wookie/operations/data/t
 
 @pytest.fixture
 def df_left():
-    left = pd.read_csv(filepath_left, index_col=0,
+    left = pd.read_csv(filepath_left,
+                       index_col=0,
+                       nrows=n_lines,
                        dtype=str)
     return left
 
 
 @pytest.fixture
 def df_right():
-    right = pd.read_csv(filepath_right, index_col=0,
+    right = pd.read_csv(filepath_right,
+                        index_col=0,
+                        nrows=n_lines,
                         dtype=str)
     return right
 
 
 @pytest.fixture
 def df_X():
-    left = pd.read_csv(filepath_left, index_col=0,
+    left = pd.read_csv(filepath_left, index_col=0, nrows=n_lines,
                        dtype=str)
-    right = pd.read_csv(filepath_right, index_col=0,
+    right = pd.read_csv(filepath_right, index_col=0, nrows=n_lines,
                         dtype=str)
     X = [left, right]
     return X
