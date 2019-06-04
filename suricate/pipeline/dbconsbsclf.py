@@ -1,7 +1,7 @@
 from sklearn.base import ClassifierMixin
 
-from wookie.pipeline.pipesbsclf import PipeSbsClf
-from wookie.preutils import concatixnames
+from suricate.pipeline.pipesbsclf import PipeSbsClf
+from suricate.preutils import concatixnames
 
 
 class DbconSbsClf(ClassifierMixin):

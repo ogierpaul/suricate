@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from wookie.preutils import concatixnames
+from suricate.preutils import concatixnames
 
 
 @pytest.fixture

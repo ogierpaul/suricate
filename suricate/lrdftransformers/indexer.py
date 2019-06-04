@@ -1,4 +1,4 @@
-from wookie.lrdftransformers.base import LrDfTransformerMixin
+from suricate.lrdftransformers.base import LrDfTransformerMixin
 
 
 class Indexer(LrDfTransformerMixin):

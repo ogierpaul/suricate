@@ -3,10 +3,10 @@ import pandas as pd
 from sklearn.base import ClassifierMixin
 from sklearn.metrics.classification import accuracy_score
 
-from wookie.lrdftransformers import cartesian_join
-from wookie.pipeline.pipelrclf import PipeLrClf
-from wookie.pipeline.pipesbsclf import PipeSbsClf
-from wookie.preutils import concatixnames, createmultiindex
+from suricate.lrdftransformers import cartesian_join
+from suricate.pipeline.pipelrclf import PipeLrClf
+from suricate.pipeline.pipesbsclf import PipeSbsClf
+from suricate.preutils import concatixnames, createmultiindex
 
 
 class PruningLrSbsClf(ClassifierMixin):

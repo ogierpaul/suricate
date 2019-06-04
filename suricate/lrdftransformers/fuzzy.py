@@ -1,7 +1,7 @@
 import pandas as pd
 
-from wookie.lrdftransformers.base import LrDfTransformerMixin
-from wookie.sbsdftransformers.funcsbscomparator import token_score, simple_score, exact_score
+from suricate.lrdftransformers.base import LrDfTransformerMixin
+from suricate.sbsdftransformers.funcsbscomparator import token_score, simple_score, exact_score
 
 
 # TODO FOR FUTURE STEPS: ENRICH THE NUMBER OF FUNCTIONS: Vicenty distance, etc...

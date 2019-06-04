@@ -3,9 +3,9 @@ import pandas as pd
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import FeatureUnion
 
-from wookie.lrdftransformers import LrDfTransformerMixin
-from wookie.lrdftransformers.base import cartesian_join
-from wookie.preutils import concatixnames, createmultiindex
+from suricate.lrdftransformers import LrDfTransformerMixin
+from suricate.lrdftransformers.base import cartesian_join
+from suricate.preutils import concatixnames, createmultiindex
 
 
 class CartesianLr(LrDfTransformerMixin):

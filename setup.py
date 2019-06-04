@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-setup(name='wookie',
+setup(name='suricate',
       version='0.50',
       description='MAAAAAAAAAAH',
       url='http://github.com/ogierpaul/wookie',

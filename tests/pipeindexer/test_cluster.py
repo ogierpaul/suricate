@@ -7,11 +7,11 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from wookie.lrdftransformers import VectorizerConnector, ExactConnector
-from wookie.lrdftransformers.cluster import LrClusterQuestions, ClusterClassifier
-from wookie.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
-from wookie.preutils import createmultiindex, scores
-from wookie.sbsdftransformers import FuncSbsComparator
+from suricate.lrdftransformers import VectorizerConnector, ExactConnector
+from suricate.lrdftransformers.cluster import LrClusterQuestions, ClusterClassifier
+from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
+from suricate.preutils import createmultiindex, scores
+from suricate.sbsdftransformers import FuncSbsComparator
 
 
 def test_clusterquestions(df_X, y_true):

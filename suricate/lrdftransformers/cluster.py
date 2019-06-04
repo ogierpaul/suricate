@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import ClusterMixin, ClassifierMixin
 
-from wookie.lrdftransformers import cartesian_join
-from wookie.preutils import concatixnames, createmultiindex
+from suricate.lrdftransformers import cartesian_join
+from suricate.preutils import concatixnames, createmultiindex
 
 
 # TODO: Save LrClusterQuestions X_score in order to gain a lot more time!!

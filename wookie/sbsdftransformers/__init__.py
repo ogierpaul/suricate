@@ -1,1 +1,0 @@
-from wookie.sbsdftransformers.funcsbscomparator import FuncSbsComparator

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from wookie.preutils import concatenate_names, concatixnames
+from suricate.preutils import concatenate_names, concatixnames
 
 
 class SingleGrouping:
@@ -15,7 +15,7 @@ class SingleGrouping:
         """
 
         Args:
-            dedupe (wookie.LrDuplicateFinder):
+            dedupe (suricate.LrDuplicateFinder):
             data (pd.DataFrame): None
             ixname (str):
             lsuffix (str):

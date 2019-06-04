@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.base import TransformerMixin, ClassifierMixin
 
-from wookie.preutils import concatixnames
+from suricate.preutils import concatixnames
 
 
 class PipeSbsClf(ClassifierMixin):

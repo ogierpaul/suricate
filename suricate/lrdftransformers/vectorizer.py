@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from wookie.lrdftransformers.base import LrDfTransformerMixin
+from suricate.lrdftransformers.base import LrDfTransformerMixin
 
 
 # HERE I HAVE VERSION 2 in try to optimize performance

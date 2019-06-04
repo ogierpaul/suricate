@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from wookie.lrdftransformers import CartesianDataPasser
+from suricate.lrdftransformers import CartesianDataPasser
 
 
 @pytest.fixture

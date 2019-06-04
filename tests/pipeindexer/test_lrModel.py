@@ -3,10 +3,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 
-from wookie.functionclassifier import FunctionClassifier
-from wookie.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
-from wookie.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
-from wookie.sbsdftransformers import FuncSbsComparator
+from suricate.functionclassifier import FunctionClassifier
+from suricate.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
+from suricate.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
+from suricate.sbsdftransformers import FuncSbsComparator
 
 
 # from ..data.dataframes import df_X, y_true, df_left, df_right

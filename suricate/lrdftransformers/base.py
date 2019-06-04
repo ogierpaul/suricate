@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
-from wookie.preutils import concatixnames, addsuffix, createmultiindex
+from suricate.preutils import concatixnames, addsuffix, createmultiindex
 
 
 def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):

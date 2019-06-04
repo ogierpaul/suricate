@@ -1,4 +1,4 @@
-from wookie.sbsdftransformers import FuncSbsComparator
+from suricate.sbsdftransformers import FuncSbsComparator
 
 
 # from ..data.circus import circus_sbs, df_circus

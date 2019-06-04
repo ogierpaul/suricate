@@ -1,6 +1,6 @@
 import numpy as np
 
-from wookie.lrdftransformers.base import LrDfTransformerMixin
+from suricate.lrdftransformers.base import LrDfTransformerMixin
 
 
 class ExactConnector(LrDfTransformerMixin):
