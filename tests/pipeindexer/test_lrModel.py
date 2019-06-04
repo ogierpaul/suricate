@@ -6,8 +6,10 @@ from sklearn.pipeline import make_union, make_pipeline
 from wookie.functionclassifier import FunctionClassifier
 from wookie.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
 from wookie.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
-from wookie.sbsdftransformers import FuzzyWuzzySbsComparator
+from wookie.sbsdftransformers import FuncSbsComparator
 
+
+# from ..data.dataframes import df_X, y_true, df_left, df_right
 
 def test_lrmodel(df_X, y_true):
     scorer = make_union(*[
@@ -30,9 +32,9 @@ def test_sbsmodel(df_X, y_true):
     df_sbs = CartesianDataPasser().fit_transform(df_X).set_index(['ix_left', 'ix_right'])
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
-        FuzzyWuzzySbsComparator(on_left='name_left', on_right='name_right', comparator='fuzzy'),
-        FuzzyWuzzySbsComparator(on_left='name_left', on_right='name_right', comparator='token'),
-        FuzzyWuzzySbsComparator(on_left='street_left', on_right='street_right', comparator='fuzzy')
+        FuncSbsComparator(on='name', comparator='fuzzy'),
+        FuncSbsComparator(on='name', comparator='token'),
+        FuncSbsComparator(on='street', comparator='fuzzy')
     ])
     imp = SimpleImputer(strategy='constant', fill_value=0)
     transformer = make_pipeline(*[transformer, imp])
@@ -49,6 +51,8 @@ def test_pipeModel(df_X, y_true):
         ExactConnector(on='countrycode'),
         ExactConnector(on='duns')
     ])
+    imp1 = SimpleImputer(strategy='constant', fill_value=0)
+    transformer1 = make_pipeline(*[transformer1, imp1])
 
     def myfunc(X):
         y_name = X[:, 0]
@@ -60,8 +64,8 @@ def test_pipeModel(df_X, y_true):
             np.logical_and(
                 y_country == 1,
                 np.logical_or(
-                    y_name > 0.5,
-                    y_street > 0.5
+                    y_name > 0.3,
+                    y_street > 0.3
                 )
             )
         )
@@ -73,14 +77,17 @@ def test_pipeModel(df_X, y_true):
         classifier=clf1
     )
     transformer2 = make_union(*[
-        FuzzyWuzzySbsComparator(on_left='name_left', on_right='name_right', comparator='fuzzy'),
-        FuzzyWuzzySbsComparator(on_left='name_left', on_right='name_right', comparator='token'),
-        FuzzyWuzzySbsComparator(on_left='street_left', on_right='street_right', comparator='fuzzy')
+        FuncSbsComparator(on='name', comparator='fuzzy'),
+        FuncSbsComparator(on='name', comparator='token'),
+        FuncSbsComparator(on='street', comparator='fuzzy'),
+        FuncSbsComparator(on='city', comparator='fuzzy'),
+        FuncSbsComparator(on='postalcode', comparator='fuzzy'),
+
     ])
-    imp = SimpleImputer(strategy='constant', fill_value=0)
-    transformer2 = make_pipeline(*[transformer2, imp])
+    imp2 = SimpleImputer(strategy='constant', fill_value=0)
+    transformer2 = make_pipeline(*[transformer2, imp2])
     clf = Classifier()
     sbsmodel = PipeSbsClf(transformer=transformer2, classifier=clf)
     totalpipe = PruningLrSbsClf(lrmodel=lrmodel, sbsmodel=sbsmodel)
-    totalpipe.fit(X=df_X, y_lr=None, y_sbs=y_true)
+    totalpipe.fit(X=df_X, y_lr=y_true, y_sbs=y_true)
     print(totalpipe.score(X=df_X, y=y_true))

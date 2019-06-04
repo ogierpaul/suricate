@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
+from sklearn.metrics.classification import accuracy_score
 
 from wookie.lrdftransformers import cartesian_join
 from wookie.pipeline.pipelrclf import PipeLrClf
@@ -56,7 +57,8 @@ class PruningLrSbsClf(ClassifierMixin):
 
     def _pipe(self, X, y_lr=None, y_sbs=None, fit=False, proba=False):
         """
-
+        # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
+        # Add as well as sure matches y_pred_lr == 2.0
         Args:
             X (list): [df_left, df_right]
             y_lr (pd.Series): training data for the first model (LrModel)
@@ -67,30 +69,37 @@ class PruningLrSbsClf(ClassifierMixin):
         Returns:
             array
         """
+
         # Fit the first model
         if fit is True:
             self.lrmodel.fit(X=X, y=y_lr)
-        # Transform into scores the input with the scoring engine from the lrmodel
+
+        # Get the first score
         X_lr_score = self.lrmodel.transformer.transform(X=X)
 
-        # Calculate the index used for the SbsModel, second phase of scoring
-        # To be index_consistent: if we are in fit phase take y_sbs to fit second (Sbs) Model
-        # Else take the positive results (pairs) of the first classifier (Pruning)
+        # If fit is true, slice this score according to scope of y_lr
         if fit is True:
-            on_ix = y_sbs.index
+            X_lr_score, y_lr_slice, ix_slice = self.lrmodel.slice(X=X, X_score=X_lr_score, y=y_lr)
+            ix_lr = ix_slice
         else:
-            y_lr_pred = pd.Series(
-                index=createmultiindex(X=X, names=self.ixnamepairs),
-                data=self.lrmodel.classifier.predict(X=X_lr_score)
-            )
-            on_ix = y_lr_pred[y_lr_pred == 1].index
-        # In addition, save the score of the lr model for the index used
-        X_lr_score = pd.DataFrame(
-            index=createmultiindex(X=X, names=self.ixnamepairs),
-            data=X_lr_score
-        ).loc[
-            on_ix
-        ].values
+            ix_lr = createmultiindex(X=X, names=self.ixnamepairs)
+
+        # Get the prediction for the X_lrscope
+        y_lr_pred = pd.Series(
+            data=self.lrmodel.classifier.predict(X=X_lr_score),
+            index=ix_lr,
+            name='y_lr_pred'
+        )
+        # select only positive matches from first classifier
+        ix_lr_pos = y_lr_pred.loc[y_lr_pred == 1].index
+
+        # intersect this index with the ones
+        if fit is True:
+            ix_sbs = ix_lr_pos.intersection(y_sbs.index)
+        else:
+            ix_sbs = ix_lr_pos
+
+        X_lr_score = pd.DataFrame(data=X_lr_score, index=ix_lr).loc[ix_sbs]
 
         # Create the input dataframe needed for the SbsModel
         X_Sbs = cartesian_join(
@@ -98,7 +107,7 @@ class PruningLrSbsClf(ClassifierMixin):
             right=X[1],
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix,
-            on_ix=on_ix
+            on_ix=ix_sbs
         )
         # And Transform (Second scoring engine)
         if fit is True:
@@ -106,10 +115,10 @@ class PruningLrSbsClf(ClassifierMixin):
         X_sbs_score = self.sbsmodel.transformer.transform(X=X_Sbs)
 
         # Merge the output of the two scores
-        X_final_score = np.hstack((X_lr_score, X_sbs_score))
+        X_final_score = np.hstack((X_lr_score.values, X_sbs_score))
 
         if fit is True:
-            self.sbsmodel.classifier.fit(X=X_final_score, y=y_sbs)
+            self.sbsmodel.classifier.fit(X=X_final_score, y=y_sbs.loc[ix_sbs])
             return self
         else:
             # If we are not for fit we are for pred
@@ -118,11 +127,35 @@ class PruningLrSbsClf(ClassifierMixin):
             else:
                 y_pred = self.sbsmodel.classifier.predict(X=X_final_score)
             y_pred_all = pd.Series(index=createmultiindex(X=X, names=self.ixnamepairs)).fillna(0)
-            y_pred_all.loc[on_ix] = y_pred
+            y_pred_all.loc[ix_sbs] = y_pred
+            y_pred_all.loc[y_lr_pred == 2.0] = 1.0
             return y_pred_all
 
     def predict(self, X):
-        return self._pipe(X=X, fit=True)
+        """
+        # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
+        # Add as well as sure matches from y_pred_lr == 2.0 (Case of clusterer for example)
+        Args:
+            X: [df_left, df_right]
+
+        Returns:
+            np.ndarray
+        """
+
+        return self._pipe(X=X, fit=False)
 
     def predict_proba(self, X):
-        return self._pipe(X=X, fit=True, proba=True)
+        return self._pipe(X=X, fit=False, proba=True)
+
+    def score(self, X, y, sampleweight=None):
+        y_pred = pd.Series(
+            data=self.predict(X=X),
+            index=createmultiindex(X=X, names=self.ixnamepairs),
+            name='y_pred'
+        )
+        ix_common = y.index.intersection(y_pred.index)
+        return accuracy_score(
+            y_pred=y_pred.loc[ix_common],
+            y_true=y.loc[ix_common],
+            sample_weight=sampleweight
+        )

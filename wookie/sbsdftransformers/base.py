@@ -62,7 +62,7 @@ class BaseSbsComparator(TransformerMixin):
             X:
 
         Returns:
-
+            np.array
         """
         y = dd.from_pandas(
             X.reset_index(drop=True),

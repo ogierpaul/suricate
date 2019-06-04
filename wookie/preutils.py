@@ -2,6 +2,8 @@ import unicodedata
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics.classification import accuracy_score, recall_score, precision_score, f1_score, \
+    balanced_accuracy_score
 
 suffixexact = 'exact'
 suffixtoken = 'token'
@@ -11,7 +13,7 @@ name_exact = 'Exact'
 name_pruning_threshold = 'threshold'
 name_usescores = 'use_scores'
 name_stop_words = 'stop_words'
-navalue_score = None
+navalue_score = 0
 
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
@@ -391,3 +393,16 @@ def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='
     xright = takeside(df=df, suffix=rsuffix, ixname=ixname)
     pairs = df.loc[:, y_true_col].copy()
     return xleft, xright, pairs
+
+
+def scores(y_true, y_pred):
+    commonindex = y_true.index.intersection(y_pred.index)
+    myscores = dict()
+    y2_true = y_true.loc[commonindex]
+    y2_pred = y_pred.loc[commonindex]
+    myscores['precision'] = precision_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['recall'] = recall_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['f1'] = f1_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['accuracy'] = accuracy_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['balanced_accuracy'] = balanced_accuracy_score(y_true=y2_true, y_pred=y2_pred)
+    return myscores

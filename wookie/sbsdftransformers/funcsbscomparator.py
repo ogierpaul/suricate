@@ -8,17 +8,19 @@ from wookie.sbsdftransformers.base import BaseSbsComparator
 
 # TODO: Prio medium : add other comparison functions
 
-class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
+class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
     """
     Compare two columns of a dataframe with one another using functions from fuzzywuzzy library
     """
 
-    def __init__(self, on_left, on_right, comparator=None, *args, **kwargs):
+    def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right', comparator='fuzzy', *args, **kwargs):
         """
         Args:
             comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token']
-            on_left (str): name of left column
-            on_right (str): name of right column
+            ixname (str): name of the index, default 'ix'
+            lsuffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_left'
+            rsuffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
+            on (str): name of the column on which to do the join
             *args:
             **kwargs:
         """
@@ -34,8 +36,8 @@ class FuzzyWuzzySbsComparator(BaseSbsComparator, TransformerMixin):
         BaseSbsComparator.__init__(
             self,
             compfunc=compfunc,
-            on_left=on_left,
-            on_right=on_right,
+            on_left=on + '_' + lsuffix,
+            on_right=on + '_' + rsuffix,
             *args,
             **kwargs
         )

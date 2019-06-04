@@ -1,8 +1,10 @@
 import pytest
 from fuzzywuzzy.fuzz import WRatio, QRatio, ratio, partial_token_sort_ratio
 
-from wookie.sbsdftransformers.fuzzy import simple_score, token_score
+from wookie.sbsdftransformers.funcsbscomparator import simple_score, token_score
 
+
+# from ..data.circus import mymatches
 
 @pytest.fixture
 def myscores():

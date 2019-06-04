@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 from wookie.lrdftransformers.base import LrDfTransformerMixin
 
@@ -24,12 +23,18 @@ class ExactConnector(LrDfTransformerMixin):
                                       scoresuffix=scoresuffix, **kwargs)
         pass
 
-    def _transform(self, X, on_ix=None):
-        ix = self._getindex(X=X, y=on_ix)
+    def _transform(self, X):
+        """
+
+        Args:
+            X (list):
+
+        Returns:
+            np.ndarray:  of shape(n_samples_left * n_samples_right, 1)
+        """
+        ix = self._getindex(X=X)
         yleft = X[0][self.on].values
         yright = X[1][self.on].values
         Xcomp = np.transpose([np.repeat(yleft, len(yright)), np.tile(yright, len(yleft))])
-        ynp = np.equal(Xcomp[:, 0], Xcomp[:, 1])
-        y = pd.Series(index=self._getindex(X=X, y=None), data=ynp)
-        y = y.loc[ix]
-        return y
+        ynp = np.equal(Xcomp[:, 0], Xcomp[:, 1]).astype(int).reshape(-1, 1)
+        return ynp

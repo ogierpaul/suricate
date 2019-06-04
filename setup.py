@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(name='wookie',
-      version='0.35',
+      version='0.50',
       description='MAAAAAAAAAAH',
       url='http://github.com/ogierpaul/wookie',
       author='Flying Circus',
@@ -17,3 +17,4 @@ setup(name='wookie',
           'elasticsearch'
       ],
       zip_safe=False)
+

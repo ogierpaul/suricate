@@ -3,6 +3,9 @@ from sklearn.pipeline import make_union
 from wookie.lrdftransformers.vectorizer import VectorizerConnector
 
 
+# from ..data.foo import ix_names
+# from ..data.dataframes import df_left, df_right, df_X
+
 def test_loaddata(ix_names, df_left, df_right):
     print(ix_names['ixname'])
     print(df_left.shape[0])

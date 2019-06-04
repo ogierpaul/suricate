@@ -49,12 +49,11 @@ class PipeLrClf(ClassifierMixin):
             self
         '''
         X_score = self.transformer.fit_transform(X=X, y=None)
-        X_slice = self.reindex(X=X, X_score=X_score, y=y)
-        commonindex = X_slice.index.intersection(y.index)
-        self.classifier.fit(X=X_slice.loc[commonindex], y=y.loc[commonindex])
+        X_slice, y_slice, ix_slice = self.slice(X=X, X_score=X_score, y=y)
+        self.classifier.fit(X=X_slice, y=y_slice)
         return self
 
-    def reindex(self, X, X_score, y=None):
+    def slice(self, X, X_score, y=None):
         '''
         Transform X_score, output of X through the score,  into X_slice, sliced according to y_true (pd.Series)
         X [df_left, df_right] -[scorer]-> X_score -[reindex]-> X_score.loc[y_true.index]
@@ -68,26 +67,27 @@ class PipeLrClf(ClassifierMixin):
                 - None --> return X
 
         Returns:
-            np.ndarray: Slice of X_score
+            np.ndarray, np.ndarray: Slice of X_score, y
         '''
+        ix_all = createmultiindex(X=X, names=self.ixnamepairs)
+        X_score = pd.DataFrame(X_score, index=ix_all)
         if isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
-            X_score = pd.DataFrame(X_score, index=createmultiindex(X=X, names=self.ixnamepairs))
             commonindex = X_score.index.intersection(y.index)
-            return X_score.loc[commonindex]
-        elif isinstance(y, np.ndarray):
-            if len(y) != X_score.shape[0]:
-                raise IndexError(
-                    'expected length of numpy.ndarray: ({}), given length of y: {}'.format(X.shape[0], len(y)))
-            else:
-                return X
+            return X_score.loc[commonindex].values, y.loc[commonindex].values, commonindex
         elif y is None:
-            return X
+            return X_score.values, None, ix_all
         else:
-            return X
+            # TODO: Prio 2: Could be used to treat case of y as masked array
+            return X_score.values, y, ix_all
 
     def predict(self, X):
         X_score = self.transformer.transform(X=X)
         return self.classifier.predict(X=X_score)
+
+    def fit_predict(self, X, y):
+        self.fit(X=X, y=y)
+        y_pred = self.predict(X=X)
+        return y_pred
 
     def predict_proba(self, X):
         X_score = self.transformer.transform(X=X)
@@ -95,9 +95,8 @@ class PipeLrClf(ClassifierMixin):
 
     def score(self, X, y, sampleweight=None):
         X_score = self.transformer.transform(X=X)
-        X_slice = self.reindex(X=X, X_score=X_score, y=y)
-        commonindex = X_slice.index.intersection(y.index)
-        return self.classifier.score(X=X_slice, y=y.loc[commonindex], sample_weight=sampleweight)
+        X_slice, y_slice, ix_slice = self.slice(X=X, X_score=X_score, y=y)
+        return self.classifier.score(X=X_slice, y=y_slice, sample_weight=sampleweight)
 
     def return_pairs(self, X):
         return pd.Series(

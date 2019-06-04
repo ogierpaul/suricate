@@ -1,8 +1,11 @@
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from wookie.lrdftransformers import VectorizerConnector, FuzzyConnector
+from wookie.lrdftransformers import VectorizerConnector, FuzzyConnector, VisualHelper
 
+
+# from ..data.foo import ix_names
+# from ..data.circus import df_circus
 
 def test_makeunionperso(ix_names, df_circus):
     X = df_circus
@@ -30,7 +33,7 @@ def test_makeunion_y_true(ix_names, df_circus):
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='name', analyzer='word'),
         FuzzyConnector(on='name', ratio='simple'),
-        FuzzyConnector(on='name', ratio='token')
+        FuzzyConnector(on='name', ratio='token'),
     ]
     pipe = make_union(*stages)
     pipe.fit(X=X)
@@ -42,3 +45,19 @@ def test_makeunion_y_true(ix_names, df_circus):
     print(alldata.columns)
     print(alldata)
     return None
+
+
+def test_visualhelper(df_circus):
+    X = df_circus
+    stages = [
+        VectorizerConnector(on='name', analyzer='char'),
+        VectorizerConnector(on='name', analyzer='word'),
+        FuzzyConnector(on='name', ratio='simple'),
+        FuzzyConnector(on='name', ratio='token'),
+    ]
+    pipe = make_union(*stages)
+    viz = VisualHelper(transformer=pipe)
+    viz.fit(X=X, y=None)
+    X_out = viz.transform(X=X, usecols=['name'])
+    print(X_out)
+    pass

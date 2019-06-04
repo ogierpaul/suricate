@@ -1,1 +1,1 @@
-from wookie.sbsdftransformers.fuzzy import FuzzyWuzzySbsComparator
+from wookie.sbsdftransformers.funcsbscomparator import FuncSbsComparator

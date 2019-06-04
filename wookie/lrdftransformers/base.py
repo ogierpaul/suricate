@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 
@@ -104,17 +105,18 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
         ).reset_index(
             drop=False
         ).join(
-            rename_with_suffix(left, lsuffix),
+            rename_with_suffix(left, lsuffix).set_index(ixnameleft),
             on=ixnameleft,
             how='left'
         ).join(
-            rename_with_suffix(right, rsuffix),
+            rename_with_suffix(right, rsuffix).set_index(ixnameright),
             on=ixnameright,
             how='left'
         ).set_index(
             [ixnameleft, ixnameright],
             drop=True
         )
+        assert True
         return df
 
 
@@ -146,7 +148,7 @@ class LrDfTransformerMixin(TransformerMixin):
         self.fitted = False
         pass
 
-    def _getindex(self, X, y=None):
+    def _getindex(self, X):
         """
         Return the cartesian product index of both dataframes
         Args:
@@ -156,16 +158,22 @@ class LrDfTransformerMixin(TransformerMixin):
         Returns:
             pd.MultiIndex
         """
-        if isinstance(y, pd.MultiIndex):
-            return y
-        elif isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
-            return y.index
-        elif y is None:
-            ix = createmultiindex(X=X, names=self.ixnamepairs)
-            return ix
-        else:
-            print('index, series or dataframe or None expected')
-            return y
+        ix = createmultiindex(X=X, names=self.ixnamepairs)
+        return ix
+
+    def transformtoseries(self, X):
+        """
+        Transform and add index and name to transform it into a series
+        Args:
+            X (list): [df_left, df_right]
+
+        Returns:
+            pd.Series: {['ix_left', 'ix_right']:score}
+        """
+        return pd.Series(
+            data=self.transform(X=X),
+            index=self._getindex(X=X),
+            name=self.outcol)
 
     def show_pairs(self, X, y=None, use_cols=None):
         """
@@ -182,7 +190,7 @@ class LrDfTransformerMixin(TransformerMixin):
         right = X[1]
 
         if y is None:
-            xpairs = pd.DataFrame(index=self._getindex(X=X, y=y))
+            xpairs = pd.DataFrame(index=self._getindex(X=X))
         elif isinstance(y, pd.DataFrame):
             xpairs = y.copy()
         else:
@@ -214,41 +222,30 @@ class LrDfTransformerMixin(TransformerMixin):
     def _fit(self, X=None, y=None):
         return self
 
-    def transform(self, X, y=None, as_series=False):
+    def transform(self, X):
         """
         X (list): [left_df, right_df]
-        y (pd.Series) : dummy value
         Returns:
-            np.ndarray
+            np.ndarray: of shape(n_samples_left * n_samples_right, 1)
         """
         left = X[0]
         right = X[1]
         assert isinstance(left, pd.DataFrame)
         assert isinstance(right, pd.DataFrame)
-        ix = self._getindex(X=X, y=y)
-        score = self._transform(X=X, y=ix)
-        y_pred = pd.Series(
-            index=ix,
-            name=self.outcol
-        )
-        commonindex = score.index.intersection(y_pred.index)
-        y_pred.loc[commonindex] = score.loc[commonindex]
-        if as_series is False:
-            # Return array of values
-            y_pred = y_pred.values.reshape(-1, 1)
-        return y_pred
+        ix = self._getindex(X=X)
+        score = self._transform(X=X)
+        return score
 
-    def _transform(self, X, y=None):
+    def _transform(self, X):
         """
 
         Args:
             X:
-            y:
 
         Returns:
-            pd.Series()
+            numpy.ndarray
         """
-        return pd.Series(index=y)
+        return np.zeros(shape=(X[0].shape[0] * X[1].shape[0], 1))
 
     def _toseries(self, left, right, on_ix):
         """

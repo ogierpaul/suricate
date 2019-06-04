@@ -3,8 +3,11 @@ import pandas as pd
 from sklearn.pipeline import make_union
 
 from wookie.lrdftransformers import CartesianLr, ExactConnector, \
-    VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
+    VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, \
+    CartesianDataPasser
 
+
+# from ..data.foo import df_left, df_right, df_X, df_sbs, ix_names
 
 def test_fixtures_init(ix_names, df_left, df_right, df_sbs):
     print('\n', 'starting test_fixtures_init')
@@ -130,6 +133,12 @@ def test_tfidf(ix_names, df_X):
     print(sbs)
     connector.pruning_ths = None
     assert connector.transform(X=df_X).shape[0] == 9
+    assert pairs[0][0] >= 1.0  # 'foo' == 'foo'
+    assert pairs[1][0] == 0.0  # 'foo' != 'bar'
+    assert pairs[4][0] >= 1.0  # 'bar' == 'bar'
+    assert pairs[5][0] > 0 and pairs[5] < 1  # 'bar' ~ 'baz'
+    assert pairs[7][0] < pairs[5]
+    assert pairs[7][0] > 0  # 'baz'~'bar'> 'baz'~'ninja' > 0
     print('\n test_tfidf successful', '\n\n')
     pass
 
@@ -143,6 +152,10 @@ def test_makeunion(ix_names, df_X):
                        ixname=ix_names['ixname'], lsuffix=ix_names['lsuffix'], rsuffix=ix_names['rsuffix'])
 
     ]
+    for s in stages:
+        output = s.fit_transform(X=df_X)
+        assert output.shape[0] == df_X[0].shape[0] * df_X[1].shape[0]
+        assert output.shape[1] == 1
     X_score = make_union(*stages).fit_transform(X=df_X)
     assert X_score.shape[0] == df_X[0].shape[0] * df_X[1].shape[0]
     print('\n test_makeunion successful', '\n\n')
@@ -177,11 +190,13 @@ def test_fuzzy_2(ix_names, df_X, df_sbs):
     )
     y = df_sbs['y_true']
     y = y.loc[y == 1]
-    pairs = connector.transform(X=df_X, y=y)
+    pairs = connector.transform(X=df_X)
     print(pairs)
-    assert pairs[0] == 1
-    assert pairs[1] == 1
-    assert pairs[2] > 0
+    assert pairs[0] == 1  # 'foo' == 'foo'
+    assert pairs[1] == 0  # 'foo' != 'bar'
+    assert pairs[4] == 1  # 'bar' == 'bar'
+    assert pairs[5] > 0 and pairs[5] < 1  # 'bar' ~ 'baz'
+    assert pairs[7] < pairs[5] and pairs[7] > 0  # 'baz'~'bar'> 'baz'~'ninja' > 0
 
 
 def test_indexer(ix_names, df_X, df_sbs):
@@ -207,6 +222,10 @@ def test_indexer(ix_names, df_X, df_sbs):
         )
     ]
     pipe = make_union(*stages)
+    for s in stages:
+        output = s.fit_transform(X=df_X)
+        assert output.shape[0] == df_X[0].shape[0] * df_X[1].shape[0]
+        assert output.shape[1] == 1
     out = pipe.fit_transform(X=df_X)
     assert out.shape[0] == df_X[0].shape[0] * df_X[1].shape[0]
     assert isinstance(out[0][0], tuple)
