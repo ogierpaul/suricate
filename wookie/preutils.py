@@ -2,11 +2,19 @@ import unicodedata
 
 import numpy as np
 import pandas as pd
-from fuzzywuzzy.fuzz import partial_token_set_ratio as fuzzyscore
+from sklearn.metrics.classification import accuracy_score, recall_score, precision_score, f1_score, \
+    balanced_accuracy_score
 
-_suffixexact = 'exact'
-_suffixtoken = 'token'
-_suffixfuzzy = 'fuzzy'
+suffixexact = 'exact'
+suffixtoken = 'token'
+suffixfuzzy = 'fuzzy'
+name_freetext = 'FreeText'
+name_exact = 'Exact'
+name_pruning_threshold = 'threshold'
+name_usescores = 'use_scores'
+name_stop_words = 'stop_words'
+navalue_score = 0
+
 
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
@@ -59,23 +67,42 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     ## remove leading zeroes
     if rmvlzeroes is True:
         s = s.lstrip('0')
+
     # remove trailing zero decimals
-    if s.endswith(('.0')):
+    if s.endswith('.0'):
         s = s[:-2]
+
     ## Remove special chars
-    if not rmvchars is None:
+    if rmvchars is not None:
         for c in rmvchars:
             s = s.replace(c, '')
     if len(s) == 0:
         return None
     ## Remove bad words
-    if not rmvwords is None:
+    if rmvwords is not None:
         if s in rmvwords:
             return None
     ## when done fill with leading zeroes
-    if not zfill is None:
+    if zfill is not None:
         s = s.zfill(zfill)
     return s
+
+
+def concatixnames(ixname='ix', lsuffix='left', rsuffix='right'):
+    """
+
+    Args:
+        ixname (str): 'ix'
+        lsuffix (str): 'left'
+        rsuffix (str): 'right'
+
+    Returns:
+        str, str, list(): 'ix_left', 'ix_right', ['ix_left', 'ix_right']
+    """
+    ixnameleft = '_'.join([ixname, lsuffix])
+    ixnameright = '_'.join([ixname, rsuffix])
+    ixnamepairs = [ixnameleft, ixnameright]
+    return ixnameleft, ixnameright, ixnamepairs
 
 
 def lowerascii(s, lower=True):
@@ -116,7 +143,7 @@ def rmv_end_list(w, mylist):
     return w
 
 
-sepvalues = [' ', ',', '/', '-', ':', "'", '(', ')', '|', '°', '!', '\n', '_', '.']
+sepvalues = (' ', ',', '/', '-', ':', "'", '(', ')', '|', '°', '!', '\n', '_', '.')
 
 
 def split(mystring, seplist=sepvalues):
@@ -148,8 +175,7 @@ def split(mystring, seplist=sepvalues):
 def concatenate_names(m):
     """
     This small function concatenate the different company names found across the names columns of SAP (name1, name2..)
-    It takes the name found in the first column. If the name in the second column adds information to the first,
-    it concatenates. And it continues like this for the other columns
+    It takes the name found in the first column.
     Args:
         m (list): list of strings
     Returns:
@@ -160,22 +186,18 @@ def concatenate_names(m):
     name3='ex-batman'
     name4='kapis code 3000'
     concatenate_names([name1,name2,name3,name4]):
-        'KNIGHT FRANK (SA) PTY LTD ex-batman kapis code 3000
+        'KNIGHT FRANK (SA) PTY LTD KNIGHT FRANK ex-batman kapis code 3000
     """
     # Remove na values
     # Remove na values
     var1 = ' '.join(filter(lambda c: not pd.isnull(c), m)).split(' ')
     if len(var1) == 0:
         return None
-    res = var1[0]
-    for ix in range(1, len(var1)):
-        # Compare fuzzy matching score with already concatenated string
-        rnew = var1[ix]
-        score = fuzzyscore(res, rnew) / 100
-        if pd.isnull(score) or score < 0.9:
-            # if score is less than threshold add it
-            res = ' '.join([res, rnew])
-    return res
+    val_tokens = var1[:1]
+    for new_token in var1[1:]:
+        val_tokens.append(new_token)
+    new_str = ' '.join(val_tokens)
+    return new_str
 
 
 def rmvstopwords(myword, stop_words=None, ending_words=None):
@@ -195,7 +217,7 @@ def rmvstopwords(myword, stop_words=None, ending_words=None):
         return None
     myword = lowerascii(myword)
     mylist = split(myword)
-    mylist = [m for m in mylist if not m in stop_words]
+    mylist = [m for m in mylist if m not in stop_words]
 
     if ending_words is not None:
         newlist = []
@@ -220,7 +242,7 @@ navalues = [
 ]
 
 
-def _chkixdf(df, ixname='ix'):
+def chkixdf(df, ixname='ix'):
     """
     Check that the dataframe does not already have a column of the name ixname
     And checks that the index name is ixname
@@ -268,7 +290,7 @@ def addsuffix(df, suffix):
 
     Examples:
         df.columns = ['name', 'age']
-        addsuffix(df, '_left').columns = ['name_left', 'age_left']
+        addsuffix(df, 'left').columns = ['name_left', 'age_left']
     """
     df = df.copy().rename(
         columns=dict(
@@ -291,7 +313,7 @@ def rmvsuffix(df, suffix):
     Rmv a suffix to each of the dataframe column
     Args:
         df (pd.DataFrame):
-        suffix (str):
+        suffix (str): 'left' (not _left) for coherency with the rest of the module
 
     Returns:
         pd.DataFrame
@@ -305,7 +327,7 @@ def rmvsuffix(df, suffix):
             zip(
                 df.columns,
                 map(
-                    lambda r: r[:-len(suffix)],
+                    lambda r: r[:-(len(suffix) + 1)],
                     df.columns
                 ),
 
@@ -314,3 +336,73 @@ def rmvsuffix(df, suffix):
     )
     assert isinstance(df, pd.DataFrame)
     return df
+
+
+def datapasser(df):
+    """
+    Do nothing
+    Args:
+        df (pd.DataFrame):
+
+    Returns:
+        pd.DataFrame
+    """
+    return df
+
+
+def createmultiindex(X, names=('ix_left', 'ix_right')):
+    return pd.MultiIndex.from_product(
+        [X[0].index, X[1].index],
+        names=names
+    )
+
+
+def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='y_true'):
+    """
+    Separate a side by side training table into the left table, the right table, and the list of pairs
+    Args:
+        df (pd.DataFrame): side by side dataframe {['ix_left', 'ix_right'] :['name_left', 'name_right']}
+        lsuffix (str): left suffix 'left'
+        rsuffix (str): right suffix 'right'
+        y_true_col (str): name of y_true column
+        ixname (str): name in index column
+
+    Returns:
+        pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
+    """
+
+    # noinspection PyShadowingNames,PyShadowingNames
+    def takeside(df, suffix, ixname):
+        """
+
+        Args:
+            df (pd.DataFrame):
+            suffix (str):
+            ixname (str):
+
+        Returns:
+
+        """
+        new = df.copy().reset_index(drop=False)
+        new = new[list(filter(lambda r: r[-len(suffix):] == suffix, new.columns))]
+        new = rmvsuffix(new, suffix).drop_duplicates(subset=[ixname])
+        new.set_index([ixname], inplace=True)
+        return new
+
+    xleft = takeside(df=df, suffix=lsuffix, ixname=ixname)
+    xright = takeside(df=df, suffix=rsuffix, ixname=ixname)
+    pairs = df.loc[:, y_true_col].copy()
+    return xleft, xright, pairs
+
+
+def scores(y_true, y_pred):
+    commonindex = y_true.index.intersection(y_pred.index)
+    myscores = dict()
+    y2_true = y_true.loc[commonindex]
+    y2_pred = y_pred.loc[commonindex]
+    myscores['precision'] = precision_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['recall'] = recall_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['f1'] = f1_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['accuracy'] = accuracy_score(y_true=y2_true, y_pred=y2_pred)
+    myscores['balanced_accuracy'] = balanced_accuracy_score(y_true=y2_true, y_pred=y2_pred)
+    return myscores
