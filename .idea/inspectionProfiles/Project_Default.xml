@@ -21,6 +21,10 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="wookie.lrcomparators.BaseLrComparator.transform" />
+          <option value="sklearn.base.TransformerMixin.transform" />
+          <option value="sklearn.base.ClassifierMixin.predict_proba" />
+          <option value="sklearn.base.ClassifierMixin.predict" />
+          <option value="sklearn.base.ClassifierMixin.fit" />
         </list>
       </option>
     </inspection_tool>

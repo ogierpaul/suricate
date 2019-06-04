@@ -6,6 +6,10 @@ from wookie.lrdftransformers import cartesian_join
 from wookie.preutils import concatixnames, createmultiindex
 
 
+# TODO: Save LrClusterQuestions X_score in order to gain a lot more time!!
+# TODO: In ClusterClassifier, use PCA with 1 component, and a Normal Scaler to output the similarity score
+
+
 class LrClusterQuestions(ClusterMixin):
     """
     Help visualize the scores
