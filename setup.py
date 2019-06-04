@@ -13,8 +13,7 @@ setup(name='suricate',
           'numpy',
           'fuzzywuzzy',
           'pytest',
-          'dask',
-          'elasticsearch'
+          'dask'
       ],
       zip_safe=False)
 
