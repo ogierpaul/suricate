@@ -396,6 +396,15 @@ def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='
 
 
 def scores(y_true, y_pred):
+    """
+    Calculate the precision, recall, f1, accuracy, balanced_accuracy scores
+    Args:
+        y_true (pd.Series): y_true (with limited set of index)
+        y_pred (pd.Series): y_pred (with limited set of index)
+
+    Returns:
+        dict : scores calculated on intersection of index. Keys Precision, recall, f1, accuracy, balanced_accuracy
+    """
     commonindex = y_true.index.intersection(y_pred.index)
     myscores = dict()
     y2_true = y_true.loc[commonindex]
