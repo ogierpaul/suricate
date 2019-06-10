@@ -2,6 +2,7 @@ import pandas as pd
 
 from suricate.preutils import concatenate_names, concatixnames
 
+#TODO: Rework everything
 
 class SingleGrouping:
     def __init__(self,

@@ -16,7 +16,9 @@ class LrClusterQuestions(ClusterMixin):
     Mix a transformer (FeatureUnion) and usecols data
     """
 
-    def __init__(self, transformer, cluster, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
+    def __init__(self, transformer, cluster, ixname='ix', lsuffix='left', rsuffix='right',
+                 showcols=None, showscore=None,
+                 **kwargs):
         """
 
         Args:
@@ -25,6 +27,8 @@ class LrClusterQuestions(ClusterMixin):
             ixname:
             lsuffix:
             rsuffix:
+            showcols (list): list of column names of both left and right dataframe to be put, default all
+            showscores: position of colums in final scoring array to be shown
             **kwargs:
         """
         ClusterMixin.__init__(self)
@@ -37,8 +41,10 @@ class LrClusterQuestions(ClusterMixin):
             rsuffix=self.rsuffix
         )
         self.transformer = transformer
-        # TODO: use outcol, transformer name
+        self.showcols = showcols
+        self.showscore = showscore
 
+        # TODO: use outcol, transformer name
         try:
             self.scorecols = [c[1].outcol for c in self.transformer.transformer_list]
         except:
@@ -48,8 +54,18 @@ class LrClusterQuestions(ClusterMixin):
                 self.scorecols = None
         else:
             self.scorecols = None
+        # Boolean to check if it is fitted
+        self.fitted = False
+        # Cluster MiXin
         self.cluster = cluster
+        # Int, number of clusters
         self.n_clusters = None
+        # Score matrix (n_samples, n_features)
+        self.X_score = pd.DataFrame()
+        # Vector of cluster shape = (n_samples, 1)
+        self.y_cluster = pd.Series()
+        # Index of X_score of length (n_samples)
+        self.ix = pd.Index()
         pass
 
     def _getindex(self, X):
@@ -66,10 +82,43 @@ class LrClusterQuestions(ClusterMixin):
         return ix
 
     def fit(self, X=None, y=None):
+        """
+
+        Args:
+            X: input matrix to be transformed by self.transformer
+            y: dummy
+
+        Returns:
+            ClusterMixin
+        """
+        self.ix = self._getindex(X=X)
         self.transformer.fit(X=X)
-        X_score = self.transformer.transform(X=X)
-        self.cluster.fit(X=X_score)
+        self.X_score = pd.DataFrame(
+            data=self.transformer.transform(X=X),
+            index=self.ix
+        )
+        self.cluster.fit(X=self.X_score)
         self.n_clusters = self.cluster.n_clusters
+        self.y_cluster = pd.Series(
+            data=self.cluster.predict(X=self.X_score),
+            index=self.ix,
+            name='cluster'
+        )
+        self.score = self.X_score.iloc[:,0]
+        self.score.name = 'similarity'
+
+        self.X_sbs = _return_cartesian_data(
+            X=X,
+            X_score=self.X_score,
+            showcols=self.showcols,
+            showscores=self.showscore,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix,
+            ixnamepairs=self.ixnamepairs
+        )
+        self.X_sbs['cluster'] = self.y_cluster
+        self.X_sbs['similarity'] = self.score
+        self.fitted = True
         return self
 
     def fit_predict(self, X, y=None):
@@ -78,83 +127,76 @@ class LrClusterQuestions(ClusterMixin):
         return y_out
 
     def predict(self, X):
+        """
+
+        Args:
+            X: input matrix to be transformed by self.transformer
+
+        Returns:
+            np.ndarray: prediction of cluster
+        """
         X_score = self.transformer.transform(X=X)
         y_out = self.cluster.predict(X=X_score)
         return y_out
 
-    def representative_questions(self, X, showcols=None, showscores=None, n_questions=20):
+
+    def representative_questions(self, n_questions=20):
         """
         Similarity score is first column of transformer
         Args:
             X (list): [df_left, df_right]
-            showcols (list): list of column names of both left and right dataframe to be put, default all
-            showscores: position of colums in final scoring array to be shown
+
+            n_questions: number of questions per cluster
+
+        Returns:
+            pd.DataFrame: side by side pairs
+        """
+        assert self.fitted is True
+
+        # start round of questionning
+        q_ix = self._findpairs(on_ix=self.ix, n_questions=n_questions, on_cluster=range(self.n_clusters))
+        return self.X_sbs.loc[q_ix]
+
+    def _findpairs(self, on_ix,  n_questions, on_cluster=None):
+        """
+        Find n_questions for each cluster in on_ix
+        Args:
+            on_ix (pd.Index): index on which to find the questions
+            n_questions (int): number of questions per cluster
+            on_cluster (list): list of clusters
 
         Returns:
 
         """
-        # TODO: check n_cluster and n_questions coherency
-        # TODO: assert is fitted
-        n_questions_c = int(n_questions / self.n_clusters)  # Number of questions per cluster
-        n_questions_bonus = n_questions - self.n_clusters * n_questions_c  # Number of bonus questions
+        q_ix = pd.Index()
+        for c in on_cluster:
+            d = self.y_cluster.loc[
+                on_ix
+            ].loc[
+                self.y_cluster.loc[on_ix] == c
+            ]
+            if d.shape[0] < n_questions:
+                print('n_questions bigger than size of cluster for cluster {}'.format(c))
+                new_ix = d.index
+            else:
+                new_ix = d.sample(
+                    n_questions
+                ).index
+            q_ix.union(new_ix)
+        return q_ix
 
-        X_score = self.transformer.transform(X=X)
-        y_cluster = pd.Series(
-            data=self.cluster.predict(X=X_score),
-            index=self._getindex(X=X),
-            name='cluster'
-        )
-        y_score = pd.Series(
-            data=X_score[:, 0],
-            index=self._getindex(X=X),
-            name='similarityscore'
-        )
+    def pointed_questions(self, y, n_questions=20):
+        """
 
-        X_data = _return_cartesian_data(
-            X=X,
-            X_score=X_score,
-            showcols=showcols,
-            showscores=showscores,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix,
-            ixnamepairs=self.ixnamepairs
-        )
-        X_data['cluster'] = y_cluster
-        X_data['similarity'] = y_score
+        Args:
+            y (pd.Series): labelled series (0 if pair is not amatch, 1 otherwise), index (['ix_left', 'ix_right])
+            n_questions (int): number of questions per cluster
 
-        # start round of questionning
-        q_ix = []
-        for c in range(self.n_clusters):
-            q_ix += y_cluster.loc[y_cluster == c].sample(n_questions_c).index.tolist()
-        q_ix += X_data.sample(n_questions_bonus).index.tolist()
-        return X_data.loc[q_ix]
+        Returns:
+            pd.DataFrame: side by side pairs
+        """
 
-    def pointed_questions(self, X, y, showcols=None, showscores=None, n_questions=20):
-        X_score = self.transformer.transform(X=X)
-        y_cluster = pd.Series(
-            data=self.cluster.predict(X=X_score),
-            index=self._getindex(X=X),
-            name='cluster'
-        )
-        y_score = pd.Series(
-            data=X_score[:, 0],
-            index=self._getindex(X=X),
-            name='similarity'
-        )
-
-        X_data = _return_cartesian_data(
-            X=X,
-            X_score=X_score,
-            showcols=showcols,
-            showscores=showscores,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix,
-            ixnamepairs=self.ixnamepairs
-        )
-        X_data['cluster'] = y_cluster
-        X_data['similarity'] = y_score
-
-        cluster_composition = self.cluster_composition(X=X, y=y)
+        cluster_composition = self.cluster_composition(y=y)
         nomatch_clusters = cluster_composition.loc[
             (cluster_composition[1] == 0)
         ].index.tolist()
@@ -163,23 +205,29 @@ class LrClusterQuestions(ClusterMixin):
             (cluster_composition[0] > 0) & (cluster_composition[1] > 0)
             ].index.tolist()
 
-        n_questions_c = int(n_questions / len(mixed_clusters))  # Number of questions per cluster
-        n_questions_bonus = n_questions - len(mixed_clusters) * n_questions_c  # Number of bonus questions
+        on_ix = self.y_cluster.loc[
+            self.y_cluster.isin(mixed_clusters)
+        ].index.difference(y.index)
         # start round of questionning
-        q_ix = []
-        for c in mixed_clusters:
-            q_ix += y_cluster.loc[y_cluster == c].sample(n_questions_c).index.tolist()
-        q_ix += X_data.loc[y_cluster.isin(mixed_clusters)].sample(n_questions_bonus).index.tolist()
-        return X_data.loc[q_ix]
+        q_ix = self._findpairs(on_ix=on_ix, on_cluster=mixed_clusters, n_questions=20)
+        return q_ix
 
-    def cluster_composition(self, X, y, normalize='index'):
-        X_score = self.transformer.transform(X=X)
-        y_cluster = pd.Series(
-            data=self.cluster.predict(X=X_score),
-            index=self._getindex(X=X),
-            name='cluster'
+    def cluster_composition(self, y, normalize='index'):
+        """
+
+        Args:
+            y (pd.Series): labelized data
+            normalize: normalize parameter of pd.crosstab
+
+        Returns:
+            pd.DataFrame: cross-tab analysis of y vers y_cluster composition of the data
+        """
+        commonindex = y.index.intersection(self.y_cluster.index)
+        cluster_composition = pd.crosstab(
+            index=self.y_cluster.loc[commonindex],
+            columns=y.loc[commonindex],
+            normalize=normalize
         )
-        cluster_composition = pd.crosstab(index=y_cluster.loc[y.index], columns=y, normalize=normalize)
         return cluster_composition
 
 
@@ -267,3 +315,23 @@ def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, i
         for c in showscores:
             X_data[c] = X_score[:, c]
     return X_data
+
+
+
+def _check_ncluster_nquestions(n_questions, n_pairs, n_clusters):
+    """
+
+    Args:
+        n_questions (int):
+        n_clusters (int):
+        n_pairs (int):
+
+    Returns:
+        boolean
+    """
+    if n_questions > n_pairs:
+        return False
+    elif n_questions * n_clusters > n_pairs:
+        return False
+    else
+        return True
