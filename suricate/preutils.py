@@ -351,6 +351,15 @@ def datapasser(df):
 
 
 def createmultiindex(X, names=('ix_left', 'ix_right')):
+    """
+
+    Args:
+        X(list): [df_left, df_right]
+        names: ('ix_left', 'ix_right'))
+
+    Returns:
+        pd.MultiIndex
+    """
     return pd.MultiIndex.from_product(
         [X[0].index, X[1].index],
         names=names
