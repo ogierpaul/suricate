@@ -6,7 +6,6 @@ from suricate.lrdftransformers import cartesian_join
 from suricate.preutils import concatixnames, createmultiindex
 
 
-# TODO: Save LrClusterQuestions X_score in order to gain a lot more time!!
 # TODO: In ClusterClassifier, use PCA with 1 component, and a Normal Scaler to output the similarity score
 
 
@@ -66,6 +65,7 @@ class LrClusterQuestions(ClusterMixin):
         self.y_cluster = pd.Series()
         # Index of X_score of length (n_samples)
         self.ix = pd.Index()
+        self.X_sbs = pd.DataFrame()
         pass
 
     def _getindex(self, X):
@@ -333,5 +333,5 @@ def _check_ncluster_nquestions(n_questions, n_pairs, n_clusters):
         return False
     elif n_questions * n_clusters > n_pairs:
         return False
-    else
+    else:
         return True
