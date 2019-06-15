@@ -9,7 +9,7 @@ from suricate.preutils import concatixnames, createmultiindex
 # TODO: In ClusterClassifier, use PCA with 1 component, and a Normal Scaler to output the similarity score
 
 
-class LrClusterQuestions(ClusterMixin):
+class ClusterQuestions(ClusterMixin):
     """
     Help visualize the scores
     Mix a transformer (FeatureUnion) and usecols data
@@ -43,7 +43,6 @@ class LrClusterQuestions(ClusterMixin):
         self.showcols = showcols
         self.showscore = showscore
 
-        # TODO: use outcol, transformer name
         try:
             self.scorecols = [c[1].outcol for c in self.transformer.transformer_list]
         except:
@@ -64,7 +63,7 @@ class LrClusterQuestions(ClusterMixin):
         # Vector of cluster shape = (n_samples, 1)
         self.y_cluster = pd.Series()
         # Index of X_score of length (n_samples)
-        self.ix = pd.Index()
+        self.ix = pd.Index([])
         self.X_sbs = pd.DataFrame()
         pass
 
@@ -122,6 +121,15 @@ class LrClusterQuestions(ClusterMixin):
         return self
 
     def fit_predict(self, X, y=None):
+        """
+
+        Args:
+            X (list): (df_left, df_right]
+            y (np.ndarray): clusters
+
+        Returns:
+
+        """
         self.fit(X=X)
         y_out = self.predict(X=X)
         return y_out
@@ -160,15 +168,16 @@ class LrClusterQuestions(ClusterMixin):
     def _findpairs(self, on_ix,  n_questions, on_cluster=None):
         """
         Find n_questions for each cluster in on_ix
+        If n_questions > len(cluster) for a given cluster, we take the full cluster
         Args:
             on_ix (pd.Index): index on which to find the questions
             n_questions (int): number of questions per cluster
             on_cluster (list): list of clusters
 
         Returns:
-
+            pd.Index
         """
-        q_ix = pd.Index()
+        q_ix = pd.Index([])
         for c in on_cluster:
             d = self.y_cluster.loc[
                 on_ix
@@ -207,10 +216,14 @@ class LrClusterQuestions(ClusterMixin):
 
         on_ix = self.y_cluster.loc[
             self.y_cluster.isin(mixed_clusters)
-        ].index.difference(y.index)
+        ].index.difference(
+            y.index
+        )
+
         # start round of questionning
-        q_ix = self._findpairs(on_ix=on_ix, on_cluster=mixed_clusters, n_questions=20)
-        return q_ix
+        q_ix = self._findpairs(on_ix=on_ix, on_cluster=mixed_clusters, n_questions=n_questions)
+
+        return self.X_sbs.loc[q_ix]
 
     def cluster_composition(self, y, normalize='index'):
         """

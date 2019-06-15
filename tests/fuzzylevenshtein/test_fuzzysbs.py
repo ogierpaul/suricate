@@ -1,5 +1,5 @@
 from suricate.sbsdftransformers import FuncSbsComparator
-
+from suricate.data.circus import df_circus, circus_sbs
 
 # from ..data.circus import circus_sbs, df_circus
 

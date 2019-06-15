@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(name='suricate',
-      version='0.52',
+      version='0.53',
       description='MAAAAAAAAAAH',
       url='http://github.com/ogierpaul/suricate',
       author='Flying Circus',

@@ -3,9 +3,9 @@ import pytest
 
 n_lines = 100
 
-filepath_left = '/Users/paulogier/81-GithubPackages/suricate/operations/data/left.csv'
-filepath_right = '/Users/paulogier/81-GithubPackages/suricate/operations/data/right.csv'
-filepath_training = '/Users/paulogier/81-GithubPackages/suricate/operations/data/trainingdata.csv'
+filepath_left = '/Users/paulogier/81-GithubPackages/suricate/suricate/data/left.csv'
+filepath_right = '/Users/paulogier/81-GithubPackages/suricate/suricate/data/right.csv'
+filepath_training = '/Users/paulogier/81-GithubPackages/suricate/suricate/data/trainingdata.csv'
 
 
 @pytest.fixture

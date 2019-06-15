@@ -7,8 +7,9 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import MinMaxScaler
 
+from suricate.data.dataframes import df_X, y_true
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
-from suricate.lrdftransformers.cluster import LrClusterQuestions, ClusterClassifier
+from suricate.lrdftransformers.cluster import ClusterQuestions, ClusterClassifier
 from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
 from suricate.preutils import createmultiindex, scores
 from suricate.sbsdftransformers import FuncSbsComparator
@@ -29,14 +30,14 @@ def test_clusterquestions(df_X, y_true):
     t2d = make_pipeline(*[scorer, imp, pca, scaler])
 
     cluster = Cluster(n_clusters=10)
-    explorer = LrClusterQuestions(transformer=t2d, cluster=cluster)
+    explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
     y_cluster = explorer.fit_predict(X=df_X)
-    questions1 = explorer.representative_questions(X=df_X, showcols=['name'], showscores=[0], n_questions=21)
+    questions1 = explorer.representative_questions( n_questions=21)
     y_slice = y_true.loc[
         y_true.index.intersection(createmultiindex(X=df_X, names=explorer.ixnamepairs))
     ]
-    questions2 = explorer.pointed_questions(X=df_X, y=y_slice, n_questions=20)
-    cluster_composition = explorer.cluster_composition(X=df_X, y=y_true, normalize=True).sort_values(
+    questions2 = explorer.pointed_questions(y=y_true, n_questions=20)
+    cluster_composition = explorer.cluster_composition(y=y_true, normalize=True).sort_values(
         by=1, ascending=True)
     assert True
 

@@ -3,7 +3,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 
-from suricate.functionclassifier import FunctionClassifier
+from suricate.preutils.functionclassifier import FunctionClassifier
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
 from suricate.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
 from suricate.sbsdftransformers import FuncSbsComparator
