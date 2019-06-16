@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from wookie.lrdftransformers import CartesianLr, ExactConnector, \
+from suricate.lrdftransformers import CartesianLr, ExactConnector, \
     VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
-
+from suricate.data.foo import ix_names, df_left, df_right, df_sbs, df_X
 
 def test_fixtures_init(ix_names, df_left, df_right, df_sbs):
     print('\n', 'starting test_fixtures_init')
@@ -177,11 +177,12 @@ def test_fuzzy_2(ix_names, df_X, df_sbs):
     )
     y = df_sbs['y_true']
     y = y.loc[y == 1]
-    pairs = connector.transform(X=df_X, y=y)
+    pairs = connector.transform(X=df_X).flatten()
     print(pairs)
     assert pairs[0] == 1
-    assert pairs[1] == 1
-    assert pairs[2] > 0
+    assert pairs[4] == 1
+    assert pairs[5] > 0
+    assert pairs[5] > pairs[7]
 
 
 def test_indexer(ix_names, df_X, df_sbs):

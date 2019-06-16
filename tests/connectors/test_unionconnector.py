@@ -1,8 +1,9 @@
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from wookie.lrdftransformers import VectorizerConnector, FuzzyConnector
-
+from suricate.lrdftransformers import VectorizerConnector, FuzzyConnector
+from suricate.data.foo import ix_names
+from suricate.data.circus import df_circus
 
 def test_makeunionperso(ix_names, df_circus):
     X = df_circus

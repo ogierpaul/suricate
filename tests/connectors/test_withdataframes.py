@@ -1,7 +1,8 @@
 from sklearn.pipeline import make_union
 
-from wookie.lrdftransformers import VectorizerConnector, ExactConnector
-
+from suricate.lrdftransformers import VectorizerConnector, ExactConnector
+from suricate.data.foo import ix_names
+from suricate.data.dataframes import df_left, df_right
 
 def test_loaddata(ix_names, df_left, df_right):
     print(ix_names['ixname'])
