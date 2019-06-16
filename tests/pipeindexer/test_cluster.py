@@ -32,11 +32,10 @@ def test_clusterquestions(df_X, y_true):
     cluster = Cluster(n_clusters=10)
     explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
     y_cluster = explorer.fit_predict(X=df_X)
-    questions1 = explorer.representative_questions( n_questions=21)
-    y_slice = y_true.loc[
-        y_true.index.intersection(createmultiindex(X=df_X, names=explorer.ixnamepairs))
-    ]
+    questions1 = explorer.representative_questions(n_questions=21)
+    assert questions1.shape[0] > 0
     questions2 = explorer.pointed_questions(y=y_true, n_questions=20)
+    assert questions2.shape[0] > 0
     cluster_composition = explorer.cluster_composition(y=y_true, normalize=True).sort_values(
         by=1, ascending=True)
     assert True

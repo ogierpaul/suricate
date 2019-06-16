@@ -191,7 +191,7 @@ class ClusterQuestions(ClusterMixin):
                 new_ix = d.sample(
                     n_questions
                 ).index
-            q_ix.union(new_ix)
+            q_ix = q_ix.union(new_ix)
         return q_ix
 
     def pointed_questions(self, y, n_questions=20):
