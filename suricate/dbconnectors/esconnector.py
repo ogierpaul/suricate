@@ -1,10 +1,8 @@
 from copy import deepcopy
-
 import elasticsearch
 import pandas as pd
 
 
-from suricate.preutils.indextools import addsuffix, concatixnames
 
 ixname = 'ix'
 ixname_left = 'ix_left'
@@ -34,6 +32,7 @@ class EsConnector:
             es_rank (str):'es_rank'
         """
         self.client = client_es
+        assert isinstance(client_es, elasticsearch.client.Elasticsearch)
         self.index = index_es
         self.doc_type = doc_type_es
         self.scoreplan = scoreplan
@@ -46,11 +45,11 @@ class EsConnector:
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
-            ixname=ixname,
-            lsuffix=lsuffix,
-            rsuffix=rsuffix
-        )
+        # self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        #     ixname=ixname,
+        #     lsuffix=lsuffix,
+        #     rsuffix=rsuffix
+        # )
         self.usecols = list(self.scoreplan.keys())
         self.outcols = [self.es_score, self.es_rank]
         if self.explain is True:
@@ -86,13 +85,14 @@ class EsConnector:
             X (pd.DataFrame): left data
 
         Returns:
-            pd.DataFrame: X_score
+            np.ndarray: X_score (['ix_left', 'ix_right', 'es_score'])
         """
         alldata = pd.DataFrame(columns=['ix_left', 'ix_right', 'es_score'])
         for lix in X.index:
             record = X.loc[lix]
             res = self.search_record(record)
-            df = pd.DataFrame(res)
+            score = unpack_allhits(res)
+            df = pd.DataFrame(score)
             usecols = X.columns.intersection(df.columns).union(pd.Index([X.index.name]))
             scorecols = pd.Index(['es_rank', 'es_score'])
             df['ix_left'] = lix
@@ -105,7 +105,7 @@ class EsConnector:
             )
             df = df[['ix_left', 'ix_right', 'es_score']]
             alldata = pd.concat([alldata, df], axis=0, ignore_index=True)
-        return alldata
+        return alldata.values
 
 
     def fit_transform(self, X, y=None):
@@ -165,110 +165,6 @@ class EsConnector:
             body=mquery
         )
         return res
-
-    def search_serie(self, left):
-        """
-        Args:
-            left (pd.DataFrame/pd.Series):
-        Returns:
-            pd.DataFrame: {['ix_left', 'ix_right', relevance_scores, name, ...]}
-        """
-        tempcol1 = 'f1b3'
-        tempcol2 = 'f2b4'
-        # Format series for use as pd.DataFrame
-        if left is pd.Series():
-            newleft = pd.DataFrame(left).transpose()
-            assert newleft.shape[0] == 1
-        else:
-            newleft = left
-        # - Launch the search
-        # - unpack results
-        # - format as dataframe
-        # - melt to have all results side by side
-        df_res = newleft.apply(
-            lambda r: self.search_record(record=r),
-            axis=1
-        ).apply(
-            lambda r: unpack_allhits(res=r, explain=self.explain)
-        ).apply(
-            pd.Series
-        ).reset_index(
-            drop=False
-        ).rename(
-            {self.ixname: self.ixnameleft},
-            axis=1
-        )
-        fres = pd.melt(
-            df_res,
-            id_vars=[self.ixnameleft],
-            var_name=tempcol1,
-            value_name=tempcol2
-        ).drop(
-            [tempcol1],
-            axis=1
-        )
-        fres2 = fres[
-            tempcol2
-        ].apply(
-            pd.Series
-        ).rename(
-            {self.ixname: self.ixnameright},
-            axis=1
-        )
-        fres2[self.ixnameleft] = fres[self.ixnameleft]
-        return fres2
-
-    def lrsearch(self, left):
-        """
-        use a dataframe and return the results formatted as a dataframe
-        With left-right, SBS-Style
-        Args:
-            left (pd.DataFrame):
-
-        Returns:
-            pd.DataFrame
-        """
-        res = self.search_serie(
-            left=left
-        )
-        # Deal with possible missing columns
-        for c in self.outcols:
-            if not c in res:
-                res[c] = None
-        # Filter on used cols (score, index, and used for sbs) and rename use_cols with '_right'
-        sbs = res.loc[:, self.ixnamepairs + self.usecols + self.outcols]
-        renamecols = list(
-            filter(
-                lambda x: x not in self.ixnamepairs + self.outcols,
-                sbs.columns
-            )
-        )
-        sbs.rename(
-            columns=dict(
-                zip(
-                    renamecols,
-                    map(
-                        lambda r: '_'.join([r, self.rsuffix]),
-                        renamecols
-
-                    ),
-
-                )
-            ),
-            inplace=True
-        )
-        # rename left with '_left'
-        newleft = addsuffix(df=left[self.usecols], suffix=self.lsuffix)
-        sbs = pd.merge(
-            left=sbs,
-            right=newleft,
-            left_on=self.ixnameleft,
-            right_index=True,
-            how='inner'
-        ).set_index(
-            self.ixnamepairs
-        )
-        return sbs
 
 
 

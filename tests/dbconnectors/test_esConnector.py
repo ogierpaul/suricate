@@ -3,7 +3,7 @@ from suricate.data.dataframes import df_left
 from suricate.dbconnectors.esconnector import EsConnector, unpack_allhits
 import elasticsearch
 import pandas as pd
-
+import numpy as np
 
 @pytest.fixture
 def esconnector():
@@ -68,5 +68,11 @@ def test_scorecols_datacols(df_left, esconnector):
         scorecols = pd.Index(['es_rank', 'es_score'])
         print(scorecols)
         assert True
+
+def test_transform(df_left, esconnector):
+    X = esconnector.fit_transform(X=df_left)
+    assert isinstance(X, np.ndarray)
+    assert X.shape[1] == 3
+
 
 

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from suricate.preutils import concatenate_names, concatixnames
+from suricate.preutils import concatenate_names
 
 #TODO: Rework everything
 
@@ -34,9 +34,9 @@ class SingleGrouping:
             self.data = data
         else:
             self.data = pd.DataFrame()
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
-            ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
-        )
+        # self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        #     ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
+        # )
 
     def launchdedupe(self, data, n_batches=None, n_records=3):
         """
