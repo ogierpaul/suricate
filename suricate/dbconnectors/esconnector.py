@@ -88,7 +88,7 @@ class EsConnector:
         Returns:
             pd.DataFrame: X_score
         """
-
+        alldata = pd.DataFrame(columns=['ix_left', 'ix_right', 'es_score'])
         for lix in X.index:
             record = X.loc[lix]
             res = self.search_record(record)
@@ -96,9 +96,17 @@ class EsConnector:
             usecols = X.columns.intersection(df.columns).union(pd.Index([X.index.name]))
             scorecols = pd.Index(['es_rank', 'es_score'])
             df['ix_left'] = lix
+            #TODO: We only take score information at the moment
+            df.rename(
+                columns={
+                    'ix': 'ix_right'
+                },
+                inplace=True
+            )
+            df = df[['ix_left', 'ix_right', 'es_score']]
+            alldata = pd.concat([alldata, df], axis=0, ignore_index=True)
+        return alldata
 
-
-        pass
 
     def fit_transform(self, X, y=None):
         self.fit(X=X, y=y)
