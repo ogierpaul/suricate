@@ -58,4 +58,15 @@ def test_searchtodf(df_left, esconnector):
         df = pd.DataFrame(score)
         assert True
 
+def test_scorecols_datacols(df_left, esconnector):
+    for c in df_left.sample(1).index:
+        record = df_left.loc[c]
+        res = esconnector.search_record(record=record)
+        score = unpack_allhits(res)
+        df = pd.DataFrame(score)
+        usecols = df_left.columns.intersection(df.columns).union(pd.Index([df_left.index.name]))
+        scorecols = pd.Index(['es_rank', 'es_score'])
+        print(scorecols)
+        assert True
+
 

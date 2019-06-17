@@ -93,7 +93,10 @@ class EsConnector:
             record = X.loc[lix]
             res = self.search_record(record)
             df = pd.DataFrame(res)
+            usecols = X.columns.intersection(df.columns).union(pd.Index([X.index.name]))
+            scorecols = pd.Index(['es_rank', 'es_score'])
             df['ix_left'] = lix
+
 
         pass
 
