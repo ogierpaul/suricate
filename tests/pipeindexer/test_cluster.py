@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from suricate.data.dataframes import df_X, y_true
+from suricate.data.companies import df_X, y_true
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
 from suricate.lrdftransformers.cluster import ClusterQuestions, ClusterClassifier
 from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf

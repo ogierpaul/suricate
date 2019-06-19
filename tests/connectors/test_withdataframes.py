@@ -1,19 +1,18 @@
 from sklearn.pipeline import make_union
 
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
-from suricate.data.foo import ix_names
-from suricate.data.dataframes import df_left, df_right
+from suricate.data.base import ix_names
+from suricate.data.companies import left, right, X_lr
 
-def test_loaddata(ix_names, df_left, df_right):
+def test_loaddata():
     print(ix_names['ixname'])
-    print(df_left.shape[0])
-    print(df_right.shape[0])
+    print(left.shape[0])
+    print(right.shape[0])
     assert True
 
 
-def test_tfidf(df_left, df_right):
-    df_X = [df_left, df_right]
-    expected_shape = df_left.shape[0] * df_right.shape[0]
+def test_tfidf():
+    expected_shape = left.shape[0] * right.shape[0]
     stages = [
         VectorizerConnector(on='name', analyzer='char', pruning=False),
         VectorizerConnector(on='street', analyzer='char', pruning=False),
@@ -21,6 +20,6 @@ def test_tfidf(df_left, df_right):
 
     ]
     scorer = make_union(*stages)
-    X_score = scorer.transform(X=df_X)
+    X_score = scorer.transform(X=X_lr)
     assert X_score.shape[0] == expected_shape
     pass

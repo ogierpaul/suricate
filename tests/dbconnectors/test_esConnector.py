@@ -1,5 +1,5 @@
 import pytest
-from suricate.data.dataframes import df_left
+from suricate.data.companies import df_left
 from suricate.dbconnectors.esconnector import EsConnector, unpack_allhits
 import elasticsearch
 import pandas as pd
