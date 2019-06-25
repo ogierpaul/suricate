@@ -8,10 +8,13 @@ from suricate.lrdftransformers import VectorizerConnector, ExactConnector, Carte
 from suricate.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
 from suricate.sbsdftransformers import FuncSbsComparator
 
+from suricate.data.companies import getXlr, getytrue
 
-# from ..data.dataframes import df_X, y_true, df_left, df_right
+# from ..data.dataframes import X_lr, y_true, df_left, df_right
 
-def test_lrmodel(df_X, y_true):
+def test_lrmodel():
+    X_lr = getXlr()
+    y_true = getytrue()
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='street', analyzer='char'),
@@ -23,13 +26,15 @@ def test_lrmodel(df_X, y_true):
     transformer = make_pipeline(*[scorer, imp])
     clf = Classifier()
     mypipe = PipeLrClf(transformer=transformer, classifier=clf)
-    X_score = mypipe.transformer.fit_transform(X=df_X)
-    mypipe.fit(X=df_X, y=y_true)
-    print(mypipe.score(X=df_X, y=y_true))
+    X_score = mypipe.transformer.fit_transform(X=X_lr)
+    mypipe.fit(X=X_lr, y=y_true)
+    print(mypipe.score(X=X_lr, y=y_true))
 
 
-def test_sbsmodel(df_X, y_true):
-    df_sbs = CartesianDataPasser().fit_transform(df_X).set_index(['ix_left', 'ix_right'])
+def test_sbsmodel():
+    X_lr = getXlr()
+    y_true = getytrue()
+    df_sbs = CartesianDataPasser().fit_transform(X_lr).set_index(['ix_left', 'ix_right'])
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
         FuncSbsComparator(on='name', comparator='fuzzy'),
@@ -44,7 +49,9 @@ def test_sbsmodel(df_X, y_true):
     print(mypipe.score(X=df_sbs, y=y_true))
 
 
-def test_pipeModel(df_X, y_true):
+def test_pipeModel():
+    X_lr = getXlr()
+    y_true = getytrue()
     transformer1 = make_union(*[
         VectorizerConnector(on='name', analyzer='word'),
         VectorizerConnector(on='street', analyzer='word'),
@@ -89,5 +96,5 @@ def test_pipeModel(df_X, y_true):
     clf = Classifier()
     sbsmodel = PipeSbsClf(transformer=transformer2, classifier=clf)
     totalpipe = PruningLrSbsClf(lrmodel=lrmodel, sbsmodel=sbsmodel)
-    totalpipe.fit(X=df_X, y_lr=y_true, y_sbs=y_true)
-    print(totalpipe.score(X=df_X, y=y_true))
+    totalpipe.fit(X=X_lr, y_lr=y_true, y_sbs=y_true)
+    print(totalpipe.score(X=X_lr, y=y_true))

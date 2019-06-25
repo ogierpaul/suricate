@@ -7,17 +7,21 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from suricate.data.companies import df_X, y_true
+from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
 from suricate.lrdftransformers.cluster import ClusterQuestions, ClusterClassifier
 from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
-from suricate.preutils import createmultiindex, scores
+from suricate.preutils import createmultiindex
+from suricate.preutils.scores import scores
 from suricate.sbsdftransformers import FuncSbsComparator
 
 
-def test_clusterquestions(df_X, y_true):
+
+def test_clusterquestions():
+    X_lr = getXlr()
+    y_true = getytrue()
     y_true = y_true.loc[
-        y_true.index.intersection(createmultiindex(X=df_X))
+        y_true.index.intersection(createmultiindex(X=X_lr))
     ]
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2)),
@@ -31,7 +35,7 @@ def test_clusterquestions(df_X, y_true):
 
     cluster = Cluster(n_clusters=10)
     explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
-    y_cluster = explorer.fit_predict(X=df_X)
+    y_cluster = explorer.fit_predict(X=X_lr)
     questions1 = explorer.representative_questions(n_questions=21)
     assert questions1.shape[0] > 0
     questions2 = explorer.pointed_questions(y=y_true, n_questions=20)
@@ -41,9 +45,11 @@ def test_clusterquestions(df_X, y_true):
     assert True
 
 
-def test_clusterclassifier(df_X, y_true):
+def test_clusterclassifier():
+    X_lr = getXlr()
+    y_true = getytrue()
     y_true = y_true.loc[
-        y_true.index.intersection(createmultiindex(X=df_X))
+        y_true.index.intersection(createmultiindex(X=X_lr))
     ]
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2)),
@@ -56,8 +62,8 @@ def test_clusterclassifier(df_X, y_true):
     t2d = make_pipeline(*[scorer, imp, pca, scaler])
     cluster = Cluster(n_clusters=10)
     X_score = pd.DataFrame(
-        data=t2d.fit_transform(X=df_X),
-        index=createmultiindex(X=df_X)
+        data=t2d.fit_transform(X=X_lr),
+        index=createmultiindex(X=X_lr)
     ).loc[y_true.index]
     clf = ClusterClassifier(cluster=cluster)
     clf.fit(X=X_score, y=y_true)
@@ -67,9 +73,11 @@ def test_clusterclassifier(df_X, y_true):
     assert True
 
 
-def test_pipelrcluster(df_X, y_true):
+def test_pipelrcluster():
+    X_lr = getXlr()
+    y_true = getytrue()
     y_true = y_true.loc[
-        y_true.index.intersection(createmultiindex(X=df_X))
+        y_true.index.intersection(createmultiindex(X=X_lr))
     ]
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2)),
@@ -83,7 +91,7 @@ def test_pipelrcluster(df_X, y_true):
     cluster = Cluster(n_clusters=8)
     clf1 = ClusterClassifier(cluster=cluster)
     lrmodel = PipeLrClf(transformer=t2d, classifier=clf1)
-    y_pred_lr = lrmodel.fit_predict(X=df_X, y=y_true)
+    y_pred_lr = lrmodel.fit_predict(X=X_lr, y=y_true)
     assert isinstance(y_pred_lr, np.ndarray)
 
     transformer2 = make_union(*[
@@ -99,13 +107,13 @@ def test_pipelrcluster(df_X, y_true):
     clf2 = Classifier()
     sbsmodel = PipeSbsClf(transformer=transformer2, classifier=clf2)
     pipe = PruningLrSbsClf(lrmodel=lrmodel, sbsmodel=sbsmodel)
-    pipe.fit(X=df_X, y_lr=y_true, y_sbs=y_true)
+    pipe.fit(X=X_lr, y_lr=y_true, y_sbs=y_true)
     y_pred = pd.Series(
-        data=pipe.predict(X=df_X),
-        index=createmultiindex(X=df_X),
+        data=pipe.predict(X=X_lr),
+        index=createmultiindex(X=X_lr),
         name='y_pred'
     )
-    y_pruning = pd.Series(data=np.where(y_pred_lr > 1, 1, y_pred_lr), index=createmultiindex(X=df_X))
+    y_pruning = pd.Series(data=np.where(y_pred_lr > 1, 1, y_pred_lr), index=createmultiindex(X=X_lr))
     pruningscores = scores(y_true=y_true, y_pred=y_pruning)
     finalscores = scores(y_true=y_true, y_pred=y_pred)
     print(pd.Series(y_pred.value_counts()))

@@ -4,9 +4,13 @@ from sklearn.pipeline import make_union
 
 from suricate.lrdftransformers import CartesianLr, ExactConnector, \
     VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
-from suricate.data.foo import left, right, X_sbs, X_lr, y_true
 from suricate.data.base import ix_names
-
+from suricate.data.foo import getleft, getright, getXsbs, getXlr, getytrue
+left = getleft()
+right = getright()
+X_lr = getXlr()
+X_sbs = getXsbs()
+y_true = getytrue()
 
 def test_fixtures_init():
     print('\n', 'starting test_fixtures_init')

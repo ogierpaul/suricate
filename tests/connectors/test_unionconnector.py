@@ -3,8 +3,15 @@ from sklearn.pipeline import make_union
 
 from suricate.lrdftransformers import VectorizerConnector, FuzzyConnector
 from suricate.data.base import ix_names
-from suricate.data.circus import X_lr, y_true
+from suricate.data.circus import getXlr, getytrue
 from suricate.preutils.indextools import createmultiindex
+from suricate.data.foo import getleft, getright, getXsbs, getXlr, getytrue
+left = getleft()
+right = getright()
+X_lr = getXlr()
+X_sbs = getXsbs()
+y_true = getytrue()
+
 
 def test_makeunion_y_true():
     X = X_lr

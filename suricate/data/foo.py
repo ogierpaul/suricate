@@ -5,40 +5,50 @@ from suricate.preutils.indextools import createmultiindex
 _samplecol = 'name'
 
 
-left = pd.DataFrame(
-    {
-        ix_names['ixname']: [0, 1, 2],
-        _samplecol: ['foo', 'bar', 'ninja']
-    }
-).set_index(
-    ix_names['ixname']
-)
+def getleft():
+    left = pd.DataFrame(
+        {
+            ix_names['ixname']: [0, 1, 2],
+            _samplecol: ['foo', 'bar', 'ninja']
+        }
+    ).set_index(
+        ix_names['ixname']
+    )
+    return left
 
-right = pd.DataFrame(
-    {
-        ix_names['ixname']: [0, 1, 2],
-        _samplecol: ['foo', 'bar', 'baz']
-    }
-).set_index(
-    ix_names['ixname']
-)
+def getright():
+    right = pd.DataFrame(
+        {
+            ix_names['ixname']: [0, 1, 2],
+            _samplecol: ['foo', 'bar', 'baz']
+        }
+    ).set_index(
+        ix_names['ixname']
+    )
+    return right
 
-X_lr = [left, right]
+def getXlr():
+    X_lr = [getleft(), getright()]
+    return X_lr
 
-X_sbs = cartesian_join(
-    left=X_lr[0],
-    right=X_lr[1],
-    lsuffix=ix_names['lsuffix'],
-    rsuffix=ix_names['rsuffix'],
-).set_index(
-    ix_names['ixnamepairs']
-)
+def getXsbs():
+    X_sbs = cartesian_join(
+        left=getXlr()[0],
+        right=getXlr()[1],
+        lsuffix=ix_names['lsuffix'],
+        rsuffix=ix_names['rsuffix'],
+    ).set_index(
+        ix_names['ixnamepairs']
+    )
+    return X_sbs
 
-y_true = pd.Series(
-    data=[1, 0, 0, 0, 1, 1, 0, 0, 0],
-    index=createmultiindex(
-        X=X_lr,
-        names=ix_names['ixnamepairs']
-    ),
-    name='y_true'
-)
+def getytrue():
+    y_true = pd.Series(
+        data=[1, 0, 0, 0, 1, 1, 0, 0, 0],
+        index=createmultiindex(
+            X=getXlr(),
+            names=ix_names['ixnamepairs']
+        ),
+        name='y_true'
+    )
+    return y_true

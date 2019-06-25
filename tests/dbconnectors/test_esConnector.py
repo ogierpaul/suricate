@@ -1,5 +1,5 @@
 import pytest
-from suricate.data.companies import df_left
+from suricate.data.companies import getleft
 from suricate.dbconnectors.esconnector import EsConnector, unpack_allhits
 import elasticsearch
 import pandas as pd
@@ -42,7 +42,8 @@ def test_init(esconnector):
     assert isinstance(esconnector, EsConnector)
     pass
 
-def test_search_record(df_left, esconnector):
+def test_search_record(esconnector):
+    df_left = getleft()
     record = df_left.sample().iloc[0]
     res = esconnector.search_record(record=record)
     score = unpack_allhits(res)
@@ -50,7 +51,8 @@ def test_search_record(df_left, esconnector):
     assert isinstance(score, list)
     assert isinstance(score[0], dict)
 
-def test_searchtodf(df_left, esconnector):
+def test_searchtodf(esconnector):
+    df_left = getleft()
     for c in df_left.sample(50).index:
         record = df_left.loc[c]
         res = esconnector.search_record(record=record)
@@ -58,7 +60,8 @@ def test_searchtodf(df_left, esconnector):
         df = pd.DataFrame(score)
         assert True
 
-def test_scorecols_datacols(df_left, esconnector):
+def test_scorecols_datacols(esconnector):
+    df_left = getleft()
     for c in df_left.sample(1).index:
         record = df_left.loc[c]
         res = esconnector.search_record(record=record)
@@ -69,7 +72,8 @@ def test_scorecols_datacols(df_left, esconnector):
         print(scorecols)
         assert True
 
-def test_transform(df_left, esconnector):
+def test_transform(esconnector):
+    df_left = getleft()
     X = esconnector.fit_transform(X=df_left)
     assert isinstance(X, np.ndarray)
     assert X.shape[1] == 3

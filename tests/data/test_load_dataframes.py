@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 
 from suricate.data.base import create_path, open_csv
-from suricate.data.companies import left, right, training_data, _folder_companydf
+from suricate.data.companies import getleft, getright, gettrainingdata, _folder_companydf
 
 def test_create_path():
     filename = 'left.csv'
@@ -21,19 +21,19 @@ def test_load_df():
 
 
 def test_load_left():
-    df = left
+    df = getleft()
     print(df.sample(10))
     assert isinstance(df, pd.DataFrame)
 
 
 def test_load_right():
-    df = right
+    df = getright()
     print(df.sample(10))
     assert isinstance(df, pd.DataFrame)
 
 
 def test_load_trainingdata():
-    df = training_data
+    df = gettrainingdata()
     print(df.sample(10))
     assert isinstance(df, pd.DataFrame)
 

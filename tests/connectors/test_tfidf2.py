@@ -2,7 +2,12 @@ from sklearn.pipeline import make_union
 
 from suricate.lrdftransformers.vectorizer import VectorizerConnector
 from suricate.data.base import ix_names
-from suricate.data.companies import right, left, X_lr
+from suricate.data.companies import getleft, getright, getXlr, getytrue
+left = getleft()
+right = getright()
+X_lr = getXlr()
+y_true = getytrue()
+
 
 def test_loaddata():
     print(ix_names['ixname'])
