@@ -2,7 +2,7 @@ import pandas as pd
 from os.path import dirname, join
 
 from suricate.preutils import concatixnames
-
+import suricate.data.companydata
 
 def create_path(filename, foldername):
     """
