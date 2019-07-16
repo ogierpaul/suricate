@@ -1,10 +1,9 @@
 import pandas as pd
 
 from suricate.lrdftransformers.base import LrDfTransformerMixin
-from suricate.sbsdftransformers.funcsbscomparator import token_score, simple_score, exact_score
+from suricate.preutils.scores import exact_score, simple_score, token_score, contain_score, vincenty_score
 
 
-# TODO FOR FUTURE STEPS: ENRICH THE NUMBER OF FUNCTIONS: Vicenty distance, etc...
 class FuzzyConnector(LrDfTransformerMixin):
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
                  scoresuffix='fuzzy', ratio='simple', **kwargs):
@@ -16,19 +15,23 @@ class FuzzyConnector(LrDfTransformerMixin):
             lsuffix:
             rsuffix:
             scoresuffix:
-            ratio (str): ['simple' , 'token']
+            ratio (str): ['exact', 'simple', 'token', 'vincenty', 'contain']
             **kwargs:
         """
         LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
                                       scoresuffix=scoresuffix + '_' + ratio, **kwargs)
         self.on = on
-        assert ratio in ['exact', 'simple', 'token']
+        assert ratio in ['exact', 'simple', 'token', 'vincenty', 'contain']
         if ratio == 'simple':
             self.func = simple_score
         elif ratio == 'token':
             self.func = token_score
         elif ratio == 'exact':
             self.func = exact_score
+        elif ratio == 'vincenty':
+            self.func = vincenty_score
+        elif ratio == 'contain':
+            self.func = contain_score
 
     def _transform(self, X):
         """

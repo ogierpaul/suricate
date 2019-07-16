@@ -12,7 +12,7 @@ from suricate.lrdftransformers import VectorizerConnector, ExactConnector
 from suricate.lrdftransformers.cluster import ClusterQuestions, ClusterClassifier
 from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
 from suricate.preutils import createmultiindex
-from suricate.preutils.scores import scores
+from suricate.preutils.metrics import scores
 from suricate.sbsdftransformers import FuncSbsComparator
 
 

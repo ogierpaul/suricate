@@ -1,34 +1,109 @@
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, balanced_accuracy_score
+import pandas as pd
+from fuzzywuzzy.fuzz import ratio as simpleratio, token_sort_ratio as tokenratio
+from geopy.distance import vincenty
+from suricate.preutils.metrics import navalue_score
 
 
-def scores(y_true, y_pred):
+def exact_score(left, right):
     """
-    Calculate the precision, recall, f1, accuracy, balanced_accuracy scores
+    Checks if the two values are equali
     Args:
-        y_true (pd.Series): y_true (with limited set of index)
-        y_pred (pd.Series): y_pred (with limited set of index)
+        left (object): object number 1
+        right (object): object number 2
 
     Returns:
-        dict : scores calculated on intersection of index. Keys Precision, recall, f1, accuracy, balanced_accuracy
+        float
     """
-    commonindex = y_true.index.intersection(y_pred.index)
-    myscores = dict()
-    y2_true = y_true.loc[commonindex]
-    y2_pred = y_pred.loc[commonindex]
-    myscores['precision'] = precision_score(y_true=y2_true, y_pred=y2_pred)
-    myscores['recall'] = recall_score(y_true=y2_true, y_pred=y2_pred)
-    myscores['f1'] = f1_score(y_true=y2_true, y_pred=y2_pred)
-    myscores['accuracy'] = accuracy_score(y_true=y2_true, y_pred=y2_pred)
-    myscores['balanced_accuracy'] = balanced_accuracy_score(y_true=y2_true, y_pred=y2_pred)
-    return myscores
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        return float(left == right)
 
 
-suffixexact = 'exact'
-suffixtoken = 'token'
-suffixfuzzy = 'fuzzy'
-name_freetext = 'FreeText'
-name_exact = 'Exact'
-name_pruning_threshold = 'threshold'
-name_usescores = 'use_scores'
-name_stop_words = 'stop_words'
-navalue_score = 0
+def simple_score(left, right):
+    """
+    return ratio score of fuzzywuzzy
+    Args:
+        left (str): string number 1
+        right (str): string number 2
+
+    Returns:
+        float
+    """
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        s = (simpleratio(left, right) / 100)
+    return s
+
+
+def token_score(left, right):
+    """
+    return the token_set_ratio score of fuzzywuzzy
+    Args:
+        left (str): string number 1
+        right (str): string number 2
+
+    Returns:
+        float
+    """
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        s = tokenratio(left, right) / 100
+    return s
+
+def contain_score(left, right):
+    """
+    check if one string is a substring of another
+    Args:
+        left (str):
+        right (str):
+
+    Returns:
+        float
+    """
+    if valid_inputs(left, right) is False:
+        return navalue_score
+    else:
+        if isinstance(left, str) and isinstance(right, str):
+            if (left in right) or (right in left):
+                return 1.0
+            else:
+                return 0.0
+        else:
+            return navalue_score
+
+def vincenty_score(left, right):
+    """
+    Return vincenty distance
+    Args:
+        left (tuple): lat lng pair
+        right (tuple): lat lng pair
+
+    Returns:
+        float
+    """
+    if left is None or right is None:
+        return navalue_score
+    else:
+        if isinstance(left, tuple) and isinstance(right, tuple):
+            return vincenty(left, right)
+        else:
+            return navalue_score
+
+
+def valid_inputs(left, right):
+    """
+    takes two inputs and return True if none of them is null, or False otherwise
+    Args:
+        left: first object (scalar)
+        right: second object (scalar)
+
+    Returns:
+        bool
+    """
+    if any(pd.isnull([left, right])):
+        return False
+    else:
+        return True
