@@ -94,13 +94,11 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
         df2new[tempcolname] = 0
         dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
         del df1new, df2new, tempcolname
-
-        return dfnew
     else:
         ixname = left.index.name
         ixnameleft = ixname + '_' + lsuffix
         ixnameright = ixname + '_' + rsuffix
-        df = pd.DataFrame(
+        dfnew = pd.DataFrame(
             index=on_ix
         ).reset_index(
             drop=False
@@ -116,8 +114,9 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
             [ixnameleft, ixnameright],
             drop=True
         )
-        assert True
-        return df
+
+    return dfnew
+
 
 
 class LrDfTransformerMixin(TransformerMixin):

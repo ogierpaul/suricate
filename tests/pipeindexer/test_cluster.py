@@ -9,7 +9,8 @@ from sklearn.preprocessing import MinMaxScaler
 
 from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
-from suricate.lrdftransformers.cluster import ClusterQuestions, ClusterClassifier
+from suricate.lrdftransformers.cluster import ClusterClassifier
+from suricate.pipeline.questions import ClusterQuestions
 from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
 from suricate.preutils import createmultiindex
 from suricate.preutils.metrics import scores

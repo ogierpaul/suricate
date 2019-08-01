@@ -60,6 +60,51 @@ class CartesianDataPasser(TransformerMixin):
     def _transform(self, X, y=None):
         return cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
 
+class LrVisualHelper(TransformerMixin):
+    def __init__(self, transformer=None, ixname='ix', lsuffix='left', rsuffix='right', usecols=None, **kwargs):
+        TransformerMixin.__init__(self)
+        self.ixname = ixname
+        self.lsuffix = lsuffix
+        self.rsuffix = rsuffix
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix
+        )
+        self.usecols = usecols
+        pass
+
+
+    def _getindex(self, X):
+        """
+        Return the cartesian product index of both dataframes
+        Args:
+            X (list): [df_left, df_right]
+            y (pd.Series/pd.DataFrame/pd.MultiIndex): dummy, not used
+
+        Returns:
+            pd.MultiIndex
+        """
+        ix = createmultiindex(X=X, names=self.ixnamepairs)
+        return ix
+
+    def fit(self, X=None, y=None):
+        return self
+
+    def transform(self, X=None, y=None):
+        X_sbs = cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        # Re-arrange the columns to put the same columns side-by-side
+        mycols = [self.ixnameleft, self.ixnameright]
+        if self.usecols is None:
+            usecols = X[0].columns
+        else:
+            usecols = self.usecols
+        for c in usecols:
+            mycols.append(c + '_' + self.lsuffix)
+            mycols.append(c + '_' + self.rsuffix)
+        X_sbs = X_sbs[mycols].set_index(self.ixnamepairs)
+        return X_sbs
+
 
 class VisualHelper(TransformerMixin):
     """
