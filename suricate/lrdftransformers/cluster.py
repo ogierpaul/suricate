@@ -30,7 +30,7 @@ class ClusterClassifier(ClassifierMixin):
 
         Args:
             X (pd.DataFrame): X_score of n_samples, n_features with INDEX
-            y:
+            y: y_true
 
         Returns:
 
