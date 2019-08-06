@@ -19,8 +19,8 @@ from suricate.sbsdftransformers import FuncSbsComparator
 
 
 def test_clusterquestions():
-    X_lr = getXlr()
-    y_true = getytrue()
+    X_lr = getXlr(nrows=100)
+    y_true = getytrue(nrows=100)
     y_true = y_true.loc[
         y_true.index.intersection(createmultiindex(X=X_lr))
     ]
@@ -47,8 +47,8 @@ def test_clusterquestions():
 
 
 def test_clusterclassifier():
-    X_lr = getXlr()
-    y_true = getytrue()
+    X_lr = getXlr(nrows=100)
+    y_true = getytrue(nrows=100)
     y_true = y_true.loc[
         y_true.index.intersection(createmultiindex(X=X_lr))
     ]
@@ -75,8 +75,8 @@ def test_clusterclassifier():
 
 
 def test_pipelrcluster():
-    X_lr = getXlr()
-    y_true = getytrue()
+    X_lr = getXlr(nrows=100)
+    y_true = getytrue(nrows=100)
     y_true = y_true.loc[
         y_true.index.intersection(createmultiindex(X=X_lr))
     ]

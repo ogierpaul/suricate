@@ -66,6 +66,7 @@ def test_featureunion_scores(fixture_data, fixture_scores):
     questions.fit(X=y_cluster)
     print(y_cluster.ndim)
     y_questions = questions.transform(y_cluster)
+    print(y_questions)
 
 
 

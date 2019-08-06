@@ -13,8 +13,8 @@ from suricate.data.companies import getXlr, getytrue
 # from ..data.dataframes import X_lr, y_true, df_left, df_right
 
 def test_lrmodel():
-    X_lr = getXlr()
-    y_true = getytrue()
+    X_lr = getXlr(nrows=100)
+    y_true = getytrue(nrows=100)
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='street', analyzer='char'),
@@ -32,8 +32,8 @@ def test_lrmodel():
 
 
 def test_sbsmodel():
-    X_lr = getXlr()
-    y_true = getytrue()
+    X_lr = getXlr(nrows=100)
+    y_true = getytrue(nrows=100)
     df_sbs = CartesianDataPasser().fit_transform(X_lr).set_index(['ix_left', 'ix_right'])
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
@@ -50,8 +50,8 @@ def test_sbsmodel():
 
 
 def test_pipeModel():
-    X_lr = getXlr()
-    y_true = getytrue()
+    X_lr = getXlr(nrows=100)
+    y_true = getytrue(nrows=100)
     transformer1 = make_union(*[
         VectorizerConnector(on='name', analyzer='word'),
         VectorizerConnector(on='street', analyzer='word'),
