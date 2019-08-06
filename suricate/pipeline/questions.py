@@ -33,9 +33,14 @@ class SimpleQuestions(TransformerMixin):
             X (np.ndarray): Matrix of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
 
         Returns:
-            np.ndarray: index number (np) of lines to take
+            np.ndarray: index number (np) of lines to take of dimensions (n_clusters * n_questions, )
         """
-        y = pd.Series(X)
+        if X.ndim == 2:
+            if X.shape[1] ==1:
+                X=X.flatten()
+            else:
+                raise IndexError('Data must be 1-dimensionnal')
+        y = pd.Series(data=X)
         questions = []
         for c in range(self.n_clusters):
             questions += y.loc[y == c].sample(5).index.tolist()

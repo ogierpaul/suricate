@@ -118,7 +118,6 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
     return dfnew
 
 
-
 class LrDfTransformerMixin(TransformerMixin):
     def __init__(self, on=None, ixname='ix',
                  lsuffix='left', rsuffix='right', scoresuffix='score', **kwargs):
@@ -130,6 +129,7 @@ class LrDfTransformerMixin(TransformerMixin):
             on (str): name of the column on which to do the join
             scoresuffix (str): suffix to be attached to the on column name
         """
+        TransformerMixin.__init__(self)
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
@@ -314,3 +314,30 @@ class LrDfTransformerMixin(TransformerMixin):
             newright = newright.loc[on_ix.levels[1].intersection(newright.index)]
             newright.index.name = self.ixname
             return newleft, newright
+
+
+class LrDfIndexEncoder(TransformerMixin):
+    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right'):
+        TransformerMixin.__init__(self)
+        self.ixname = ixname
+        self.lsuffix = lsuffix
+        self.rsuffix = rsuffix
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix
+        )
+        self.index = pd.Index()
+        self.num = np.ndarray
+
+    def fit(self, X, y=None):
+        """
+
+        Args:
+            X (list): [left_df, right_df]
+            y: dummy, not used
+
+        Returns:
+            self
+        """
+        self.index = createmultiindex(X=X, names=self.ixnamepairs)

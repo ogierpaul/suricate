@@ -1,4 +1,6 @@
 import pytest
+import numpy as np
+import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer as Imputer
 from sklearn.preprocessing import Normalizer, QuantileTransformer
@@ -8,12 +10,14 @@ from sklearn.cluster import KMeans
 from suricate.lrdftransformers import LrVisualHelper
 from suricate.data.companies import getXlr
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
+from suricate.pipeline.questions import SimpleQuestions
 
 @pytest.fixture
 def fixture_data():
     # Load the data
-    X_lr = getXlr(nrows=500)
+    X_lr = getXlr(nrows=100)
     return X_lr
+
 
 @pytest.fixture
 def fixture_scores():
@@ -30,39 +34,42 @@ def fixture_scores():
     ]
     return scores
 
-@pytest.fixture
+
 def test_featureunion_scores(fixture_data, fixture_scores):
     X_lr = fixture_data
     scores = fixture_scores
     transformer = FeatureUnion(scores)
-    X_score = transformer.fit_transform(X_lr)
-    print(X_score.shape)
-    assert  True
-    return transformer
+    X_score_raw = transformer.fit_transform(X_lr)
+    print(X_score_raw.shape)
 
-@pytest.fixture
-def test_preprocessing_pipeline(fixture_data, test_featureunion_scores):
     # Impute, scale, and reduce the dimensions
-    steps = [
-        ('scorer', test_featureunion_scores),
+
+    reduce1d = Pipeline(
+        steps=[
+            ('imputer', Imputer()),
+            ('scaler_quantile', QuantileTransformer()),
+            ('reduction1d', PCA(n_components=1))
+        ]
+    )
+    reduce3d = Pipeline(steps=[
         ('imputer', Imputer(strategy='constant', fill_value=0)),
         ('normalizer_scaler', Normalizer()),
         ('reduction3d', PCA(n_components=3))
     ]
-    preprocessing_pipeline = Pipeline(steps)
-    X_score_ready = preprocessing_pipeline.fit_transform(X=fixture_data)
-    print(X_score_ready.shape)
-    return preprocessing_pipeline
+    )
+    X_score3d = reduce3d.fit_transform(X=X_score_raw)
+    X_score1d = reduce1d.fit_transform(X=X_score_raw)
+    y_cluster = KMeans(n_clusters=10).fit_predict(X=X_score3d).reshape(-1, 1)
+    X_all = np.hstack([X_score1d, y_cluster])
+    X_sbs = LrVisualHelper().fit_transform(X=X_lr)
+    questions = SimpleQuestions(n_questions=10)
+    questions.fit(X=y_cluster)
+    print(y_cluster.ndim)
+    y_questions = questions.transform(y_cluster)
 
-def test_cluster1(fixture_data, test_preprocessing_pipeline):
-    # Train a basic cluster
-    # scores = FeatureUnion(transformer_list=[
-    #     ('y_cluster', KMeans(n_clusters=10)),
-    #     ('reduction1d', Pipeline(steps=[
-    #         ('reduction1d', PCA(n_components=1)),
-    #         ('quantile_scaler', QuantileTransformer())
-    #     ])),
-    #     ('sidebyside', LrVisualHelper())
-    # ])
-    # y_cluster = KMeans(n_clusters=10).fit_predict(X_score_ready)
+
+
+
+
+
 

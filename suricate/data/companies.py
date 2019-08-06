@@ -1,7 +1,7 @@
 import pytest
 from suricate.data.base import open_csv
 
-nrows = 100
+nrows = None
 _folder_companydf = 'companydata'
 
 
