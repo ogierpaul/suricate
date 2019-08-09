@@ -6,10 +6,8 @@ from suricate.lrdftransformers import cartesian_join
 from suricate.preutils import concatixnames
 
 
-
-
 class ClusterClassifier(ClassifierMixin):
-    def __init__(self, cluster, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
+    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
         ClassifierMixin.__init__(self)
         self.ixname = ixname
         self.lsuffix = lsuffix
@@ -19,32 +17,42 @@ class ClusterClassifier(ClassifierMixin):
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix
         )
-        self.cluster = cluster
         self.n_clusters = None
-        self.nomatch_clusters = None
-        self.allmatch_clusters = None
-        self.mixedmatch_clusters = None
+        self.nomatch = None
+        self.allmatch = None
+        self.mixedmatch = None
 
     def fit(self, X, y):
         """
 
         Args:
-            X (pd.DataFrame): X_score of n_samples, n_features with INDEX
+            X (pd.Series): cluster vector from cluster.fit_predict() with index
             y: y_true
 
         Returns:
 
         """
-        self.cluster.fit(X)
-        self.n_clusters = self.cluster.n_clusters
-        cluster_composition = self.cluster_composition(X=X, y=y)
-        self.nomatch_clusters = cluster_composition.loc[
+        self.n_clusters = np.unique(X)
+        cluster_composition = self.cluster_composition(y_cluster=X, y_true=y)
+        self.nomatch = cluster_composition.loc[
             (cluster_composition[1] == 0)
         ].index.tolist()
-        self.allmatch_clusters = cluster_composition.loc[cluster_composition[0] == 0].index.tolist()
-        self.mixedmatch_clusters = cluster_composition.loc[
+        self.allmatch = cluster_composition.loc[cluster_composition[0] == 0].index.tolist()
+        self.mixedmatch = cluster_composition.loc[
             (cluster_composition[0] > 0) & (cluster_composition[1] > 0)
             ].index.tolist()
+        notfound = list(
+            filter(
+                lambda c: all(
+                    map(
+                        lambda m: c not in m,
+                        [self.nomatch, self.allmatch, self.mixedmatch]
+                    )
+                ),
+                self.n_clusters
+            )
+        )
+        self.nomatch+=notfound
         self.fitted = True
         return self
 
@@ -52,15 +60,12 @@ class ClusterClassifier(ClassifierMixin):
         """
 
         Args:
-            X (list): df_left, df_right
+            X (np.array/pd.Series): 1-d array or Series, y_cluster
 
         Returns:
             np.ndarray (0 for sure non matches, 1 for mixed matches, 2 for sure positive matches)
         """
-        y_cluster = self.cluster.predict(X=X)
-        y_pred = np.isin(y_cluster, self.mixedmatch_clusters).astype(int) + 2 * np.isin(y_cluster,
-                                                                                        self.allmatch_clusters).astype(
-            int)
+        y_pred = np.isin(X, self.mixedmatch).astype(int) + 2 * np.isin(X, self.allmatch).astype(int)
         return y_pred
 
     def fit_predict(self, X, y):
@@ -68,10 +73,21 @@ class ClusterClassifier(ClassifierMixin):
         y_pred = self.predict(X=X)
         return y_pred
 
-    def cluster_composition(self, X, y, normalize='index'):
-        y_cluster = self.cluster.predict(X=X)
-        cluster_composition = pd.crosstab(index=y_cluster, columns=y, normalize=normalize)
-        return cluster_composition
+    def cluster_composition(self, y_cluster, y_true, normalize='index'):
+        """
+
+        Args:
+            y_cluster (pd.Series): series with index
+            y_true (pd.Series): series with index
+            normalize:
+
+        Returns:
+
+        """
+        ix_common = y_cluster.index.intersection(y_true.index)
+        df = pd.crosstab(index=y_cluster.loc[ix_common], columns=y_true.loc[ix_common], normalize=normalize)
+        assert isinstance(df, pd.DataFrame)
+        return df
 
 
 def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, ixnamepairs):
@@ -92,7 +108,6 @@ def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, i
         for c in showscores:
             X_data[c] = X_score[:, c]
     return X_data
-
 
 
 def _check_ncluster_nquestions(n_questions, n_pairs, n_clusters):

@@ -330,7 +330,7 @@ class LrDfIndexEncoder(TransformerMixin):
         self.index = pd.Index
         self.dfnum = pd.DataFrame()
         self.dfix = pd.DataFrame()
-        self.num = np.ndarray()
+        self.num = None
 
     def fit(self, X, y=None):
         """
@@ -343,12 +343,8 @@ class LrDfIndexEncoder(TransformerMixin):
             self
         """
         self.index = createmultiindex(X=X, names=self.ixnamepairs)
-        df = pd.DataFrame(data=self.index, columns=self.ixnamepairs)
-        df['ix_num'] = np.arange(0, X.shape[0])
-        #TODO: self.dfnum = [(), ()] as np.ndarray˚
-        self.dfnum = df.set_index(keys=['ix_num'], drop=True).
-        self.dfix = df.set_index(keys=self.ixnamepairs, drop=True).copy()
-        self.num = df['ix_num']
+        self.dfnum = pd.Series(index=np.arange(0, len(self.index)), data=self.index.values, name='ix')
+        self.dfix = pd.Series(index=self.index, data=np.arange(0, len(self.index)), name='ixnum')
         return self
 
     def transform(self, X, y=None):

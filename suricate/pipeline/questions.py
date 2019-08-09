@@ -46,6 +46,11 @@ class SimpleQuestions(TransformerMixin):
             questions += y.loc[y == c].sample(5).index.tolist()
         questions = np.array(questions)
         return questions
+    def predict(self, X):
+        return self.transform(X)
+
+    def fit_predict(self,X, y=None):
+        return self.fit_transform(X, y=y)
 
 
 class PointedQuestions(TransformerMixin):
