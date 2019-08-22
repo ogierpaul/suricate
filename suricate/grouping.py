@@ -1,6 +1,7 @@
 import pandas as pd
 
-from suricate.preutils import concatenate_names
+from suricate.preutils.preprocessing import concatenate_names
+from suricate.preutils import concatixnames
 
 #TODO: Rework everything
 
@@ -27,6 +28,11 @@ class SingleGrouping:
         self.ixname = ixname
         self.lsuffix = lsuffix
         self.rsuffix = rsuffix
+        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+            ixname=self.ixname,
+            lsuffix=self.lsuffix,
+            rsuffix=self.rsuffix
+        )
         self.dedupe = dedupe
         self.verbose = verbose
         self.gidname = gidname

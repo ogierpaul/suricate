@@ -3,9 +3,6 @@ import unicodedata
 import numpy as np
 import pandas as pd
 
-from suricate.preutils import navalues, rmv_end_str
-
-
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
     Format an id to a str, removing separators like [, . / - ], leading zeros
