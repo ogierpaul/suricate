@@ -1,5 +1,5 @@
 from suricate.lrdftransformers.base import LrDfTransformerMixin, cartesian_join
-from suricate.lrdftransformers.cartesian import CartesianLr, CartesianDataPasser, VisualHelper, LrVisualHelper
+from suricate.lrdftransformers.cartesian import CartesianLr, CartesianDataPasser, VisualHelper, LrDfVisualHelper
 from suricate.lrdftransformers.exact import ExactConnector
 from suricate.lrdftransformers.fuzzy import FuzzyConnector
 from suricate.lrdftransformers.indexer import Indexer

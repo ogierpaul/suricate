@@ -60,7 +60,7 @@ class CartesianDataPasser(TransformerMixin):
     def _transform(self, X, y=None):
         return cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
 
-class LrVisualHelper(TransformerMixin):
+class LrDfVisualHelper(TransformerMixin):
     def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', usecols=None, **kwargs):
         TransformerMixin.__init__(self)
         self.ixname = ixname

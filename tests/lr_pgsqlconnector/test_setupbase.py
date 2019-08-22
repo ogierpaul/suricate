@@ -12,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 from suricate.preutils import createmultiindex
-from suricate.lrdftransformers import LrVisualHelper
+from suricate.lrdftransformers import LrDfVisualHelper
 from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector, ClusterClassifier
 from suricate.pipeline.questions import SimpleQuestions, PointedQuestions
@@ -45,7 +45,7 @@ def create_lrsbs():
     Xlr = getXlr(nrows=nrows)
     ix = createmultiindex(X=Xlr)
     ixsimple = multiindex21column(df=pd.DataFrame(index=ix)).index
-    Xsbs = LrVisualHelper().fit_transform(X=Xlr)
+    Xsbs = LrDfVisualHelper().fit_transform(X=Xlr)
     Xsbs = multiindex21column(Xsbs)
     engine = pgsqlengine()
     Xsbs.to_sql('xsbs', engine, if_exists='replace', index=True)
@@ -132,7 +132,7 @@ def simple_questions():
     Xlr = getXlr(nrows=nrows)
     le = LrDfIndexEncoder().fit(X=Xlr)
     engine = pgsqlengine()
-    y_cluster = pd.read_sql('SELECT * FROM xcluster LIMIT 10000', con=engine).set_index('ix')['y_cluster']
+    y_cluster = pd.read_sql('SELECT * FROM xcluster', con=engine).set_index('ix')['y_cluster']
     # QUESTIONS
     simplequestions = SimpleQuestions(n_questions=8)
     # ix_questions = le.num_to_ix(vals=simplequestions.fit_transform(X=y_cluster))
@@ -141,13 +141,12 @@ def simple_questions():
     assert commonindex.shape[0]> 0
     print(commonindex.shape[0])
 
-    Xsimplequestions = pd.DataFrame(index=createmultiindex(X=Xlr))
-    # Xsimplequestions['simplequestion'] = False
-    # Xsimplequestions.loc[ix_questions, 'simplequestion'] = True
-    # Xsimplequestions = multiindex21column(Xsimplequestions).drop(axis=['ix_left', 'ix_right'])
-    #
-    # # TO SQL
-    # Xsimplequestions.to_sql(name='xsimplequestions', index=True, con=engine)
+    Xsimplequestions = pd.DataFrame(index=y_cluster.index)
+    Xsimplequestions['simplequestion'] = False
+    Xsimplequestions.loc[ix_questions, 'simplequestion'] = True
+
+    # TO SQL
+    Xsimplequestions.to_sql(name='xsimplequestions', index=True, con=engine)
     engine.dispose()
     return True
 

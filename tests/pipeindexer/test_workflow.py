@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 
 from suricate.preutils import createmultiindex
-from suricate.lrdftransformers import LrVisualHelper
+from suricate.lrdftransformers import LrDfVisualHelper
 from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector, ClusterClassifier
 from suricate.pipeline.questions import SimpleQuestions, PointedQuestions
@@ -59,7 +59,7 @@ def test_build_sbsinfo(fixture_data, fixture_scores):
     X_lr = fixture_data
     scorer = fixture_scores
     cluster = KMeans(n_clusters=10)
-    X_sbs = LrVisualHelper().fit_transform(X=X_lr)
+    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
     X_score = scorer.fit_transform(X=X_lr)
     y_cluster = PredtoTrans(estimator=cluster).fit_transform(X=X_score)
     y_score = similarity.fit_transform(X=X_score)
@@ -74,7 +74,7 @@ def test_build_simplequestions(fixture_data, fixture_scores):
     X_lr = fixture_data
     scorer = fixture_scores
     cluster = KMeans(n_clusters=10)
-    X_sbs = LrVisualHelper().fit_transform(X=X_lr)
+    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
     X_score = scorer.fit_transform(X=X_lr)
     y_cluster = PredtoTrans(estimator=cluster).fit_transform(X=X_score)
     y_score = np.mean(X_score, axis=1)
@@ -97,7 +97,7 @@ def test_build_hard_questions(fixture_data, fixture_scores):
     scorer = fixture_scores
     cluster = KMeans(n_clusters=10)
     le = LrDfIndexEncoder().fit(X=X_lr)
-    X_sbs = LrVisualHelper().fit_transform(X=X_lr)
+    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
     X_score = scorer.fit_transform(X=X_lr)
     y_cluster = PredtoTrans(estimator=cluster).fit_transform(X=X_score)
     y_score = similarity.fit_transform(X=X_score)
