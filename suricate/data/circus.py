@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 
 from suricate.lrdftransformers import CartesianDataPasser
 from suricate.preutils.indextools import createmultiindex

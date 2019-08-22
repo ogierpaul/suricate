@@ -1,4 +1,3 @@
-import pytest
 from suricate.data.base import open_csv
 
 nrows = None

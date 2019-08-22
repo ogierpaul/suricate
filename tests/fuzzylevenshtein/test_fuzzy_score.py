@@ -1,4 +1,3 @@
-import pytest
 from fuzzywuzzy.fuzz import WRatio, QRatio, ratio, partial_token_sort_ratio
 
 from suricate.preutils.scores import simple_score, token_score, contain_score, vincenty_score
