@@ -4,9 +4,9 @@ from suricate.lrdftransformers.base import LrDfTransformerMixin
 
 
 class ExactConnector(LrDfTransformerMixin):
-    '''
+    """
     This class returns the cartesian product
-    '''
+    """
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right', scoresuffix='exact', **kwargs):
         """
 

@@ -39,7 +39,7 @@ class PipeLrClf(ClassifierMixin):
         pass
 
     def fit(self, X, y):
-        '''
+        """
         Fit the transformer
         Args:
             X (list): list of [df_left, df_right]
@@ -47,14 +47,14 @@ class PipeLrClf(ClassifierMixin):
 
         Returns:
             self
-        '''
+        """
         X_score = self.transformer.fit_transform(X=X, y=None)
         X_slice, y_slice, ix_slice = self.slice(X=X, X_score=X_score, y=y)
         self.classifier.fit(X=X_slice, y=y_slice)
         return self
 
     def slice(self, X, X_score, y=None):
-        '''
+        """
         Transform X_score, output of X through the score,  into X_slice, sliced according to y_true (pd.Series)
         X [df_left, df_right] -[scorer]-> X_score -[reindex]-> X_score.loc[y_true.index]
         Into
@@ -68,7 +68,7 @@ class PipeLrClf(ClassifierMixin):
 
         Returns:
             np.ndarray, np.ndarray: Slice of X_score, y
-        '''
+        """
         ix_all = createmultiindex(X=X, names=self.ixnamepairs)
         X_score = pd.DataFrame(X_score, index=ix_all)
         if isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):

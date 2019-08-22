@@ -9,9 +9,9 @@ from suricate.preutils import concatixnames, createmultiindex
 
 
 class CartesianLr(LrDfTransformerMixin):
-    '''
+    """
     This transformer returns the cartesian product of left and right indexes
-    '''
+    """
 
     def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', on='all',
                  scoresuffix='cartesianscore', **kwargs):
@@ -32,10 +32,10 @@ class CartesianLr(LrDfTransformerMixin):
 
 
 class CartesianDataPasser(TransformerMixin):
-    '''
+    """
     THIS CLASS IS NOT A DF CONNECTOR BUT A TRANSFORMER MIXIN
     It returns the cartesian join of the two dataframes with all their columns
-    '''
+    """
 
     def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
         TransformerMixin.__init__(self)
@@ -61,7 +61,7 @@ class CartesianDataPasser(TransformerMixin):
         return cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
 
 class LrVisualHelper(TransformerMixin):
-    def __init__(self, transformer=None, ixname='ix', lsuffix='left', rsuffix='right', usecols=None, **kwargs):
+    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', usecols=None, **kwargs):
         TransformerMixin.__init__(self)
         self.ixname = ixname
         self.lsuffix = lsuffix
@@ -75,7 +75,7 @@ class LrVisualHelper(TransformerMixin):
         pass
 
 
-    def _getindex(self, X):
+    def _getindex(self, X, y=None):
         """
         Return the cartesian product index of both dataframes
         Args:
@@ -92,6 +92,15 @@ class LrVisualHelper(TransformerMixin):
         return self
 
     def transform(self, X=None, y=None):
+        """
+
+        Args:
+            X (list): [df_left, df_right]
+            y: dummy
+
+        Returns:
+            pd.DataFrame with index [ix_left, ix_right]
+        """
         X_sbs = cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
         # Re-arrange the columns to put the same columns side-by-side
         mycols = [self.ixnameleft, self.ixnameright]
@@ -143,7 +152,7 @@ class VisualHelper(TransformerMixin):
         else:
             self.scorecols = None
 
-    def _getindex(self, X):
+    def _getindex(self, X, y=None):
         """
         Return the cartesian product index of both dataframes
         Args:

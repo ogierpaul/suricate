@@ -38,7 +38,7 @@ class PipeSbsClf(ClassifierMixin):
         pass
 
     def fit(self, X, y):
-        '''
+        """
         Fit the transformer
         Args:
             X (pd.DataFrame): side by side [name_left; name_right, ...]
@@ -46,7 +46,7 @@ class PipeSbsClf(ClassifierMixin):
 
         Returns:
             self
-        '''
+        """
         X_score = self.transformer.fit_transform(X=X, y=None)
         self.classifier.fit(X=X_score, y=y)
         return self

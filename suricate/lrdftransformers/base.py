@@ -147,7 +147,7 @@ class LrDfTransformerMixin(TransformerMixin):
         self.fitted = False
         pass
 
-    def _getindex(self, X):
+    def _getindex(self, X, y=None):
         """
         Return the cartesian product index of both dataframes
         Args:

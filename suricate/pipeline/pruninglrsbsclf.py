@@ -43,7 +43,7 @@ class PruningLrSbsClf(ClassifierMixin):
         pass
 
     def fit(self, X, y_lr=None, y_sbs=None):
-        '''
+        """
         Fit the transformer
         Args:
             X (pd.DataFrame): side by side [name_left; name_right, ...]
@@ -52,7 +52,7 @@ class PruningLrSbsClf(ClassifierMixin):
 
         Returns:
             self
-        '''
+        """
         return self._pipe(X=X, y_lr=y_lr, y_sbs=y_sbs, fit=True)
 
     def _pipe(self, X, y_lr=None, y_sbs=None, fit=False, proba=False):
