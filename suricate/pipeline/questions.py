@@ -8,6 +8,12 @@ from suricate.preutils import concatixnames, createmultiindex
 
 class SimpleQuestions(TransformerMixin):
     def __init__(self, n_questions=10):
+        """
+
+        Args:
+            n_questions (int): number of questions to be asked for each cluster
+            isseries: if the input data is a serie or not
+        """
         TransformerMixin.__init__(self)
         self.n_questions = n_questions
         self.n_clusters = None
@@ -16,13 +22,13 @@ class SimpleQuestions(TransformerMixin):
         """
         Fit the transformer with the maximum number of clusters
         Args:
-            X (np.ndarray): Matrix of shape (n_pairs, 1) or (n_pairs,)  with the cluster classifications of the pairs
-            y: None, dummy
+            X (pd.Series/np.ndarray): Vector of shape (n_pairs, 1) or (n_pairs,)  with the cluster classifications of the pairs
+            y: vector
 
         Returns:
             self
         """
-        if not (X.ndim == 1 or (X.ndim == 2 and X.shape[1] == 1)):
+        if not (isinstance(X, pd.Series) or X.ndim == 1 or (X.ndim == 2 and X.shape[1] == 1)):
             raise IndexError('Expected dimension of array: ({a},1) or ({a},)'.format(a=X.shape[0]))
         self.n_clusters = np.max(X) + 1
         return self
@@ -30,22 +36,31 @@ class SimpleQuestions(TransformerMixin):
     def transform(self, X):
         """
         Args:
-            X (np.ndarray): Matrix of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
+            X (pd.Series/np.ndarray): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
 
         Returns:
-            np.ndarray: index number (np) of lines to take of dimensions (n_clusters * n_questions, )
+            np.ndarray: index number  of lines to take; dimension maximum is (n_clusters * n_questions, ) (some clusters may have a size inferior to n_questions)
         """
-        if X.ndim == 2:
-            if X.shape[1] ==1:
-                X=X.flatten()
-            else:
-                raise IndexError('Data must be 1-dimensionnal')
-        y = pd.Series(data=X)
+        if not isinstance(X, pd.Series):
+            if X.ndim == 2:
+                if X.shape[1] ==1:
+                    X = X.flatten()
+                else:
+                    raise IndexError('Data must be 1-dimensionnal')
+            y = pd.Series(data=X)
+        else:
+            y = X
         questions = []
         for c in range(self.n_clusters):
-            questions += y.loc[y == c].sample(5).index.tolist()
+            cluster = y.loc[y == c]
+            if cluster.shape[0] < self.n_questions:
+                sample_ix = cluster.index.tolist()
+            else:
+                sample_ix = cluster.sample(self.n_questions).index.tolist()
+            questions += sample_ix
         questions = np.array(questions)
         return questions
+
     def predict(self, X):
         return self.transform(X)
 

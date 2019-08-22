@@ -59,7 +59,6 @@ def test_build_sbsinfo(fixture_data, fixture_scores):
     X_lr = fixture_data
     scorer = fixture_scores
     cluster = KMeans(n_clusters=10)
-    le = LrDfIndexEncoder().fit(X=X_lr)
     X_sbs = LrVisualHelper().fit_transform(X=X_lr)
     X_score = scorer.fit_transform(X=X_lr)
     y_cluster = PredtoTrans(estimator=cluster).fit_transform(X=X_score)
@@ -75,19 +74,18 @@ def test_build_simplequestions(fixture_data, fixture_scores):
     X_lr = fixture_data
     scorer = fixture_scores
     cluster = KMeans(n_clusters=10)
-    le = LrDfIndexEncoder().fit(X=X_lr)
     X_sbs = LrVisualHelper().fit_transform(X=X_lr)
     X_score = scorer.fit_transform(X=X_lr)
     y_cluster = PredtoTrans(estimator=cluster).fit_transform(X=X_score)
-    y_score = similarity.fit_transform(X=X_score)
+    y_score = np.mean(X_score, axis=1)
     X_info = pd.DataFrame(data=np.column_stack([y_cluster, y_score]),
                           index=createmultiindex(X=X_lr),
                           columns=['y_cluster', 'y_score'])
     X_all = pd.concat([X_info, X_sbs], ignore_index=False, axis=1)
 
-
+    y_cluster = pd.Series(index=createmultiindex(X=X_lr), data=y_cluster)
     simplequestions = SimpleQuestions(n_questions=10)
-    ix_questions = le.num_to_ix(vals=simplequestions.fit_transform(X=y_cluster))
+    ix_questions = pd.Index(simplequestions.fit_transform(X=y_cluster))
     X_questions = X_all.loc[ix_questions]
     X_questions.sort_values(by=['y_score', 'y_cluster'], ascending=False, inplace=True)
     print(X_questions.head(5))
@@ -116,6 +114,7 @@ def test_build_hard_questions(fixture_data, fixture_scores):
     cluspred = ClusterClassifier()
     y_cluster = pd.Series(data=y_cluster, index=createmultiindex(X=X_lr))
     ix_common = pd.Index(data=ix_questions.values).intersection(y_true.index)
+
     y_true = y_true.loc[ix_common]
     y_pred_cluster = cluspred.fit_predict(X=y_cluster, y=y_true)
     questions_hard = PointedQuestions(n_questions=10).fit(X=y_cluster, y=y_pred_cluster)
