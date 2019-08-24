@@ -74,7 +74,6 @@ class LrDfVisualHelper(TransformerMixin):
         self.usecols = usecols
         pass
 
-
     def _getindex(self, X, y=None):
         """
         Return the cartesian product index of both dataframes
@@ -115,7 +114,21 @@ class LrDfVisualHelper(TransformerMixin):
         return X_sbs
 
 
-class VisualHelper(TransformerMixin):
+def create_lrdf_sbs(X, on_ix=None):
+    """
+
+    Args:
+        X (list): [df_left, df_right]
+        on_ix (pd.MultiIndex): collection of pairs ('ix_left', 'ix_right')
+
+    Returns:
+        pd.DataFrame, of shape (len(on_ix), df.shape[1] * 2 [{('ix_left', 'ix_right'):('name_left', 'name_right', ...}]
+    """
+    Xsbs = pd.DataFrame(index=on_ix).reset_index(drop=False)
+    Xsbs = Xsbs.join()
+
+
+class ObsoleteVisualHelper(TransformerMixin):
     """
     Help visualize the scores
     Mix a transformer (FeatureUnion) and usecols data
