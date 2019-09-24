@@ -6,7 +6,7 @@ from sklearn.pipeline import FeatureUnion
 from suricate.lrdftransformers import LrDfTransformerMixin
 from suricate.lrdftransformers.base import cartesian_join
 from suricate.preutils import concatixnames, createmultiindex
-
+import itertools
 
 class CartesianLr(LrDfTransformerMixin):
     """
@@ -114,7 +114,7 @@ class LrDfVisualHelper(TransformerMixin):
         return X_sbs
 
 
-def create_lrdf_sbs(X, on_ix=None):
+def create_lrdf_sbs(X, on_ix=None, ixname = 'ix', lsuffix='left', rsuffix='right'):
     """
 
     Args:
@@ -124,8 +124,37 @@ def create_lrdf_sbs(X, on_ix=None):
     Returns:
         pd.DataFrame, of shape (len(on_ix), df.shape[1] * 2 [{('ix_left', 'ix_right'):('name_left', 'name_right', ...}]
     """
+    usecols = X[0].columns.intersection(X[1].columns)
+    # Check on_ix is contained into the cartesian join of df_left and df_right
+    allix = createmultiindex(X=X, names={'{}_{}'.format(ixname, lsuffix), '{}_{}'.format(ixname, rsuffix)})
+    if len(on_ix.difference(allix)) > 0:
+        raise IndexError(
+            'Indexes called {} not found in cartesian product of left and right dataframe'.format(
+                on_ix.difference(allix)
+            )
+        )
+
+    # Rename the left and right dataframe with suffix
+    df_left = X[0][usecols]
+    df_left.columns = ['{}_{}'.format(c, lsuffix) for c in usecols]
+    df_right = X[1][usecols]
+    df_right.columns = [c + '_' + rsuffix for c in usecols]
+    # Join on the index
     Xsbs = pd.DataFrame(index=on_ix).reset_index(drop=False)
-    Xsbs = Xsbs.join()
+    Xsbs = Xsbs.join(df_left, on='{}_{}'.format(ixname, lsuffix), how='left')
+    Xsbs = Xsbs.join(df_right, on='{}_{}'.format(ixname, rsuffix), how='left')
+    # Re-order the columns
+    order_cols = [('{}_{}'.format(c, lsuffix), '{}_{}'.format(c, rsuffix)) for c in usecols]
+    order_cols = list(itertools.chain(*order_cols))
+    Xsbs = Xsbs.set_index(
+        ['{}_{}'.format(ixname, lsuffix), '{}_{}'.format(ixname, rsuffix)],
+        drop=True
+    )
+    Xsbs = Xsbs.loc[:, order_cols]
+    return Xsbs
+
+
+
 
 
 class ObsoleteVisualHelper(TransformerMixin):

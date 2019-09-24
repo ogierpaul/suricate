@@ -1,6 +1,7 @@
-from suricate.lrdftransformers import LrDfVisualHelper
+from suricate.lrdftransformers.cartesian import LrDfVisualHelper, create_lrdf_sbs
 from suricate.data.companies import getXlr
 import pandas as pd
+import pytest
 
 
 class Test_LrDfVisualHelper():
@@ -33,3 +34,13 @@ class Test_LrDfVisualHelper():
         assert Xsbs.shape[1] == Xlr[0].shape[1] + Xlr[1].shape[1]
         assert self.check_output(X=Xsbs)
         return True
+
+class Test_create_lrdf_sbs():
+    def test_normal_behaviour(self):
+        df_left = pd.DataFrame({'ix': range(3), 'name':list('abc')}).set_index('ix')
+        df_right = pd.DataFrame({'ix': range(3), 'name':list('abc')}).set_index('ix')
+        on_ix = pd.MultiIndex.from_tuples([(0,0), (1,1), (2, 0)], names=['ix_left', 'ix_right'])
+        Xsbs = create_lrdf_sbs(X=[df_left, df_right], on_ix=on_ix)
+        assert on_ix.shape[0] == len(on_ix)
+        assert {'name_left', 'name_right'} == set(Xsbs.columns)
+
