@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans as Cluster
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegressionCV as Classifier
@@ -19,11 +19,13 @@ from suricate.sbsdftransformers import FuncSbsComparator
 
 
 def test_clusterquestions():
+    # LOAD THE DATA
     X_lr = getXlr(nrows=100)
     y_true = getytrue(nrows=100)
     y_true = y_true.loc[
         y_true.index.intersection(createmultiindex(X=X_lr))
     ]
+    # CREATE SCORER
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2)),
         VectorizerConnector(on='street', analyzer='word', ngram_range=(1, 2)),
@@ -34,6 +36,8 @@ def test_clusterquestions():
     scaler = MinMaxScaler(feature_range=(0.0, 1.0))
     t2d = make_pipeline(*[scorer, imp, pca, scaler])
 
+    # CREATE CLUSTER
+    # TODO: REMOVE / DISCARD CLUSTER QUESTIONS AND REPLACE WITH CLUSTER SIMPLE QUESTIONS
     cluster = Cluster(n_clusters=10)
     explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
     y_cluster = explorer.fit_predict(X=X_lr)
@@ -61,7 +65,7 @@ def test_clusterclassifier():
     pca = PCA(n_components=2)
     scaler = MinMaxScaler(feature_range=(0.0, 1.0))
     t2d = make_pipeline(*[scorer, imp, pca, scaler])
-    cluster = Cluster(n_clusters=10)
+    cluster = KMeans(n_clusters=10)
     X_score = pd.DataFrame(
         data=t2d.fit_transform(X=X_lr),
         index=createmultiindex(X=X_lr)
@@ -89,7 +93,7 @@ def test_pipelrcluster():
     pca = PCA(n_components=2)
     scaler = MinMaxScaler(feature_range=(0.0, 1.0))
     t2d = make_pipeline(*[scorer, imp, pca, scaler])
-    cluster = Cluster(n_clusters=8)
+    cluster = KMeans(n_clusters=8)
     clf1 = ClusterClassifier(cluster=cluster)
     lrmodel = PipeLrClf(transformer=t2d, classifier=clf1)
     y_pred_lr = lrmodel.fit_predict(X=X_lr, y=y_true)
