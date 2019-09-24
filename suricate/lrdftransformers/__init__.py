@@ -5,6 +5,5 @@ from suricate.lrdftransformers.fuzzy import FuzzyConnector
 from suricate.lrdftransformers.indexer import Indexer
 from suricate.lrdftransformers.vectorizer import VectorizerConnector
 from suricate.lrdftransformers.cluster import ClusterClassifier
-from suricate.pipeline.questions import SimpleQuestions
 
 

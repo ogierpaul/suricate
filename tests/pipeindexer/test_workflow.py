@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import Normalizer, QuantileTransformer, FunctionTransformer
+from sklearn.preprocessing import Normalizer, FunctionTransformer
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 
@@ -11,9 +11,10 @@ from suricate.preutils import createmultiindex
 from suricate.lrdftransformers import LrDfVisualHelper
 from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector, ClusterClassifier
-from suricate.pipeline.questions import SimpleQuestions, PointedQuestions
+from suricate.questions import SimpleQuestions, PointedQuestions
 from suricate.lrdftransformers.base import LrDfIndexEncoder
-from suricate.pipeline.base import PredtoTrans, TranstoPred
+from suricate.pipeline.base import PredtoTrans
+
 
 def similarity_score(X):
     return np.mean(X, axis=1)
