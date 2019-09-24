@@ -129,13 +129,11 @@ def clustering():
 
 def simple_questions():
     # LOAD THE DATA
-    Xlr = getXlr(nrows=nrows)
-    le = LrDfIndexEncoder().fit(X=Xlr)
+    nrows = 1000
     engine = pgsqlengine()
-    y_cluster = pd.read_sql('SELECT * FROM xcluster', con=engine).set_index('ix')['y_cluster']
+    y_cluster = pd.read_sql('SELECT * FROM xcluster LIMIT {}'.format(nrows), con=engine).set_index('ix')['y_cluster']
     # QUESTIONS
     simplequestions = SimpleQuestions(n_questions=8)
-    # ix_questions = le.num_to_ix(vals=simplequestions.fit_transform(X=y_cluster))
     ix_questions = simplequestions.fit_transform(X=y_cluster)
     commonindex = pd.Index(ix_questions).intersection(y_cluster.index)
     assert commonindex.shape[0]> 0
@@ -146,7 +144,7 @@ def simple_questions():
     Xsimplequestions.loc[ix_questions, 'simplequestion'] = True
 
     # TO SQL
-    Xsimplequestions.to_sql(name='xsimplequestions', index=True, con=engine)
+    Xsimplequestions.to_sql(name='xsimplequestions', index=True, con=engine, if_exists='replace')
     engine.dispose()
     return True
 

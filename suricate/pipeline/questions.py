@@ -30,7 +30,7 @@ class SimpleQuestions(TransformerMixin):
         """
         if not (isinstance(X, pd.Series) or X.ndim == 1 or (X.ndim == 2 and X.shape[1] == 1)):
             raise IndexError('Expected dimension of array: ({a},1) or ({a},)'.format(a=X.shape[0]))
-        self.n_clusters = np.max(X) + 1
+        self.n_clusters = np.unique(X).shape[0]
         return self
 
     def transform(self, X):
