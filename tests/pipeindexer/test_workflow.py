@@ -56,6 +56,61 @@ def fixture_scores():
     )
     return scores
 
+def test_build_scores(fixture_data, fixture_scores):
+    X_lr = fixture_data
+    scorer = fixture_scores
+    X_score = scorer.fit_transform(X=X_lr)
+    assert X_lr[0].shape[0] * X_lr[1].shape[0]== X_score.shape[0]
+    assert X_score.shape[1] == 3 # PCA HAS been implemented
+
+def test_build_cluster_2_step(fixture_data, fixture_scores):
+    n_clusters = 5
+    X_lr = fixture_data
+    scorer = fixture_scores
+    X_score = scorer.fit_transform(X=X_lr)
+    cluster = KMeans(n_clusters=n_clusters)
+    y_cluster = cluster.fit_predict(X=X_score)
+    assert y_cluster.ndim == 1
+    assert np.unique(y_cluster).shape[0] == n_clusters
+
+def test_ask_simple_questions_return_array(fixture_data, fixture_scores):
+    n_clusters = 5
+    n_questions = 6
+    X_lr = fixture_data
+    scorer = fixture_scores
+    X_score = scorer.fit_transform(X=X_lr)
+    cluster = KMeans(n_clusters=n_clusters)
+    y_cluster = cluster.fit_predict(X=X_score)
+    questions = SimpleQuestions(n_questions=n_questions)
+    ix_questions = questions.fit_transform(X=y_cluster)
+    # HERE simplequestions is fed via an array, so it returns the row number of each line (it has no index)
+    assert ix_questions.ndim == 1
+    assert ix_questions.shape[0] <= n_questions * n_clusters
+
+def test_ask_simple_questions_return_multiindex(fixture_data, fixture_scores):
+    n_clusters = 5
+    n_questions = 6
+    X_lr = fixture_data
+    scorer = fixture_scores
+    X_score = scorer.fit_transform(X=X_lr)
+    cluster = KMeans(n_clusters=n_clusters)
+    y_cluster = pd.Series(
+        data=cluster.fit_predict(X=X_score),
+        index=createmultiindex(X=X_lr)
+    )
+    questions = SimpleQuestions(n_questions=n_questions)
+    ix_questions = questions.fit_transform(X=y_cluster)
+    assert ix_questions.ndim == 2
+    assert ix_questions.shape[1] == 2
+    assert ix_questions.shape[0] <= n_questions * n_clusters
+
+    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
+    X_questions = X_sbs.loc[ix_questions]
+    #TODO: WORK HERE PRIO 1
+    assert True
+
+
+
 def test_build_sbsinfo(fixture_data, fixture_scores):
     X_lr = fixture_data
     scorer = fixture_scores

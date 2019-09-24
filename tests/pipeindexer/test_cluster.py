@@ -23,6 +23,7 @@ def test_clusterquestions():
     # THIS STEP SHOULD BE ABOUT CREATING A CLUSTER
     # THEN NEXT STEP ABOUT ASKING SIMPLE QUESTIONS
     # THEN NEXT STEP ABOUT ASKING POINTED QUESTIONS
+    # MERGE WITH WORKFLOW
 
     # LOAD THE DATA
     X_lr = getXlr(nrows=100)
@@ -43,7 +44,7 @@ def test_clusterquestions():
 
     # CREATE CLUSTER
 
-    cluster = Cluster(n_clusters=10)
+    cluster = KMeans(n_clusters=10)
     explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
     y_cluster = explorer.fit_predict(X=X_lr)
     questions1 = explorer.representative_questions(n_questions=21)

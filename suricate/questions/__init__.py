@@ -43,13 +43,15 @@ class SimpleQuestions(TransformerMixin):
         """
         if not isinstance(X, pd.Series):
             if X.ndim == 2:
-                if X.shape[1] ==1:
+                if X.shape[1] == 1:
                     X = X.flatten()
                 else:
                     raise IndexError('Data must be 1-dimensionnal')
             y = pd.Series(data=X)
         else:
             y = X
+        assert isinstance(y, pd.Series)
+
         questions = []
         for c in range(self.n_clusters):
             cluster = y.loc[y == c]
