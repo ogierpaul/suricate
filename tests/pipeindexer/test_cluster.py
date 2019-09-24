@@ -19,6 +19,11 @@ from suricate.sbsdftransformers import FuncSbsComparator
 
 
 def test_clusterquestions():
+    # TODO: REMOVE / DISCARD CLUSTER QUESTIONS AND REPLACE WITH CLUSTER SIMPLE QUESTIONS \
+    # THIS STEP SHOULD BE ABOUT CREATING A CLUSTER
+    # THEN NEXT STEP ABOUT ASKING SIMPLE QUESTIONS
+    # THEN NEXT STEP ABOUT ASKING POINTED QUESTIONS
+
     # LOAD THE DATA
     X_lr = getXlr(nrows=100)
     y_true = getytrue(nrows=100)
@@ -37,7 +42,7 @@ def test_clusterquestions():
     t2d = make_pipeline(*[scorer, imp, pca, scaler])
 
     # CREATE CLUSTER
-    # TODO: REMOVE / DISCARD CLUSTER QUESTIONS AND REPLACE WITH CLUSTER SIMPLE QUESTIONS
+
     cluster = Cluster(n_clusters=10)
     explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
     y_cluster = explorer.fit_predict(X=X_lr)
