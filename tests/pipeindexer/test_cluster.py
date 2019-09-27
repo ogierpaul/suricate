@@ -9,79 +9,11 @@ from sklearn.preprocessing import MinMaxScaler
 
 from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
-from suricate.lrdftransformers.cluster import ClusterClassifier
-from suricate.questions import ClusterQuestions
+from suricate.explore.clusterclassifier import ClusterClassifier
 from suricate.pipeline import PipeSbsClf, PruningLrSbsClf, PipeLrClf
 from suricate.preutils import createmultiindex
 from suricate.preutils.metrics import scores
 from suricate.sbsdftransformers import FuncSbsComparator
-
-
-
-def test_clusterquestions():
-    # TODO: REMOVE / DISCARD CLUSTER QUESTIONS AND REPLACE WITH CLUSTER SIMPLE QUESTIONS \
-    # THIS STEP SHOULD BE ABOUT CREATING A CLUSTER
-    # THEN NEXT STEP ABOUT ASKING SIMPLE QUESTIONS
-    # THEN NEXT STEP ABOUT ASKING POINTED QUESTIONS
-    # MERGE WITH WORKFLOW
-
-    # LOAD THE DATA
-    X_lr = getXlr(nrows=100)
-    y_true = getytrue(nrows=100)
-    y_true = y_true.loc[
-        y_true.index.intersection(createmultiindex(X=X_lr))
-    ]
-    # CREATE SCORER
-    scorer = make_union(*[
-        VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2)),
-        VectorizerConnector(on='street', analyzer='word', ngram_range=(1, 2)),
-        ExactConnector(on='duns')
-    ])
-    imp = SimpleImputer(strategy='constant', fill_value=0)
-    pca = PCA(n_components=2)
-    scaler = MinMaxScaler(feature_range=(0.0, 1.0))
-    t2d = make_pipeline(*[scorer, imp, pca, scaler])
-
-    # CREATE CLUSTER
-
-    cluster = KMeans(n_clusters=10)
-    explorer = ClusterQuestions(transformer=t2d, cluster=cluster)
-    y_cluster = explorer.fit_predict(X=X_lr)
-    questions1 = explorer.representative_questions(n_questions=21)
-    assert questions1.shape[0] > 0
-    questions2 = explorer.pointed_questions(y=y_true, n_questions=20)
-    assert questions2.shape[0] > 0
-    cluster_composition = explorer.cluster_composition(y=y_true, normalize=True).sort_values(
-        by=1, ascending=True)
-    assert True
-
-
-def test_clusterclassifier():
-    X_lr = getXlr(nrows=100)
-    y_true = getytrue(nrows=100)
-    y_true = y_true.loc[
-        y_true.index.intersection(createmultiindex(X=X_lr))
-    ]
-    scorer = make_union(*[
-        VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2)),
-        VectorizerConnector(on='street', analyzer='word', ngram_range=(1, 2)),
-        ExactConnector(on='duns')
-    ])
-    imp = SimpleImputer(strategy='constant', fill_value=0)
-    pca = PCA(n_components=2)
-    scaler = MinMaxScaler(feature_range=(0.0, 1.0))
-    t2d = make_pipeline(*[scorer, imp, pca, scaler])
-    cluster = KMeans(n_clusters=10)
-    X_score = pd.DataFrame(
-        data=t2d.fit_transform(X=X_lr),
-        index=createmultiindex(X=X_lr)
-    ).loc[y_true.index]
-    clf = ClusterClassifier(cluster=cluster)
-    clf.fit(X=X_score, y=y_true)
-    y_pred = clf.predict(X=X_score)
-    res = pd.Series(y_pred).value_counts()
-    print(res)
-    assert True
 
 
 def test_pipelrcluster():

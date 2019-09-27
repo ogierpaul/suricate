@@ -1,21 +1,22 @@
 import pytest
 import numpy as np
-from localpgsqlconnector import connecttopgsql, pgsqlengine
+from localpgsqlconnector import connecttopgsql, pgsqlengine, work_on_ix, select_from_ix
 import psycopg2
 import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import Normalizer, QuantileTransformer, FunctionTransformer, StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 from suricate.preutils import createmultiindex
 from suricate.lrdftransformers import LrDfVisualHelper
 from suricate.data.companies import getXlr, getytrue
-from suricate.lrdftransformers import VectorizerConnector, ExactConnector, ClusterClassifier
-from suricate.questions import SimpleQuestions, PointedQuestions
+from suricate.lrdftransformers import VectorizerConnector, ExactConnector
+from suricate.explore.pointedquestions import PointedQuestions
+from suricate.explore import SimpleQuestions, ClusterClassifier
 from suricate.lrdftransformers.base import LrDfIndexEncoder
 from suricate.pipeline.base import PredtoTrans, TranstoPred
 
@@ -197,6 +198,31 @@ def workflow():
     predict()
     return True
 
-def test_sql():
-    simple_questions()
-    assert True
+def test_clusterclassifier():
+    #TODO: WORK HERE PRIO 1
+    print(pd.datetime.now(), 'START')
+    n_questions = 20
+    n_clusters = 8
+    engine = pgsqlengine()
+    Xlr = getXlr(nrows=200)
+    ix = multiindex21column(pd.DataFrame(index=createmultiindex(X=Xlr))).index
+    work_on_ix(ix)
+    print(pd.datetime.now(), 'index in')
+    X_score = select_from_ix(table='xscore').set_index('ix')[_score_cols]
+    print(pd.datetime.now(), 'score in')
+    X_pca = select_from_ix(table='xpca').set_index('ix')
+    print(pd.datetime.now(), 'pca in')
+    y_cluster = KMeans(n_clusters=n_clusters).fit_predict(X=X_pca)
+    y_cluster = pd.Series(index=ix, data=y_cluster)
+    print(pd.datetime.now(), 'cluster in')
+    ix_questions = SimpleQuestions(n_questions=n_questions).fit_transform(X=y_cluster)
+    print(pd.datetime.now(), 'total number of questions {}'.format((ix_questions.shape[0])))
+    work_on_ix(ix_questions)
+    y_true = select_from_ix(table='xpred').set_index('ix')['y_true']
+    print(pd.datetime.now(), 'questions and y_true in')
+    print('total number of answers {}'.format((y_true.shape[0])))
+    print((y_true.value_counts()))
+    # get now:
+    # - cluster classifier
+    pass
+

@@ -17,30 +17,60 @@ class ClusterClassifier(ClassifierMixin):
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix
         )
+        # number of unique clusters
         self.n_clusters = None
+
+        # clusters where no match has been found
         self.nomatch = None
+
+        # clusters where all elements are positive matches
         self.allmatch = None
+
+        # clusters where there is positive and negative values (matche and non-match)
         self.mixedmatch = None
+
+        # Clusters not found (added in no matc)
+        self.notfound = None
+
+        self.fitted = False
+        pass
 
     def fit(self, X, y):
         """
+        For each cluster from X (y_cluster), use y_true (labelled data) to tell if the cluster contains:
+        - only positive matches (self.allmatch)
+        - only negative matches (self.nomatch)
+        - positive and negative matches (self.mixedmatch)
+
+        Cluster that are in X (y_cluster) and not in y (y_true) will be added to no_match
 
         Args:
             X (pd.Series): cluster vector from cluster.fit_predict() with index
-            y: y_true
+            y (pd.Series): labelled data (1 for a match, 0 if not), with index
 
         Returns:
 
         """
+        # number of unique clusters
         self.n_clusters = np.unique(X)
+
+        # clusters composition, how many matches have been found, from y_true (supervised data)
         cluster_composition = self.cluster_composition(y_cluster=X, y_true=y)
+
+        # clusters where no match has been found
         self.nomatch = cluster_composition.loc[
             (cluster_composition[1] == 0)
         ].index.tolist()
+
+        # clusters where all elements are positive matches
         self.allmatch = cluster_composition.loc[cluster_composition[0] == 0].index.tolist()
+
+        # clusters where there is positive and negative values (matche and non-match)
         self.mixedmatch = cluster_composition.loc[
             (cluster_composition[0] > 0) & (cluster_composition[1] > 0)
             ].index.tolist()
+
+        # clusters that do not appear on y_true will be added to no match
         notfound = list(
             filter(
                 lambda c: all(
@@ -52,12 +82,19 @@ class ClusterClassifier(ClassifierMixin):
                 self.n_clusters
             )
         )
-        self.nomatch+=notfound
+        self.notfound = notfound
+        print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
+        self.nomatch += notfound
+
         self.fitted = True
         return self
 
     def predict(self, X):
         """
+        This method returns for each cluster from X, an integer:
+        - 0 if the cluster is a no-match cluster
+        - 1 if the cluster is a mixed-match cluster
+        - 2 if the cluster is an all-match cluster
 
         Args:
             X (np.array/pd.Series): 1-d array or Series, y_cluster
