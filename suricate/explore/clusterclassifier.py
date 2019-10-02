@@ -17,6 +17,9 @@ class ClusterClassifier(ClassifierMixin):
             lsuffix=self.lsuffix,
             rsuffix=self.rsuffix
         )
+        # clusters
+        self.clusters = None
+
         # number of unique clusters
         self.n_clusters = None
 
@@ -52,22 +55,24 @@ class ClusterClassifier(ClassifierMixin):
 
         """
         # number of unique clusters
-        self.n_clusters = np.unique(X)
+        self.n_clusters = np.unique(X).shape[0]
+
+        self.clusters = np.unique(X)
 
         # clusters composition, how many matches have been found, from y_true (supervised data)
-        cluster_composition = self.cluster_composition(y_cluster=X, y_true=y)
+        df_cluster_composition = cluster_composition(y_cluster=X, y_true=y)
 
         # clusters where no match has been found
-        self.nomatch = cluster_composition.loc[
-            (cluster_composition[1] == 0)
+        self.nomatch = df_cluster_composition.loc[
+            (df_cluster_composition[1] == 0)
         ].index.tolist()
 
         # clusters where all elements are positive matches
-        self.allmatch = cluster_composition.loc[cluster_composition[0] == 0].index.tolist()
+        self.allmatch = df_cluster_composition.loc[df_cluster_composition[0] == 0].index.tolist()
 
         # clusters where there is positive and negative values (matche and non-match)
-        self.mixedmatch = cluster_composition.loc[
-            (cluster_composition[0] > 0) & (cluster_composition[1] > 0)
+        self.mixedmatch = df_cluster_composition.loc[
+            (df_cluster_composition[0] > 0) & (df_cluster_composition[1] > 0)
             ].index.tolist()
 
         # clusters that do not appear on y_true will be added to no match
@@ -79,11 +84,12 @@ class ClusterClassifier(ClassifierMixin):
                         [self.nomatch, self.allmatch, self.mixedmatch]
                     )
                 ),
-                self.n_clusters
+                self.clusters
             )
         )
         self.notfound = notfound
-        print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
+        if len(notfound>0):
+            print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
         self.nomatch += notfound
 
         self.fitted = True
@@ -100,7 +106,7 @@ class ClusterClassifier(ClassifierMixin):
             X (np.array/pd.Series): 1-d array or Series, y_cluster
 
         Returns:
-            np.ndarray (0 for sure non matches, 1 for mixed matches, 2 for sure positive matches)
+            np.ndarray: (0 for sure non matches, 1 for mixed matches, 2 for sure positive matches)
         """
         y_pred = np.isin(X, self.mixedmatch).astype(int) + 2 * np.isin(X, self.allmatch).astype(int)
         return y_pred
@@ -110,21 +116,7 @@ class ClusterClassifier(ClassifierMixin):
         y_pred = self.predict(X=X)
         return y_pred
 
-    def cluster_composition(self, y_cluster, y_true, normalize='index'):
-        """
 
-        Args:
-            y_cluster (pd.Series): series with index
-            y_true (pd.Series): series with index
-            normalize:
-
-        Returns:
-
-        """
-        ix_common = y_cluster.index.intersection(y_true.index)
-        df = pd.crosstab(index=y_cluster.loc[ix_common], columns=y_true.loc[ix_common], normalize=normalize)
-        assert isinstance(df, pd.DataFrame)
-        return df
 
 
 def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, ixnamepairs):
@@ -164,3 +156,20 @@ def _check_ncluster_nquestions(n_questions, n_pairs, n_clusters):
         return False
     else:
         return True
+
+def cluster_composition(y_cluster, y_true, normalize='index'):
+    """
+
+    Args:
+        y_cluster (pd.Series): series with index
+        y_true (pd.Series): series with index
+        normalize:
+
+    Returns:
+
+    """
+    ix_common = y_cluster.index.intersection(y_true.index)
+    df = pd.crosstab(index=y_cluster.loc[ix_common], columns=y_true.loc[ix_common], normalize=normalize)
+    df.sort_values(by=1, ascending=False, inplace=True)
+    assert isinstance(df, pd.DataFrame)
+    return df

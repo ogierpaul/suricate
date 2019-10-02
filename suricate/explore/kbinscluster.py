@@ -3,12 +3,12 @@ import numpy as np
 from sklearn.base import ClusterMixin
 from sklearn.preprocessing import KBinsDiscretizer
 
-class ScoreCluster(ClusterMixin):
+class KBinsCluster(ClusterMixin):
     def __init__(self, n_clusters):
         self.n_clusters = n_clusters
         self.kb = KBinsDiscretizer(n_bins=n_clusters, strategy='uniform', encode='ordinal')
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         """
         Fit the KBinsDiscretizer
         Args:

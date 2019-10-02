@@ -1,13 +1,30 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
+from suricate.explore import cluster_composition
 
 
 class PointedQuestions(TransformerMixin):
     def __init__(self, n_questions=10):
         TransformerMixin.__init__(self)
         self.n_questions = n_questions
+        # number of unique clusters
         self.n_clusters = None
+        self.clusters = None
+
+        # clusters where no match has been found
+        self.nomatch = None
+
+        # clusters where all elements are positive matches
+        self.allmatch = None
+
+        # clusters where there is positive and negative values (matche and non-match)
+        self.mixedmatch = None
+
+        # Clusters not found (added in no matc)
+        self.notfound = None
+
+        self.fitted = False
 
     def fit(self, X, y):
         """
@@ -21,12 +38,43 @@ class PointedQuestions(TransformerMixin):
         Returns:
             self
         """
-        if not (X.ndim == 1 or (X.ndim == 2 and X.shape[1] == 1)):
-            raise IndexError('Expected dimension of array X: ({a},1) or ({a},)'.format(a=X.shape[0]))
-        # if not (y.ndim == 2 and y.shape[1] == 2):
-        if not isinstance(y, pd.Series):
-            raise IndexError('Expected dimension of array y: ({a}, 2) '.format(a=y.shape[0]))
-        self.n_clusters = np.max(X) + 1
+        # number of unique clusters
+        self.n_clusters = np.unique(X).shape[0]
+        self.clusters = np.unique(X)
+
+        # clusters composition, how many matches have been found, from y_true (supervised data)
+        df_cluster_composition = cluster_composition(y_cluster=X, y_true=y)
+
+        # clusters where no match has been found
+        self.nomatch = df_cluster_composition.loc[
+            (df_cluster_composition[1] == 0)
+        ].index.tolist()
+
+        # clusters where all elements are positive matches
+        self.allmatch = df_cluster_composition.loc[df_cluster_composition[0] == 0].index.tolist()
+
+        # clusters where there is positive and negative values (matche and non-match)
+        self.mixedmatch = df_cluster_composition.loc[
+            (df_cluster_composition[0] > 0) & (df_cluster_composition[1] > 0)
+            ].index.tolist()
+
+        # clusters that do not appear on y_true will be added to no match
+        notfound = list(
+            filter(
+                lambda c: all(
+                    map(
+                        lambda m: c not in m,
+                        [self.nomatch, self.allmatch, self.mixedmatch]
+                    )
+                ),
+                range(self.n_clusters)
+            )
+        )
+        self.notfound = notfound
+        print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
+        self.nomatch += notfound
+
+        self.fitted = True
         return self
 
     def transform(self, X):
@@ -37,40 +85,24 @@ class PointedQuestions(TransformerMixin):
         Returns:
             np.ndarray: index number (np) of lines to take
         """
-        y = pd.Series(X)
-        questions = []
-        for c in range(self.n_clusters):
-            questions += y.loc[y == c].sample(5).index.tolist()
+        if not isinstance(X, pd.Series):
+            if X.ndim == 2:
+                if X.shape[1] == 1:
+                    X = X.flatten()
+                else:
+                    raise IndexError('Data must be 1-dimensionnal')
+            y = pd.Series(data=X)
+        else:
+            y = X
+        assert isinstance(y, pd.Series)
+
+        questions = np.array([])
+        for c in self.mixedmatch:
+            cluster = y.loc[y == c]
+            if cluster.shape[0] < self.n_questions:
+                sample_ix = cluster.index.values
+            else:
+                sample_ix = cluster.sample(self.n_questions).index.values
+            questions = np.append(questions, sample_ix)
         questions = np.array(questions)
         return questions
-
-    def _cluster_composition(self, X, y, normalize='index'):
-        """
-
-        Args:
-            X (numpy.ndarray): cluster vector
-            y (pd.Series): labelized data
-            normalize: normalize parameter of pd.crosstab
-
-        Returns:
-            pd.DataFrame: cross-tab analysis of y vers y_cluster composition of the data
-        """
-        y_cluster = pd.Series(X)
-        y_true = y
-        commonindex = y_true.index.intersection(y_cluster.index)
-        cluster_composition = pd.crosstab(
-            index=self.y_cluster.loc[commonindex],
-            columns=y.loc[commonindex],
-            normalize=normalize
-        )
-        return cluster_composition
-
-    def mixed_clusters(self, cluster_composition):
-        nomatch_clusters = cluster_composition.loc[
-            (cluster_composition[1] == 0)
-        ].index.tolist()
-        allmatch_clusters = cluster_composition.loc[cluster_composition[0] == 0].index.tolist()
-        mixed_clusters = cluster_composition.loc[
-            (cluster_composition[0] > 0) & (cluster_composition[1] > 0)
-            ].index.tolist()
-        # TODO: Stop here.  Pointed question should be fed from a y_cluster_predictor giving nomatch_cluster, allmatch_clusters, mixed_clusters

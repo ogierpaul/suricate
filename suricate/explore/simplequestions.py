@@ -14,6 +14,7 @@ class SimpleQuestions(TransformerMixin):
         TransformerMixin.__init__(self)
         self.n_questions = n_questions
         self.n_clusters = None
+        self.clusters = None
 
     def fit(self, X, y=None):
         """
@@ -28,6 +29,7 @@ class SimpleQuestions(TransformerMixin):
         if not (isinstance(X, pd.Series) or X.ndim == 1 or (X.ndim == 2 and X.shape[1] == 1)):
             raise IndexError('Expected dimension of array: ({a},1) or ({a},)'.format(a=X.shape[0]))
         self.n_clusters = np.unique(X).shape[0]
+        self.clusters = np.unique(X)
         return self
 
     def transform(self, X):
@@ -50,7 +52,7 @@ class SimpleQuestions(TransformerMixin):
         assert isinstance(y, pd.Series)
 
         questions = np.array([])
-        for c in range(self.n_clusters):
+        for c in self.clusters:
             cluster = y.loc[y == c]
             if cluster.shape[0] < self.n_questions:
                 sample_ix = cluster.index.values
