@@ -29,7 +29,7 @@ class ScoreCluster(ClusterMixin):
         Returns:
             np.ndarray: of dim (n_samples, 1)
         """
-        return np.asarray(np.sum(X, axis=1)).reshape(-1,1)
+        return np.asarray(np.sum(X, axis=1)).reshape(-1, 1)
 
 
     def transform(self, X):

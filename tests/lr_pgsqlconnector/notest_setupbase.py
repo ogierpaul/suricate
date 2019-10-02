@@ -54,42 +54,6 @@ def create_lrsbs():
     return True
 
 
-def create_lrscores():
-    Xlr = getXlr(nrows=nrows)
-    ix = createmultiindex(X=Xlr)
-    ixsimple = multiindex21column(df=pd.DataFrame(index=ix)).index
-    scorer = Pipeline(
-        steps=[
-            ('scores', FeatureUnion(_score_list)),
-            ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
-            ('scaler', StandardScaler())
-        ]
-    )
-    scores = scorer.fit_transform(X=Xlr)
-    score_name = Pipeline(
-        steps=[
-            ('Scaler', StandardScaler()),
-            ('reduction1d', PCA(n_components=1))
-        ]
-    ).fit_transform(X=scores[:, :3])
-    score_pos = Pipeline(
-        steps=[
-            ('Scaler', StandardScaler()),
-            ('reduction1d', PCA(n_components=1))
-        ]
-    ).fit_transform(X=scores[:, 3:])
-    score_avg = np.mean(scores, axis=1).reshape(-1, 1)
-
-    # Create DataFrame
-
-    X_score = np.hstack([scores, score_name, score_pos, score_avg])
-    _scorecols_full = _score_cols + ['name_score', 'pos_score', 'avg_score', 'pca1', 'pca2']
-    X_score = pd.DataFrame(data=X_score, index=ixsimple, columns=_scorecols_full)
-    # TO SQL
-    engine = pgsqlengine()
-    X_score.to_sql('xscore', engine, if_exists='replace', index=True)
-    engine.dispose()
-    return True
 
 
 def reduce_scores():
@@ -190,7 +154,7 @@ def predict():
 
 def workflow():
     create_lrsbs()
-    create_lrscores()
+    # create_lrscores()
     reduce_scores()
     clustering()
     simple_questions()
