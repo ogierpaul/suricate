@@ -115,7 +115,6 @@ class LrDfVisualHelper(TransformerMixin):
 
 
 def create_lrdf_sbs(X, on_ix=None, ixname = 'ix', lsuffix='left', rsuffix='right'):
-    #TODO: Check usage
     """
 
     Args:

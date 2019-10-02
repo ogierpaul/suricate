@@ -3,15 +3,15 @@ import pandas as pd
 from sklearn.base import ClassifierMixin, TransformerMixin, ClusterMixin
 from sklearn.metrics.classification import accuracy_score
 from suricate.preutils import concatixnames, createmultiindex
-from suricate.explore import ClusterClassifier
+from suricate.explore import Explorer
 
+#TODO: Review the doc
+#TODO: Review the score method
 
-class PruningClfSbs(ClassifierMixin):
+class PruningPipe(ClassifierMixin):
     def __init__(self,
-                 lr_scorer,
-                 lr_connector,
-                 cluster,
-                 clusterclassifier,
+                 connector,
+                 explorer,
                  sbsmodel,
                  classifier,
                  ixname='ix',
@@ -21,15 +21,13 @@ class PruningClfSbs(ClassifierMixin):
         """
 
         Args:
-            lr_scorer (TransfomerMixin): Scorer used to do the calculation,
-            lr_connector (TransformerMixin: Connector used to create a Sbs view of the data
-            cluster (ClusterMixin): Cluster used to predict
-            sbsmodel (PipeSbsClf): SbSModel
+            connector (TransfomerMixin): Lr Df Connector (Scorer) used to do the calculation,
+            explorer (Explorer): Classifier used to do the pruning (0=no match, 1: potential match, 2: sure match)
+            sbsmodel (TransformerMixin): Side-by-Side scorer
+            classifier (ClassifierMixin): Classifier used to do the prediction
             ixname (str):
             lsuffix (str):
             rsuffix (str):
-            n_jobs (int):
-            pruning_ths (float): return only the pairs which have a score greater than the store_ths
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
@@ -41,33 +39,30 @@ class PruningClfSbs(ClassifierMixin):
             rsuffix=self.rsuffix
         )
         self.fitted = False
-        self.lr_scorer = lr_scorer
-        self.lr_connector = lr_connector
-        self.cluster = cluster
-        self.clusterclassifier = clusterclassifier
+        self.connector = connector
+        self.explorer = explorer
         self.sbsmodel = sbsmodel
         self.classifier = classifier
         pass
 
-    def fit(self, X, y_lr=None, y_sbs=None):
+    def fit(self, X, y):
         """
         Fit the transformer
         Args:
             X (pd.DataFrame): side by side [name_left; name_right, ...]
-            y_lr (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the pruning model
-            y_sbs (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the predictive model
+            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the training
 
         Returns:
             self
         """
-        return self._pipe(X=X, y_lr=y_lr, y_sbs=y_sbs, fit=True)
+        return self._pipe(X=X, y_true=y, fit=True)
 
     def _pipe(self, X, y_true, fit=False, proba=False):
         """
         # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
         # Add as well as sure matches y_pred_lr == 2.0
         Args:
-            X (list): [df_left, df_right]
+            X: input data to the connector
             y_lr (pd.Series): training data for the first model (LrModel)
             y_sbs (pd.Series): training data for the second model (SbsModel)
             fit (bool): True: fit all transformers / classifiers and return self. False: return y_pred
@@ -76,68 +71,65 @@ class PruningClfSbs(ClassifierMixin):
         Returns:
             array
         """
-
-        # Fit the first model
+        # First model: Connector
+        ## Fit the first model
         if fit is True:
-            self.lr_scorer.fit(X=X)
+            self.connector.fit(X=X)
 
-        # Get the first score
-        X_lr_score = self.lr_scorer.getscore(X=X)
-        ix_lr = self.lr_scorer.getindex(X=X)
-        Xsbs = self.lr_scorer.getsbs(X=X)
+        ## Get the first score
+        Xtc = self.connector.transform(X=X) # score matrix
+        ixc = self.connector.getindex(X=X) # index of Xc
 
-        # If fit is true, slice this score according to scope of y_lr
+        # Second model: Explorer
+        ## Fit the explorer
         if fit is True:
-            X_lr_score, y_lr_slice, ix_slice = self.lrmodel.slice(X=X, X_score=X_lr_score, y=y_lr)
-            ix_lr = ix_slice
-        else:
-            ix_lr = createmultiindex(X=X, names=self.ixnamepairs)
-
-        # Get the prediction for the X_lrscope
-        y_lr_pred = pd.Series(
-            data=self.lrmodel.classifier.predict(X=X_lr_score),
-            index=ix_lr,
-            name='y_lr_pred'
+            self.explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_true, fit_cluster=True)
+        ## Get the pruning classifier
+        y_pruning = pd.Series(
+            data=self.explorer.predict(X=Xtc),
+            index=ixc
         )
-        # select only positive matches from first classifier
-        ix_lr_pos = y_lr_pred.loc[y_lr_pred == 1].index
 
-        # intersect this index with the ones
-        if fit is True:
-            ix_sbs = ix_lr_pos.intersection(y_sbs.index)
-        else:
-            ix_sbs = ix_lr_pos
-
-        X_lr_score = pd.DataFrame(data=X_lr_score, index=ix_lr).loc[ix_sbs]
-
-        # Create the input dataframe needed for the SbsModel
-        X_Sbs = cartesian_join(
-            left=X[0],
-            right=X[1],
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix,
-            on_ix=ix_sbs
-        )
+        ## Get the mixed matches from the pruning classifier
+        ### Save the sure matches
+        ix_sure = y_pruning.loc[y_pruning == 2].index
+        ## Save the sure negative matches
+        ix_neg = y_pruning.loc[y_pruning == 0].index
+        # select only possible (mixed) matches from first classifier
+        ix_mix = y_pruning.loc[y_pruning == 1].index
+        Xs_mix = self.connector.getsbs(X=X, on_ix=ix_mix) # side by side view of ix_mix
+        Xtc_mix = pd.DataFrame(data=Xtc, index=ixc).loc[ix_mix]
         # And Transform (Second scoring engine)
         if fit is True:
-            self.sbsmodel.transformer.fit(X=X_Sbs)
-        X_sbs_score = self.sbsmodel.transformer.transform(X=X_Sbs)
+            self.sbsmodel.fit(X=Xs_mix)
+        Xts_mix = self.sbsmodel.transform(X=Xs_mix)
 
         # Merge the output of the two scores
-        X_final_score = np.hstack((X_lr_score.values, X_sbs_score))
+        Xtf = np.hstack((Xtc_mix.values, Xts_mix.values))
 
         if fit is True:
-            self.sbsmodel.classifier.fit(X=X_final_score, y=y_sbs.loc[ix_sbs])
+            # select only the intersection of y_true and ix_mix:
+            ix_train = ix_mix.intersection(y_true.index)
+            assert len(ix_train) > 0
+            Xtf_train= pd.DataFrame(data=Xtf, index=ix_mix).loc[ix_train]
+            y_true_train = y_true.loc[ix_train]
+            assert y_true_train.value_counts().shape[0] == 2
+            self.classifier.fit(X=Xtf_train, y=y_true_train)
             return self
         else:
             # If we are not for fit we are for pred
             if proba is True:
-                y_pred = self.sbsmodel.classifier.predict_proba(X=X_final_score)
+                y_pred = self.classifier.predict_proba(X=Xtf)
             else:
-                y_pred = self.sbsmodel.classifier.predict(X=X_final_score)
-            y_pred_all = pd.Series(index=createmultiindex(X=X, names=self.ixnamepairs)).fillna(0)
-            y_pred_all.loc[ix_sbs] = y_pred
-            y_pred_all.loc[y_lr_pred == 2.0] = 1.0
+                y_pred = self.classifier.predict(X=Xtf)
+
+            # Format the results
+            ## Create a series to contain the results
+            y_pred_all = pd.Series(index=ixc, name='y_pred')
+            ## Results where pruning gives possible (mixed) results are given y_pred (classification or probability from classifier)
+            y_pred_all.loc[ix_mix] = y_pred
+            y_pred_all.loc[ix_neg] = 0
+            y_pred_all.loc[ix_sure] = 1.0
             return y_pred_all
 
     def predict(self, X):
