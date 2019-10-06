@@ -16,7 +16,7 @@ class PipeLrClf(ClassifierMixin):
         """
 
         Args:
-            transformer (TransformerMixin):
+            transformer (TransformerMixin): Transformer --> CLF
             classifier (ClassifierMixin):
             ixname (str):
             lsuffix (str):
@@ -50,7 +50,7 @@ class PipeLrClf(ClassifierMixin):
         """
         X_score = self.transformer.fit_transform(X=X, y=None)
         X_slice, y_slice, ix_slice = self.slice(X=X, X_score=X_score, y=y)
-        self.classifier.fit(X=X_slice, y=y_slice)
+        self.classifier.fit(X=pd.DataFrame(X_slice, index=ix_slice), y=pd.Series(y_slice, index=ix_slice))
         return self
 
     def slice(self, X, X_score, y=None):
@@ -67,7 +67,7 @@ class PipeLrClf(ClassifierMixin):
                 - None --> return X
 
         Returns:
-            np.ndarray, np.ndarray: Slice of X_score, y
+            np.ndarray, np.ndarray, pd.Index: Slice of X_score, y, common index
         """
         ix_all = createmultiindex(X=X, names=self.ixnamepairs)
         X_score = pd.DataFrame(X_score, index=ix_all)

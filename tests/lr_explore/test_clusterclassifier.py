@@ -47,7 +47,7 @@ def fixture_scores():
 
 
 
-def test_clusterclassifier():
+def test_clusterclassifier(fixture_scores, fixture_data):
     n_clusters = 10
     n_questions = 200
     y_true = getytrue(nrows=None)
@@ -61,16 +61,14 @@ def test_clusterclassifier():
     )
     questions = SimpleQuestions(n_questions=n_questions)
     ix_questions = questions.fit_transform(X=y_cluster)
-    ix_questions = pd.MultiIndex.from_tuples(ix_questions)
     y_true = y_true.loc[y_cluster.index.intersection(y_true.index)]
     print('number of labellized rows found :{}'.format(len(y_true)))
-
     clf = ClusterClassifier(cluster=cluster)
     clf.fit(X=y_cluster, y=y_true)
     print('all match: {}'.format(clf.allmatch))
     print('no match: {}'.format(clf.nomatch))
     print('mixed match: {}'.format(clf.mixedmatch))
     print('not found: {}'.format(clf.notfound))
-    y_pred = clf.predict(X=X_score)
+    y_pred = clf.predict(X=y_cluster)
     res = pd.Series(y_pred).value_counts()
     print(res)

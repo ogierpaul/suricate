@@ -7,6 +7,7 @@ class KBinsCluster(ClusterMixin):
     def __init__(self, n_clusters):
         self.n_clusters = n_clusters
         self.kb = KBinsDiscretizer(n_bins=n_clusters, strategy='uniform', encode='ordinal')
+        self.fitted = False
 
     def fit(self, X, y=None):
         """
@@ -18,6 +19,7 @@ class KBinsCluster(ClusterMixin):
             ScoreCluster
         """
         self.kb.fit(X=self._sumscore(X=X))
+        self.fitted = True
         return self
 
     def _sumscore(self, X):
@@ -54,4 +56,4 @@ class KBinsCluster(ClusterMixin):
         return self.kb.transform(X=y_score)
 
     def predict(self, X):
-        return self.kb.transform(X=self._sumscore(X=X))
+        return self.kb.transform(X=self._sumscore(X=X)).flatten()

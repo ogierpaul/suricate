@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
-from sklearn.base import TransformerMixin
 from suricate.explore import cluster_composition
+from suricate.explore.questions import _Questions
 
 
-class PointedQuestions(TransformerMixin):
+class HardQuestions(_Questions):
     def __init__(self, n_questions=10):
-        TransformerMixin.__init__(self)
+        _Questions.__init__(self, n_questions=n_questions)
         self.n_questions = n_questions
         # number of unique clusters
         self.n_clusters = None
@@ -30,7 +30,7 @@ class PointedQuestions(TransformerMixin):
         """
         Fit the transformer with the maximum number of clusters
         Args:
-            X (np.ndarray): Matrix of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
+            X (pd.Series): Matrix of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
             y (pd.Series): series of correct answers, (n_answers, 2), where: \
                 - index is a numerical value relative to X \
                 - data is the classification (0 = not a match, 1: is a match) \
@@ -40,7 +40,6 @@ class PointedQuestions(TransformerMixin):
         """
         # number of unique clusters
         self.n_clusters = np.unique(X).shape[0]
-        self.clusters = np.unique(X)
 
         # clusters composition, how many matches have been found, from y_true (supervised data)
         df_cluster_composition = cluster_composition(y_cluster=X, y_true=y)
@@ -71,38 +70,12 @@ class PointedQuestions(TransformerMixin):
             )
         )
         self.notfound = notfound
-        print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
+        if len(self.notfound) > 0:
+            print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
         self.nomatch += notfound
 
         self.fitted = True
+
+        self.clusters = self.mixedmatch
+
         return self
-
-    def transform(self, X):
-        """
-        Args:
-            X (np.ndarray): Matrix of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
-
-        Returns:
-            np.ndarray: index number (np) of lines to take
-        """
-        if not isinstance(X, pd.Series):
-            if X.ndim == 2:
-                if X.shape[1] == 1:
-                    X = X.flatten()
-                else:
-                    raise IndexError('Data must be 1-dimensionnal')
-            y = pd.Series(data=X)
-        else:
-            y = X
-        assert isinstance(y, pd.Series)
-
-        questions = np.array([])
-        for c in self.mixedmatch:
-            cluster = y.loc[y == c]
-            if cluster.shape[0] < self.n_questions:
-                sample_ix = cluster.index.values
-            else:
-                sample_ix = cluster.sample(self.n_questions).index.values
-            questions = np.append(questions, sample_ix)
-        questions = np.array(questions)
-        return questions

@@ -17,7 +17,8 @@ def gettrainingdata(nrows=nrows):
     return training_data
 
 def getytrue(nrows=nrows):
-    y_true = gettrainingdata(nrows=nrows)['y_true']
+    y_true = open_csv(filename='ytrue.csv', foldername=_folder_companydf, index_col=[0, 1], nrows=nrows)['y_true']
+    #TODO: simplify this file by creating a more empty file
     return y_true
 
 def getXlr(nrows=nrows):

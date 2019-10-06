@@ -88,7 +88,7 @@ class ClusterClassifier(ClassifierMixin):
             )
         )
         self.notfound = notfound
-        if len(notfound>0):
+        if len(notfound) > 0:
             print('clusters {} are not found in y_true. they will be added to the no_match group'.format(notfound))
         self.nomatch += notfound
 

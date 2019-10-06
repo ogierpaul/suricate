@@ -1,10 +1,10 @@
 from sklearn.base import TransformerMixin, ClusterMixin, ClassifierMixin
 import pandas as pd
-from suricate.explore import SimpleQuestions, PointedQuestions, ClusterClassifier, cluster_composition, KBinsCluster
+from suricate.explore import SimpleQuestions, HardQuestions, ClusterClassifier, cluster_composition, KBinsCluster
 from suricate.preutils import concatixnames
 
 class Explorer(ClassifierMixin):
-    def __init__(self, cluster=None, n_simplequestions = 10, n_pointedquestions=10, ixname='ix', lsuffix='left', rsuffix='right'):
+    def __init__(self, cluster=None, n_simple = 10, n_hard=10, ixname='ix', lsuffix='left', rsuffix='right'):
         """
 
         Args:
@@ -21,10 +21,10 @@ class Explorer(ClassifierMixin):
         )
         if cluster is None:
             cluster = KBinsCluster(n_clusters=25)
-        self.cluster = cluster
-        self.simplequestions = SimpleQuestions(n_questions=n_simplequestions)
-        self.pointedquestions = PointedQuestions(n_questions=n_pointedquestions)
-        self.classifier = ClusterClassifier(ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        self._cluster = cluster
+        self._simplequestions = SimpleQuestions(n_questions=n_simple)
+        self._hardquestions = HardQuestions(n_questions=n_hard)
+        self._classifier = ClusterClassifier(ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix)
         pass
 
     def fit_cluster(self, X, y=None):
@@ -37,8 +37,8 @@ class Explorer(ClassifierMixin):
         Returns:
             np.ndarray
         """
-        self.cluster.fit(X=X, y=y)
-        return self.cluster
+        self._cluster.fit(X=X, y=y)
+        return self._cluster
 
 
     def pred_cluster(self, X):
@@ -50,11 +50,11 @@ class Explorer(ClassifierMixin):
         Returns:
             np.ndarray: 1-d vector of cluster
         """
-        y_cluster = self.simplequestions.transform(X=X)
+        y_cluster = self._cluster.predict(X=X)
         return y_cluster
 
 
-    def simplequestions(self, X, ix, fit_cluster=False):
+    def ask_simple(self, X, ix, fit_cluster=False):
         """
 
         Args:
@@ -68,11 +68,11 @@ class Explorer(ClassifierMixin):
             self.fit_cluster(X=X)
         y_cluster = self.pred_cluster(X=X)
         y_cluster = pd.Series(data=y_cluster, name='y_cluster', index=ix)
-        self.simplequestions.fit(X=y_cluster)
-        ix_questions = self.simplequestions.transform(X=y_cluster)
+        self._simplequestions.fit(X=y_cluster)
+        ix_questions = self._simplequestions.transform(X=y_cluster)
         return ix_questions
 
-    def pointedquestions(self, X, y, ix, fit_cluster = False):
+    def ask_hard(self, X, y, ix, fit_cluster = False):
         """
         Args:
             X (np.ndarray): Score matrix
@@ -86,11 +86,11 @@ class Explorer(ClassifierMixin):
             self.fit_cluster(X=X)
         y_cluster = self.pred_cluster(X=X)
         y_cluster = pd.Series(data=y_cluster, name='y_cluster', index=ix)
-        self.pointedquestions.fit(X=y_cluster, y=y)
-        ix_questions = self.pointedquestions.transform(X=y_cluster)
+        self._hardquestions.fit(X=y_cluster, y=y)
+        ix_questions = self._hardquestions.transform(X=y_cluster)
         return ix_questions
 
-    def fit(self, X, y, fit_cluster = False):
+    def fit(self, X, y, fit_cluster = True):
         """
 
         Args:
@@ -102,8 +102,9 @@ class Explorer(ClassifierMixin):
         """
         if fit_cluster is True:
             self.fit_cluster(X=X)
-        y_cluster = self.cluster.predict(X=X)
-        self.classifier.fit(X=y_cluster, y=y)
+        y_cluster = self._cluster.predict(X=X)
+        y_cluster = pd.Series(data=y_cluster, index=X.index)
+        self._classifier.fit(X=y_cluster, y=y)
         return self
 
 
@@ -117,7 +118,7 @@ class Explorer(ClassifierMixin):
             np.ndarray: (0 for sure non matches, 1 for mixed matches, 2 for sure positive matches)
         """
         y_cluster = self.pred_cluster(X=X)
-        y_pred = self.classifier.predict(X=y_cluster)
+        y_pred = self._classifier.predict(X=y_cluster)
         return y_pred
 
     def transform(self, X):

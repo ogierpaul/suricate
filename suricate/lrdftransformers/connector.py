@@ -57,9 +57,9 @@ class LrDfConnector(TransformerMixin):
     def fetch_right(self, X, ix):
         return X[1].loc[ix]
 
-    def multiindex21column(self, on_ix):
+    def multiindex21column(self, on_ix, sep='-'):
         df = pd.DataFrame(index=on_ix)
         df.reset_index(inplace=True, drop=False)
-        df[self.ixname] = df[self.ixnameleft] + '_' + df[self.ixnameright]
+        df[self.ixname] = df[self.ixnameleft] + sep + df[self.ixnameright]
         df.set_index(self.ixname, inplace=True, drop=True)
         return df.index

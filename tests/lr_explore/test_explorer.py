@@ -1,43 +1,31 @@
-from suricate.pipeline.pruningpipe import PruningPipe
+from suricate.data.companies import getXlr, getytrue
 from suricate.explore import Explorer, KBinsCluster
-from suricate.lrdftransformers import LrDfConnector
-from tests.lr_pgsqlconnector.notest_setupbase import _score_list, _score_cols, createmultiindex, multiindex21column
+from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactConnector
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
 from suricate.data.companies import getXlr
-from localpgsqlconnector import pgsqlengine, work_on_ix
 import pandas as pd
-
-n_rows = 100
-def init_ix():
-    Xlr = getXlr(nrows=n_rows)
-    connector = LrDfConnector(scorer=None)
-    ixc = connector.multiindex21column(on_ix=connector.getindex(Xlr))
-    work_on_ix(ixc)
-    engine = pgsqlengine()
-    query = """
-    WITH a AS (SELECT ix, xtrue.y_true FROM tempix
-        INNER JOIN xtrue USING(ix)
-    ),
-    b AS (SELECT ix, ix_left, ix_right FROM xsbs)
-    SELECT b.ix_left, b.ix_right, a.y_true 
-    FROM b
-    INNER JOIN a USING(ix);
-    """
-    y_true = pd.read_sql(query, con=engine).set_index(['ix_left', 'ix_right'])[['y_true']]
-    y_true.to_sql('tempytrue', if_exists='replace', chunksize=2000, method='multi', con=engine)
-    engine.dispose()
+import numpy as np
 
 
+nrows = None
+_score_list = [
+    ('name_vecword', VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2))),
+    ('street_vecword', VectorizerConnector(on='street', analyzer='word', ngram_range=(1, 2))),
+    ('city_vecchar', VectorizerConnector(on='city', analyzer='char', ngram_range=(1, 3))),
+    ('countrycode_exact', ExactConnector(on='countrycode'))
 
-def comple_workflow():
+]
+_score_cols = [c[0] for c in _score_list]
+
+
+def test_explorer():
     print(pd.datetime.now())
+    n_rows = 200
     n_cluster = 25
     n_simplequestions = 20
     n_pointedquestions = 40
-    engine = pgsqlengine()
-    y_true = pd.read_sql('tempytrue', con=engine).set_index(['ix_left', 'ix_right'])['y_true']
-    engine.dispose()
+    y_true = getytrue()
     Xlr = getXlr(nrows=n_rows)
     print(pd.datetime.now(), 'data loaded')
     connector = LrDfConnector(
@@ -76,14 +64,35 @@ def comple_workflow():
     explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_train)
     print('results of pred:\n', pd.Series(explorer.predict(X=Xtc)).value_counts())
     print('****')
-    assert True
 
-if __name__ == '__main__':
-    # init_ix()
-    comple_workflow()
-    # test simple questions
-    # test pointed questions
-    # test cluster classifier
-    # create the sbs scorer
-    # create the pipe
-    # test the scores
+
+def test_pruning():
+    print(pd.datetime.now())
+    n_rows = None
+    n_cluster = 25
+    y_true = getytrue()
+    Xlr = getXlr(nrows=n_rows)
+    print(pd.datetime.now(), 'data loaded')
+    connector = LrDfConnector(
+        scorer=Pipeline(
+            steps=[
+                ('scores', FeatureUnion(_score_list)),
+                ('imputer', SimpleImputer(strategy='constant', fill_value=0))
+            ]
+        )
+    )
+    explorer = Explorer(
+        cluster=KBinsCluster(n_clusters=n_cluster)
+    )
+    connector.fit(X=Xlr)
+    # Xtc is the transformed output from the connector, i.e. the score matrix
+    Xtc = connector.transform(X=Xlr)
+    print(pd.datetime.now(), 'score ok')
+    # ixc is the index corresponding to the score matrix
+    ixc = connector.getindex(X=Xlr)
+    y_train = y_true.loc[ixc]
+    explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_train, fit_cluster=True)
+    y_pred = explorer.predict(X=Xtc)
+    y_pred = pd.Series(data=y_pred, name='y_pruning', index=ixc)
+    print(pd.datetime.now(), 'results of pred:\n', y_pred.value_counts())
+

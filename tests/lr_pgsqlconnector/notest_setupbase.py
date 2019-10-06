@@ -15,7 +15,7 @@ from suricate.preutils import createmultiindex
 from suricate.lrdftransformers import LrDfVisualHelper
 from suricate.data.companies import getXlr, getytrue
 from suricate.lrdftransformers import VectorizerConnector, ExactConnector
-from suricate.explore.pointedquestions import PointedQuestions
+from suricate.explore.hardquestions import HardQuestions
 from suricate.explore import SimpleQuestions, ClusterClassifier
 from suricate.lrdftransformers.base import LrDfIndexEncoder
 from suricate.pipeline.base import PredtoTrans, TranstoPred
