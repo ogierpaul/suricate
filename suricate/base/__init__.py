@@ -1,0 +1,1 @@
+from suricate.base.connector import ConnectorMixin

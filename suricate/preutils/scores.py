@@ -53,7 +53,7 @@ def token_score(left, right):
         s = tokenratio(left, right) / 100
     return s
 
-def contain_score(left, right):
+def contains_score(left, right):
     """
     check if one string is a substring of another
     Args:

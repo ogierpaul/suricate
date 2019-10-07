@@ -4,7 +4,7 @@ from sklearn.base import TransformerMixin, ClassifierMixin
 
 from suricate.preutils import concatixnames, createmultiindex, addsuffix
 
-
+# THIS SHOULD BE OBSOLETE
 class PipeLrClf(ClassifierMixin):
     def __init__(self,
                  transformer,
@@ -77,7 +77,6 @@ class PipeLrClf(ClassifierMixin):
         elif y is None:
             return X_score.values, None, ix_all
         else:
-            # TODO: Prio 2: Could be used to treat case of y as masked array
             return X_score.values, y, ix_all
 
     def predict(self, X):

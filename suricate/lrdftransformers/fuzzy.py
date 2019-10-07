@@ -1,7 +1,7 @@
 import pandas as pd
 
 from suricate.lrdftransformers.base import LrDfTransformerMixin
-from suricate.preutils.scores import exact_score, simple_score, token_score, contain_score, vincenty_score
+from suricate.preutils.scores import exact_score, simple_score, token_score, contains_score, vincenty_score
 
 
 class FuzzyConnector(LrDfTransformerMixin):
@@ -31,7 +31,7 @@ class FuzzyConnector(LrDfTransformerMixin):
         elif ratio == 'vincenty':
             self.func = vincenty_score
         elif ratio == 'contain':
-            self.func = contain_score
+            self.func = contains_score
 
     def _transform(self, X):
         """

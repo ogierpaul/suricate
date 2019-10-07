@@ -9,7 +9,6 @@ class SimpleQuestions(_Questions):
 
         Args:
             n_questions (int): number of lr_explore to be asked for each cluster
-            isseries: if the input data is a serie or not
         """
         _Questions.__init__(self, n_questions=n_questions)
 

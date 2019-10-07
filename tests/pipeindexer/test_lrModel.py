@@ -4,7 +4,7 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 
 from suricate.preutils.functionclassifier import FunctionClassifier
-from suricate.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser
+from suricate.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser, LrDfVisualHelper
 from suricate.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
 from suricate.sbsdftransformers import FuncSbsComparator
 
@@ -14,7 +14,7 @@ from suricate.data.companies import getXlr, getytrue
 
 def test_lrmodel():
     X_lr = getXlr(nrows=100)
-    y_true = getytrue(nrows=100)
+    y_true = getytrue(Xlr=X_lr)
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='street', analyzer='char'),
@@ -33,8 +33,8 @@ def test_lrmodel():
 
 def test_sbsmodel():
     X_lr = getXlr(nrows=100)
-    y_true = getytrue(nrows=100)
-    df_sbs = CartesianDataPasser().fit_transform(X_lr).set_index(['ix_left', 'ix_right'])
+    y_true = getytrue(Xlr=X_lr)
+    df_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
         FuncSbsComparator(on='name', comparator='fuzzy'),
@@ -51,7 +51,7 @@ def test_sbsmodel():
 
 def test_pipeModel():
     X_lr = getXlr(nrows=100)
-    y_true = getytrue(nrows=100)
+    y_true = getytrue(Xlr=X_lr)
     transformer1 = make_union(*[
         VectorizerConnector(on='name', analyzer='word'),
         VectorizerConnector(on='street', analyzer='word'),

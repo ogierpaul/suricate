@@ -1,6 +1,6 @@
 from fuzzywuzzy.fuzz import WRatio, QRatio, ratio, partial_token_sort_ratio
 
-from suricate.preutils.scores import simple_score, token_score, contain_score, vincenty_score
+from suricate.preutils.scores import simple_score, token_score, contains_score, vincenty_score
 from suricate.data.circus import getXsbs
 X_sbs = getXsbs()
 
@@ -26,7 +26,7 @@ def test_simplescore():
 
 def test_contain():
     df = X_sbs.copy()
-    y = df.apply(lambda r: contain_score(r['name_left'], r['name_right']), axis=1)
+    y = df.apply(lambda r: contains_score(r['name_left'], r['name_right']), axis=1)
     print(y)
     assert True
 

@@ -50,8 +50,8 @@ def fixture_scores():
 def test_clusterclassifier(fixture_scores, fixture_data):
     n_clusters = 10
     n_questions = 200
-    y_true = getytrue(nrows=None)
     X_lr = fixture_data
+    y_true = getytrue(Xlr=X_lr)
     X_raw = fixture_scores.fit_transform(X=X_lr)
     X_reduced = PCA(n_components=3).fit_transform(X_raw)
     cluster = KMeans(n_clusters=n_clusters)

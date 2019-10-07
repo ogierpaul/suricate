@@ -1,6 +1,6 @@
 from sklearn.base import TransformerMixin
 
-from suricate.preutils.scores import exact_score, simple_score, token_score, vincenty_score, contain_score
+from suricate.preutils.scores import exact_score, simple_score, token_score, vincenty_score, contains_score
 from suricate.sbsdftransformers.base import BaseSbsComparator
 
 
@@ -12,7 +12,7 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right', comparator='fuzzy', *args, **kwargs):
         """
         Args:
-            comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token', 'contain', 'vincenty' ]
+            comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token', 'contains', 'vincenty' ]
             ixname (str): name of the index, default 'ix'
             lsuffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_left'
             rsuffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
@@ -28,11 +28,11 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
             compfunc = token_score
         elif comparator == 'vincenty':
             compfunc = vincenty_score
-        elif comparator == 'contain':
-            compfunc = contain_score
+        elif comparator == 'contains':
+            compfunc = contains_score
         else:
             raise ValueError('compfunc value not understood: {}'.format(comparator),
-                             "must be one of those: ['exact', 'fuzzy', 'token', 'contain', 'vincenty']")
+                             "must be one of those: ['exact', 'fuzzy', 'token', 'contains', 'vincenty']")
         BaseSbsComparator.__init__(
             self,
             compfunc=compfunc,

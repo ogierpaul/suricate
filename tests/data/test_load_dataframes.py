@@ -1,8 +1,9 @@
 import pytest
 import pandas as pd
-
+from numpy import unique
 from suricate.data.base import create_path, open_csv
-from suricate.data.companies import getleft, getright, gettrainingdata, _folder_companydf, getytrue
+from suricate.data.companies import getleft, getright, gettrainingdata, _folder_companydf, getytrue, getXlr
+from suricate.preutils import createmultiindex
 
 def test_create_path():
     filename = 'left.csv'
@@ -38,7 +39,10 @@ def test_load_trainingdata():
     assert isinstance(df, pd.DataFrame)
 
 def test_load_ytrue():
+    ix_all = createmultiindex(X=getXlr())
     y = getytrue()
+    assert y.shape[0] == ix_all.shape[0]
+    assert unique(y).shape[0] == 2
     print(y.sample(10))
     assert isinstance(y, pd.Series)
 

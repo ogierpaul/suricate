@@ -6,7 +6,7 @@ from suricate.data.companies import getleft, getright,  getXlr, getytrue
 left = getleft(nrows=100)
 right = getright(nrows=100)
 X_lr = getXlr(nrows=100)
-y_true = getytrue(nrows=100)
+y_true = getytrue(Xlr=X_lr)
 
 def test_loaddata():
     print(ix_names['ixname'])

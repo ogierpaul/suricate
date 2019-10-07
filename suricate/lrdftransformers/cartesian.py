@@ -98,7 +98,7 @@ class LrDfVisualHelper(TransformerMixin):
             y: dummy
 
         Returns:
-            pd.DataFrame with index [ix_left, ix_right]
+            pd.DataFrame: with index [ix_left, ix_right]
         """
         X_sbs = cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
         # Re-arrange the columns to put the same columns side-by-side

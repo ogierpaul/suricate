@@ -2,9 +2,10 @@ from sklearn.base import TransformerMixin
 from suricate.preutils import concatixnames, addsuffix, createmultiindex
 from suricate.lrdftransformers import LrDfVisualHelper, create_lrdf_sbs
 import pandas as pd
+from suricate.base import ConnectorMixin
 
 
-class LrDfConnector(TransformerMixin):
+class LrDfConnector(ConnectorMixin):
     def __init__(self, scorer, ixname='ix', lsuffix='left', rsuffix='right'):
         """
 
@@ -14,17 +15,8 @@ class LrDfConnector(TransformerMixin):
             rsuffix:
             scorer (TransformerMixin): score pipeline or featureunion
         """
-        TransformerMixin.__init__(self)
-        self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
-            ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
-        )
+        ConnectorMixin.__init__(self)
         self.scorer = scorer
-        #TODO: Add method to get scorenames
 
     def fit(self, X, y=None):
         self.scorer.fit(X=X, y=y)
@@ -37,9 +29,10 @@ class LrDfConnector(TransformerMixin):
             X (list): [df_left, df_right]
 
         Returns:
-            np.ndarray
+            pd.DataFrame: with index
         """
         Xt = self.scorer.transform(X=X)
+        Xt = pd.DataFrame(data=Xt, index=self.getindex(X=X))
         return Xt
 
     def getindex(self, X):
@@ -56,10 +49,3 @@ class LrDfConnector(TransformerMixin):
 
     def fetch_right(self, X, ix):
         return X[1].loc[ix]
-
-    def multiindex21column(self, on_ix, sep='-'):
-        df = pd.DataFrame(index=on_ix)
-        df.reset_index(inplace=True, drop=False)
-        df[self.ixname] = df[self.ixnameleft] + sep + df[self.ixnameright]
-        df.set_index(self.ixname, inplace=True, drop=True)
-        return df.index

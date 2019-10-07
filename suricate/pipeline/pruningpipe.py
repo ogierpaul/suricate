@@ -4,9 +4,8 @@ from sklearn.base import ClassifierMixin, TransformerMixin, ClusterMixin
 from sklearn.metrics.classification import accuracy_score
 from suricate.preutils import concatixnames, createmultiindex
 from suricate.explore import Explorer
+from suricate.base import ConnectorMixin
 
-#TODO: Review the doc
-#TODO: Review the score method
 
 class PruningPipe(ClassifierMixin):
     def __init__(self,
@@ -21,13 +20,13 @@ class PruningPipe(ClassifierMixin):
         """
 
         Args:
-            connector (TransfomerMixin): Lr Df Connector (Scorer) used to do the calculation,
+            connector (ConnectorMixin): Connector (Scorer) used to do the calculation,
             explorer (Explorer): Classifier used to do the pruning (0=no match, 1: potential match, 2: sure match)
-            sbsmodel (TransformerMixin): Side-by-Side scorer
+            sbsmodel (TransformerMixin): Side-by-Side scorer, Can be FeatureUnion, Pipeline...
             classifier (ClassifierMixin): Classifier used to do the prediction
-            ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            ixname (str): 'ix'
+            lsuffix (str): 'left'
+            rsuffix (str): 'right'
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
@@ -49,7 +48,7 @@ class PruningPipe(ClassifierMixin):
         """
         Fit the transformer
         Args:
-            X (pd.DataFrame): side by side [name_left; name_right, ...]
+            X (pd.DataFrame): input for the connector
             y (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the training
 
         Returns:
@@ -57,20 +56,23 @@ class PruningPipe(ClassifierMixin):
         """
         return self._pipe(X=X, y_true=y, fit=True)
 
-    def _pipe(self, X, y_true, fit=False, proba=False):
+    def _pipe(self, X, y_true=None, fit=False, proba=False):
         """
         # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
         # Add as well as sure matches y_pred_lr == 2.0
         Args:
             X: input data to the connector
-            y_lr (pd.Series): training data for the first model (LrModel)
-            y_sbs (pd.Series): training data for the second model (SbsModel)
+            y_true (pd.Series): training data, with MultiIndex {('ix_left', 'ix_right'): 0 or 1}
             fit (bool): True: fit all transformers / classifiers and return self. False: return y_pred
             proba (bool): Only works if fit is False. If fit is False and proba is True: return y_proba. If fit if False and proba is False: return y_pred
 
         Returns:
-            array
+            pd.Series
         """
+        if fit is True:
+            if y_true is None:
+                raise ValueError('y_true is None, cannot fit')
+
         # First model: Connector
         ## Fit the first model
         if fit is True:
@@ -98,14 +100,14 @@ class PruningPipe(ClassifierMixin):
         # select only possible (mixed) matches from first classifier
         ix_mix = y_pruning.loc[y_pruning == 1].index
         Xs_mix = self.connector.getsbs(X=X, on_ix=ix_mix) # side by side view of ix_mix
-        Xtc_mix = pd.DataFrame(data=Xtc, index=ixc).loc[ix_mix]
+        Xtc_mix = Xtc.loc[ix_mix]
         # And Transform (Second scoring engine)
         if fit is True:
             self.sbsmodel.fit(X=Xs_mix)
         Xts_mix = self.sbsmodel.transform(X=Xs_mix)
 
         # Merge the output of the two scores
-        Xtf = np.hstack((Xtc_mix.values, Xts_mix.values))
+        Xtf = np.hstack((Xtc_mix.values, Xts_mix))
 
         if fit is True:
             # select only the intersection of y_true and ix_mix:
@@ -134,26 +136,37 @@ class PruningPipe(ClassifierMixin):
 
     def predict(self, X):
         """
-        # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
-        # Add as well as sure matches from y_pred_lr == 2.0 (Case of clusterer for example)
         Args:
-            X: [df_left, df_right]
+            X: input data for the connector
 
         Returns:
-            np.ndarray
+            pd.Series: with MultiIndex {('ix_left', 'ix_right'): 0 or 1}
         """
 
-        return self._pipe(X=X, fit=False)
+        return self._pipe(X=X, fit=False, proba=False)
 
     def predict_proba(self, X):
+        """
+        Args:
+            X: input data for the connector
+
+        Returns:
+            pd.Series: with MultiIndex {('ix_left', 'ix_right'): proba between 0 and 1}
+        """
         return self._pipe(X=X, fit=False, proba=True)
 
     def score(self, X, y, sampleweight=None):
-        y_pred = pd.Series(
-            data=self.predict(X=X),
-            index=createmultiindex(X=X, names=self.ixnamepairs),
-            name='y_pred'
-        )
+        """
+
+        Args:
+            X: input data for the connector
+            y (pd.Series): y_true
+            sampleweight:
+
+        Returns:
+            float: accuracy_score from sklearn
+        """
+        y_pred = self.predict(X=X)
         ix_common = y.index.intersection(y_pred.index)
         return accuracy_score(
             y_pred=y_pred.loc[ix_common],

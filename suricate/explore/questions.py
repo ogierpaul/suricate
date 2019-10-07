@@ -22,7 +22,7 @@ class _Questions(TransformerMixin):
             X (pd.Series): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
 
         Returns:
-            pd.Index: index number  of lines to take; dimension maximum is (n_clusters * n_questions, ) (some clusters may have a size inferior to n_questions)
+            pd.MultiIndex: index number  of lines to take; dimension maximum is (n_clusters * n_questions, ) (some clusters may have a size inferior to n_questions)
         """
         if not isinstance(X, pd.Series):
             raise IndexError('Data must be a 1-dimensionnal pandas series with index')
