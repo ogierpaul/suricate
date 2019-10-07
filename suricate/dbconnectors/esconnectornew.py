@@ -12,34 +12,20 @@ ixname_pairs = [ixname_left, ixname_right]
 
 
 class EsConnectorNew(ConnectorMixin):
+    """
+    Elastic Search Connector for the suricate project
+    Attributes:
+        client (elasticsearch.client.Elasticsearch):
+        ixname:
+        lsuffix:
+    """
     def __init__(self, client, index, scoreplan,   doc_type='_doc', size=30, explain=True,
                  ixname='ix', lsuffix='left', rsuffix='right',
                  es_id='es_id', es_score='es_score', suffix_score='es', es_rank='es_rank'):
         """
-        Scoreplan:
-            scoreplan = {
-                'name': {
-                    'type': 'FreeText'
-                },
-                'street': {
-                    'type': 'FreeText'
-                },
-                'city': {
-                    'type': 'FreeText'
-                },
-                'duns': {
-                    'type': 'Exact'
-                },
-                'postalcode': {
-                    'type': 'FreeText'
-                },
-                'countrycode': {
-                    'type': 'Exact'
-                }
-            }
 
         Args:
-            client (elasticsearch.client): elastic search client
+            client (elasticsearch.client.Elasticsearch): elastic search client
             index (str): name of the ES index to search (from GET _cat/indices)
             doc_type (str): the name of the document type in the ES database
             scoreplan (dict): list of matches to have (see above)
@@ -55,7 +41,7 @@ class EsConnectorNew(ConnectorMixin):
         """
         ConnectorMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
         self.client = client
-        assert isinstance(client, elasticsearch.client.Elasticsearch)
+        assert isinstance(self.client, elasticsearch.client.Elasticsearch)
         self.index = index
         self.doc_type = doc_type
         self.scoreplan = scoreplan
@@ -81,7 +67,7 @@ class EsConnectorNew(ConnectorMixin):
         """
         return X.loc[ix]
 
-    def fetch_right(self, X=None, ix=None):
+    def fetch_right(self, ix=None, X=None):
         """
         :TODO: to test
         Args:
@@ -92,17 +78,17 @@ class EsConnectorNew(ConnectorMixin):
             pd.DataFrame formatted records
         """
         results={}
-        for id in ix:
+        for i in ix.values:
             assert isinstance(self.client, elasticsearch.client.Elasticsearch)
-            res = self.client.get(index=self.index, id=id, doc_type=self.doc_type)
+            res = self.client.get(index=self.index, id=i, doc_type=self.doc_type)
             if res['found'] is False:
                 raise IndexError(
-                    'id: {} not found in ES Index {} for doc_type {}'.format(id, self.index, self.doc_type)
+                    'id: {} not found in ES Index {} for doc_type {}'.format(i, self.index, self.doc_type)
                 )
             else:
                 data = res['_source']
-                results[id] = data
-        X = pd.DataFrame.from_dict(data=results, orient='columns')
+                results[i] = data
+        X = pd.DataFrame.from_dict(data=results, orient='index')
         # If we have a duplicate column ix
         if X.index.name in X.columns:
             X.drop(labels=[X.index.name], axis=1, inplace=True)
@@ -160,16 +146,14 @@ class EsConnectorNew(ConnectorMixin):
         Returns:
             pd.DataFrame: X_score ({['ix_left', 'ix_right'}: 'es_score'])
         """
-        alldata = pd.DataFrame(columns=[self.ixnameleft, self.ixnameright, 'es_score'])
+        alldata = pd.DataFrame(columns=[self.ixnameleft, self.ixnameright, self.es_score, self.es_rank])
         for lix in X.index:
             record = X.loc[lix]
             res = self.search_record(record)
             score = unpack_allhits(res)
             df = pd.DataFrame(score)
-            usecols = X.columns.intersection(df.columns).union(pd.Index([X.index.name]))
-            scorecols = pd.Index(['es_rank', 'es_score'])
+            scorecols = pd.Index([self.es_score, self.es_rank])
             df[self.ixnameleft] = lix
-
             df.rename(
                 columns={
                     'ix': self.ixnameright
@@ -191,26 +175,15 @@ class EsConnectorNew(ConnectorMixin):
         r2 = record.dropna()
         for inputfield in self.scoreplan.keys():
             if inputfield in r2.index:
-                scoretype = self.scoreplan[inputfield]['type']
-                subquery = dict()
-                if True:
-                    subquery = {
-                        "match": {
-                            inputfield: {
-                                "query": record[inputfield],
-                                "fuzziness": 2,
-                                "prefix_length": 2
-                            }
+                subquery = {
+                    "match": {
+                        inputfield: {
+                            "query": record[inputfield],
+                            "fuzziness": 2,
+                            "prefix_length": 2
                         }
                     }
-                # elif False:
-                #     subquery = {
-                #         "match": {
-                #             inputfield: {
-                #                 "query": record[inputfield]
-                #             }
-                #         }
-                #     }
+                }
                 subqueries.append(subquery)
         mquery = {
             "size": self.size,

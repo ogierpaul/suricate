@@ -1,5 +1,5 @@
 from sklearn.base import TransformerMixin
-from suricate.preutils import concatixnames, addsuffix, createmultiindex
+from suricate.preutils import createmultiindex
 from suricate.lrdftransformers import LrDfVisualHelper, create_lrdf_sbs
 import pandas as pd
 from suricate.base import ConnectorMixin
