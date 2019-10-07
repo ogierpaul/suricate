@@ -2,7 +2,8 @@ from copy import deepcopy
 import elasticsearch
 import pandas as pd
 from suricate.base import ConnectorMixin
-
+from suricate.lrdftransformers.cartesian import create_lrdf_sbs
+import numpy as np
 
 ixname = 'ix'
 ixname_left = 'ix_left'
@@ -10,17 +11,38 @@ ixname_right = 'ix_right'
 ixname_pairs = [ixname_left, ixname_right]
 
 
-class EsConnectorNew:
-    def __init__(self, client_es, index_es, doc_type_es, scoreplan, size=30, explain=True,
+class EsConnectorNew(ConnectorMixin):
+    def __init__(self, client, index, scoreplan,   doc_type='_doc', size=30, explain=True,
                  ixname='ix', lsuffix='left', rsuffix='right',
                  es_id='es_id', es_score='es_score', suffix_score='es', es_rank='es_rank'):
         """
+        Scoreplan:
+            scoreplan = {
+                'name': {
+                    'type': 'FreeText'
+                },
+                'street': {
+                    'type': 'FreeText'
+                },
+                'city': {
+                    'type': 'FreeText'
+                },
+                'duns': {
+                    'type': 'Exact'
+                },
+                'postalcode': {
+                    'type': 'FreeText'
+                },
+                'countrycode': {
+                    'type': 'Exact'
+                }
+            }
 
         Args:
-            client_es (elasticsearch.client): elastic search client
-            index_es (str): name of the ES index to search (from GET _cat/indices)
-            doc_type_es (str): the name of the document type in the ES database
-            scoreplan (dict): list of matches to have
+            client (elasticsearch.client): elastic search client
+            index (str): name of the ES index to search (from GET _cat/indices)
+            doc_type (str): the name of the document type in the ES database
+            scoreplan (dict): list of matches to have (see above)
             size (int): max number of hits from ES
             explain (bool): get detailed scores
             ixname (str): default 'ix', index name (in the sense of unique identified of record)
@@ -31,10 +53,11 @@ class EsConnectorNew:
             suffix_score (str): 'es'
             es_rank (str):'es_rank'
         """
-        self.client = client_es
-        assert isinstance(client_es, elasticsearch.client.Elasticsearch)
-        self.index = index_es
-        self.doc_type = doc_type_es
+        ConnectorMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
+        self.client = client
+        assert isinstance(client, elasticsearch.client.Elasticsearch)
+        self.index = index
+        self.doc_type = doc_type
         self.scoreplan = scoreplan
         self.size = size
         self.explain = explain
@@ -42,29 +65,78 @@ class EsConnectorNew:
         self.es_rank = es_rank
         self.es_id = es_id
         self.suffix_score = suffix_score
-        self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        # self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
-        #     ixname=ixname,
-        #     lsuffix=lsuffix,
-        #     rsuffix=rsuffix
-        # )
         self.usecols = list(self.scoreplan.keys())
         self.outcols = [self.es_score, self.es_rank]
         if self.explain is True:
             self.outcols += [c + '_' + self.suffix_score for c in self.usecols]
 
-    def fetch(self, ix):
+    def fetch_left(self, X, ix):
         """
-        :TODO: to write
         Args:
+            X: input data (left)
             ix (pd.Index): index of the records to be passed on
 
         Returns:
             pd.DataFrame formatted records
         """
+        return X.loc[ix]
+
+    def fetch_right(self, X=None, ix=None):
+        """
+        :TODO: to test
+        Args:
+            X: dummy, input data to be given to the connector
+            ix (pd.Index): index of the records to be passed on NEEDED
+
+        Returns:
+            pd.DataFrame formatted records
+        """
+        results={}
+        for id in ix:
+            assert isinstance(self.client, elasticsearch.client.Elasticsearch)
+            res = self.client.get(index=self.index, id=id, doc_type=self.doc_type)
+            if res['found'] is False:
+                raise IndexError(
+                    'id: {} not found in ES Index {} for doc_type {}'.format(id, self.index, self.doc_type)
+                )
+            else:
+                data = res['_source']
+                results[id] = data
+        X = pd.DataFrame.from_dict(data=results, orient='columns')
+        # If we have a duplicate column ix
+        if X.index.name in X.columns:
+            X.drop(labels=[X.index.name], axis=1, inplace=True)
+        return X
+
+
+
+    def getindex(self, X):
+        """
+        TODO: to write
+        Args:
+            X:
+
+        Returns:
+            pd.MultiIndex
+        """
         pass
+
+    def getsbs(self, X, on_ix=None):
+        """
+        TODO: to test
+        Args:
+            X (pd.DataFrame): input data
+            on_ix (pd.MultiIndex):
+
+        Returns:
+            pd.DataFrame
+        """
+        ix_left = np.unique(on_ix.get_level_values(self.ixnameleft))
+        ix_right = np.unique(on_ix.get_level_values(self.ixnameright))
+        left = self.fetch_left(X=X, ix=ix_left)
+        right = self.fetch_right(ix=ix_right)
+        df = create_lrdf_sbs(X=[left, right], on_ix=on_ix, ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        return df
 
     def fit(self, X=None, y=None):
         """
@@ -80,14 +152,15 @@ class EsConnectorNew:
 
     def transform(self, X):
         """
-        # TODO: to write
+        # TODO: check use of suffixes and column names
+        # TODO: We only take score information at the moment
         Args:
             X (pd.DataFrame): left data
 
         Returns:
-            np.ndarray: X_score (['ix_left', 'ix_right', 'es_score'])
+            pd.DataFrame: X_score ({['ix_left', 'ix_right'}: 'es_score'])
         """
-        alldata = pd.DataFrame(columns=['ix_left', 'ix_right', 'es_score'])
+        alldata = pd.DataFrame(columns=[self.ixnameleft, self.ixnameright, 'es_score'])
         for lix in X.index:
             record = X.loc[lix]
             res = self.search_record(record)
@@ -95,20 +168,21 @@ class EsConnectorNew:
             df = pd.DataFrame(score)
             usecols = X.columns.intersection(df.columns).union(pd.Index([X.index.name]))
             scorecols = pd.Index(['es_rank', 'es_score'])
-            df['ix_left'] = lix
-            #TODO: We only take score information at the moment
+            df[self.ixnameleft] = lix
+
             df.rename(
                 columns={
-                    'ix': 'ix_right'
+                    'ix': self.ixnameright
                 },
                 inplace=True
             )
-            df = df[['ix_left', 'ix_right', 'es_score']]
+            df = df[[self.ixnameleft, self.ixnameright, 'es_score']]
             alldata = pd.concat([alldata, df], axis=0, ignore_index=True)
-        return alldata.values
+        Xt = alldata.set_index(self.ixnamepairs)
+        return Xt
 
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(self, X, y=None, **fit_params):
         self.fit(X=X, y=y)
         return self.transform(X=X)
 

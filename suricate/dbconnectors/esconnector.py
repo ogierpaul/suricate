@@ -1,7 +1,6 @@
 from copy import deepcopy
 import elasticsearch
 import pandas as pd
-from suricate.base import ConnectorMixin
 
 
 ixname = 'ix'

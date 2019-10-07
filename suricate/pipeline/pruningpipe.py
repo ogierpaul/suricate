@@ -80,7 +80,7 @@ class PruningPipe(ClassifierMixin):
 
         ## Get the first score
         Xtc = self.connector.transform(X=X) # score matrix
-        ixc = self.connector.getindex(X=X) # index of Xc
+        ixc = Xtc.index # index of Xc
 
         # Second model: Explorer
         ## Fit the explorer
