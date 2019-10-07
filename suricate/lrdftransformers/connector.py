@@ -15,7 +15,7 @@ class LrDfConnector(ConnectorMixin):
             rsuffix:
             scorer (TransformerMixin): score pipeline or featureunion
         """
-        ConnectorMixin.__init__(self)
+        ConnectorMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
         self.scorer = scorer
 
     def fit(self, X, y=None):
