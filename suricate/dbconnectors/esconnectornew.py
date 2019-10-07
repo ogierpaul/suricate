@@ -10,7 +10,7 @@ ixname_right = 'ix_right'
 ixname_pairs = [ixname_left, ixname_right]
 
 
-class EsConnector:
+class EsConnectorNew:
     def __init__(self, client_es, index_es, doc_type_es, scoreplan, size=30, explain=True,
                  ixname='ix', lsuffix='left', rsuffix='right',
                  es_id='es_id', es_score='es_score', suffix_score='es', es_rank='es_rank'):
