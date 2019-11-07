@@ -37,17 +37,6 @@ class ConnectorMixin(TransformerMixin):
         Xt = pd.DataFrame()
         return Xt
 
-    def getindex(self, X):
-        """
-
-        Args:
-            X:
-
-        Returns:
-            pd.MultiIndex
-        """
-        return pd.MultiIndex(names=self.ixnamepairs)
-
     def getsbs(self, X, on_ix=None):
         """
 

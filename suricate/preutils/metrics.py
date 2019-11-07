@@ -1,7 +1,7 @@
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, balanced_accuracy_score
 
 
-def scores(y_true, y_pred):
+def get_commonscores(y_true, y_pred):
     """
     Calculate the precision, recall, f1, accuracy, balanced_accuracy scores
     Args:

@@ -10,6 +10,11 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegressionCV
 from suricate.preutils import createmultiindex
 
+# ESCONNECTOR
+from suricate.dbconnectors import EsConnector
+import elasticsearch
+from suricate.preutils.metrics import get_commonscores
+
 _lr_score_list = [
     ('name_vecword', VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2))),
     ('street_vecword', VectorizerConnector(on='street', analyzer='word', ngram_range=(1, 2))),
@@ -57,6 +62,61 @@ def test_pruningpipe():
     precision = precision_score(y_true=y_true, y_pred=y_pred)
     recall = recall_score(y_true=y_true, y_pred=y_pred)
     accuracy = balanced_accuracy_score(y_true=y_true, y_pred=y_pred)
+    print('***\nscores:\n')
+    print('precision score:{}\n recall score:{}\n balanced accuracy score:{}'.format(
+        precision, recall, accuracy))
+
+
+def test_esconnector():
+    print('start', pd.datetime.now())
+    n_rows = 500
+    n_cluster = 25
+    Xlr = getXlr(nrows=n_rows)
+    left = Xlr[0]
+    esclient = elasticsearch.Elasticsearch()
+    scoreplan = {
+        'name': {
+            'type': 'FreeText'
+        },
+        'street': {
+            'type': 'FreeText'
+        },
+        'city': {
+            'type': 'FreeText'
+        },
+        'duns': {
+            'type': 'Exact'
+        },
+        'postalcode': {
+            'type': 'FreeText'
+        },
+        'countrycode': {
+            'type': 'Exact'
+        }
+    }
+    escon = EsConnector(
+        client=esclient,
+        scoreplan=scoreplan,
+        index="right",
+        explain=False,
+        size=20
+    )
+    ixc = createmultiindex(X=Xlr)
+    y_true = getytrue()
+    y_true = y_true.loc[ixc]
+    print(pd.datetime.now(), 'data loaded')
+    pipe = PruningPipe(
+        connector=escon,
+        explorer=Explorer(cluster=KBinsCluster(n_clusters=n_cluster)),
+        sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
+        classifier=LogisticRegressionCV()
+    )
+    pipe.fit(X=left, y=y_true)
+    y_pred = pipe.predict(X=left)
+    scores = get_commonscores(y_pred=y_pred, y_true=y_true)
+    precision = scores['precision']
+    recall = scores['recall']
+    accuracy = scores['balanced_accuracy']
     print('***\nscores:\n')
     print('precision score:{}\n recall score:{}\n balanced accuracy score:{}'.format(
         precision, recall, accuracy))
