@@ -29,11 +29,11 @@
 * LrDfTransformerMixin
 * uses the apply method of pandas dataframe: does not scale very well
 * for each pair of records, returns score according to the *compfunc* (comparison function)
-* *exact*: 1 or 0
-* *simple*: ratio score of fuzzywuzzy
-* *token*: token_set_ratio score of fuzzywuzzy
-* *vincenty*: Return vincenty distance of two (lat, lng) tuples
-* *contain*: check if one string is a substring of another
+    * *exact*: 1 or 0
+    * *simple*: ratio score of fuzzywuzzy
+    * *token*: token_set_ratio score of fuzzywuzzy
+    * *vincenty*: Return vincenty distance of two (lat, lng) tuples
+    * *contain*: check if one string is a substring of another
 
 ## Vectorizer
 * LrDfTransformerMixin
