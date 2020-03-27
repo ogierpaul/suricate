@@ -6,7 +6,7 @@ from suricate.preutils.scores import exact_score, simple_score, token_score, con
 
 class FuzzyConnector(LrDfTransformerMixin):
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
-                 scoresuffix='fuzzy', ratio='simple', **kwargs):
+                 scoresuffix='fuzzy', compfunc='simple', **kwargs):
         """
 
         Args:
@@ -15,22 +15,22 @@ class FuzzyConnector(LrDfTransformerMixin):
             lsuffix:
             rsuffix:
             scoresuffix:
-            ratio (str): ['exact', 'simple', 'token', 'vincenty', 'contain']
+            compfunc (str): ['exact', 'simple', 'token', 'vincenty', 'contain']
             **kwargs:
         """
         LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                                      scoresuffix=scoresuffix + '_' + ratio, **kwargs)
+                                      scoresuffix=scoresuffix + '_' + compfunc, **kwargs)
         self.on = on
-        assert ratio in ['exact', 'simple', 'token', 'vincenty', 'contain']
-        if ratio == 'simple':
+        assert compfunc in ['exact', 'simple', 'token', 'vincenty', 'contain']
+        if compfunc == 'simple':
             self.func = simple_score
-        elif ratio == 'token':
+        elif compfunc == 'token':
             self.func = token_score
-        elif ratio == 'exact':
+        elif compfunc == 'exact':
             self.func = exact_score
-        elif ratio == 'vincenty':
+        elif compfunc == 'vincenty':
             self.func = vincenty_score
-        elif ratio == 'contain':
+        elif compfunc == 'contain':
             self.func = contains_score
 
     def _transform(self, X):

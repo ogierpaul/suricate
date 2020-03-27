@@ -18,8 +18,8 @@ def test_makeunion_y_true():
     stages = [
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='name', analyzer='word'),
-        FuzzyConnector(on='name', ratio='simple'),
-        FuzzyConnector(on='name', ratio='token')
+        FuzzyConnector(on='name', compfunc='simple'),
+        FuzzyConnector(on='name', compfunc='token')
     ]
     pipe = make_union(*stages)
     pipe.fit(X=X)

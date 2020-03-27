@@ -5,7 +5,7 @@ from suricate.lrdftransformers.base import LrDfTransformerMixin
 
 class ExactConnector(LrDfTransformerMixin):
     """
-    This class returns the cartesian product
+    This class returns the cartesian product of left and right, and gives 1 if it is an exact match, 0 otherwise
     """
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right', scoresuffix='exact', **kwargs):
         """
