@@ -17,7 +17,7 @@ All sub-modules of suricate:
 |data|Done|Ok|Ok|No|Ok|
 |dbconnectors|
 |explore|
-|lrdftransformers|
+|lrdftransformers|important features ok, some cleaning to do|ok|ok|to review|core is ok|
 |pipeline|
 |preutils|
 |sbsdftransformers|

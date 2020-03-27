@@ -4,6 +4,11 @@ from suricate.lrdftransformers import LrDfVisualHelper, create_lrdf_sbs
 import pandas as pd
 from suricate.base import ConnectorMixin
 
+#TODO: Document this transfomer
+# Features needed:
+# Fetch the data
+# Create a similarity matrix
+# Return a sbs matrix
 
 class LrDfConnector(ConnectorMixin):
     def __init__(self, scorer, ixname='ix', lsuffix='left', rsuffix='right'):
