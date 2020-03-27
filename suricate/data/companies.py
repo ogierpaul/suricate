@@ -7,10 +7,26 @@ _folder_companydf = 'companydata'
 
 
 def getleft(nrows=nrows):
+    """
+
+    Args:
+        nrows (int): number of rows to load
+
+    Returns:
+        pd.DataFrame
+    """
     left = open_csv(filename='left.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
     return left
 
 def getright(nrows=nrows):
+    """
+
+    Args:
+        nrows(int): number of rows to load
+
+    Returns:
+        pd.DataFrame
+    """
     right = open_csv(filename='right.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
     return right
 
@@ -25,7 +41,7 @@ def getytrue(Xlr=None):
         Xlr: left and right dataframe for which to get the labelling
 
     Returns:
-
+        pd.Series: supervised training data
     """
     if Xlr is None:
         Xlr = getXlr()
@@ -36,5 +52,13 @@ def getytrue(Xlr=None):
     return y_true
 
 def getXlr(nrows=nrows):
+    """
+
+    Args:
+        nrows (int): number of rows to load
+
+    Returns:
+        list: length2 with 2 dataframes, left and right
+    """
     X_lr = [getleft(nrows=nrows), getright(nrows=nrows)]
     return X_lr

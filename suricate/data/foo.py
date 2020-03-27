@@ -6,6 +6,11 @@ _samplecol = 'name'
 
 
 def getleft():
+    """
+
+    Returns:
+        pd.DataFrame: length (3, 1)
+    """
     left = pd.DataFrame(
         {
             ix_names['ixname']: [0, 1, 2],
@@ -17,6 +22,11 @@ def getleft():
     return left
 
 def getright():
+    """
+
+    Returns:
+        pd.DataFrame: length (3, 1)
+    """
     right = pd.DataFrame(
         {
             ix_names['ixname']: [0, 1, 2],
@@ -28,10 +38,21 @@ def getright():
     return right
 
 def getXlr():
+    """
+
+    Returns:
+        list: length2 with 2 dataframes, left and right
+
+    """
     X_lr = [getleft(), getright()]
     return X_lr
 
 def getXsbs():
+    """
+
+    Returns:
+        pd.DataFrame: cartesian join of left and right dataframes, shape (9, 2)
+    """
     X_sbs = cartesian_join(
         left=getXlr()[0],
         right=getXlr()[1],
@@ -43,6 +64,11 @@ def getXsbs():
     return X_sbs
 
 def getytrue():
+    """
+
+    Returns:
+        pd.Series: supervised training data
+    """
     y_true = pd.Series(
         data=[1, 0, 0, 0, 1, 1, 0, 0, 0],
         index=createmultiindex(
