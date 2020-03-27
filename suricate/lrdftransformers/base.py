@@ -4,120 +4,6 @@ from sklearn.base import TransformerMixin
 
 from suricate.preutils import concatixnames, addsuffix, createmultiindex
 
-
-def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
-    """
-
-    Args:
-        left (pd.DataFrame): table 1
-        right (pd.DataFrame): table 2
-        lsuffix (str):
-        rsuffix (str):
-        on_ix (MultiIndex):
-
-    Returns:
-        pd.DataFrame
-
-    Examples:
-        df1 = pd.DataFrame({'a':['foo', 'bar']})
-             a
-        0   foo
-        1	bar
-
-        df2 = pd.DataFrame({'b':['foz', 'baz']})
-             b
-        0   foz
-        1	baz
-
-        cartesian_join(df1, df2)
-            index_left	a_left	index_right	b_right
-        0	0	        foo	    0	        foz
-        1	0	        foo	    1	        baz
-        2	1	        bar	    0	        foz
-        3	1	        bar	    1	        baz
-
-    """
-
-    def rename_with_suffix(df, suffix):
-        """
-        rename the columns with a suffix, including the index
-        Args:
-            df (pd.DataFrame): {'ix':['name']}
-            suffix (str): 'left'
-
-        Returns:
-            pd.DataFrame
-
-        Examples:
-            df = pd.DataFrame({'a':['foo', 'bar']})
-                 a
-            0   foo
-            1	bar
-
-            rename_with_suffix(df, 'right')
-
-                index_right	a_right
-            0	0	        foo
-            1	1	        bar
-        """
-        if suffix is None:
-            return df
-        assert isinstance(suffix, str)
-        assert isinstance(df, pd.DataFrame)
-        df_new = df.copy()
-        if df.index.name is None:
-            ixname = 'ix'
-        else:
-            ixname = df.index.name
-        df_new.index.name = ixname
-        df_new.reset_index(drop=False, inplace=True)
-        cols = df_new.columns
-        mydict = dict(
-            zip(
-                cols,
-                map(lambda c: c + '_' + suffix, cols)
-            )
-        )
-        df_new.rename(columns=mydict, inplace=True)
-        return df_new
-
-    if on_ix is None:
-        # hack to create a column name unknown to both df1 and df2
-        tempcolname = 'f1b3'
-        while tempcolname in left.columns or tempcolname in right.columns:
-            tempcolname += 'f'
-
-        # create a new df1 with renamed cols
-        df1new = rename_with_suffix(left, lsuffix)
-        df2new = rename_with_suffix(right, rsuffix)
-        df1new[tempcolname] = 0
-        df2new[tempcolname] = 0
-        dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
-        del df1new, df2new, tempcolname
-    else:
-        ixname = left.index.name
-        ixnameleft = ixname + '_' + lsuffix
-        ixnameright = ixname + '_' + rsuffix
-        dfnew = pd.DataFrame(
-            index=on_ix
-        ).reset_index(
-            drop=False
-        ).join(
-            rename_with_suffix(left, lsuffix).set_index(ixnameleft),
-            on=ixnameleft,
-            how='left'
-        ).join(
-            rename_with_suffix(right, rsuffix).set_index(ixnameright),
-            on=ixnameright,
-            how='left'
-        ).set_index(
-            [ixnameleft, ixnameright],
-            drop=True
-        )
-
-    return dfnew
-
-
 class LrDfTransformerMixin(TransformerMixin):
     def __init__(self, on=None, ixname='ix',
                  lsuffix='left', rsuffix='right', scoresuffix='score', **kwargs):
@@ -314,7 +200,6 @@ class LrDfTransformerMixin(TransformerMixin):
             newright = newright.loc[on_ix.levels[1].intersection(newright.index)]
             newright.index.name = self.ixname
             return newleft, newright
-
 
 class LrDfIndexEncoder(TransformerMixin):
     def __init__(self, ixname='ix', lsuffix='left', rsuffix='right'):

@@ -8,3 +8,17 @@ All sub-modules of suricate:
 * pipeline: pipelining tools
 * preutils: utils for pre-processing the datasets
 * sbsdftransformers: transformers used for comparing one dataframe with side-by-side comparison
+
+## Advancement status
+
+|Module|Comments|Features|Tests|Tutorial|Docs|
+|---|---|---|---|---|---|
+|base||||||
+|data|Done|Ok|Ok|No|Ok|
+|dbconnectors|
+|explore|
+|lrdftransformers|
+|pipeline|
+|preutils|
+|sbsdftransformers|
+|grouping|
