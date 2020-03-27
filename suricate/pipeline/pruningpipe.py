@@ -10,7 +10,7 @@ from suricate.base import ConnectorMixin
 class PruningPipe(ClassifierMixin):
     def __init__(self,
                  connector,
-                 explorer,
+                 pruningclf,
                  sbsmodel,
                  classifier,
                  ixname='ix',
@@ -21,7 +21,7 @@ class PruningPipe(ClassifierMixin):
 
         Args:
             connector (ConnectorMixin): Connector (Scorer) used to do the calculation,
-            explorer (Explorer): Classifier used to do the pruning (0=no match, 1: potential match, 2: sure match)
+            pruningclf (Explorer): Classifier used to do the pruning (0=no match, 1: potential match, 2: sure match)
             sbsmodel (TransformerMixin): Side-by-Side scorer, Can be FeatureUnion, Pipeline...
             classifier (ClassifierMixin): Classifier used to do the prediction
             ixname (str): 'ix'
@@ -39,7 +39,7 @@ class PruningPipe(ClassifierMixin):
         )
         self.fitted = False
         self.connector = connector
-        self.explorer = explorer
+        self.pruningclf = pruningclf
         self.sbsmodel = sbsmodel
         self.classifier = classifier
         pass
@@ -85,10 +85,10 @@ class PruningPipe(ClassifierMixin):
         # Second model: Explorer
         ## Fit the explorer
         if fit is True:
-            self.explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_true, fit_cluster=True)
+            self.pruningclf.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_true, fit_cluster=True)
         ## Get the pruning classifier
         y_pruning = pd.Series(
-            data=self.explorer.predict(X=Xtc),
+            data=self.pruningclf.predict(X=Xtc),
             index=ixc
         )
 
