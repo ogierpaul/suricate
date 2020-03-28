@@ -2,11 +2,20 @@ import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
 
-from suricate.lrdftransformers import cartesian_join
 from suricate.preutils import concatixnames
 
 
 class ClusterClassifier(ClassifierMixin):
+    """
+    This Classifier predicts for each cluster if the cluster is :
+    - no match
+    - all match
+    - mixed match
+
+    Input data (X) is a (n_pairs, ) pd.Series containing cluster values
+    Fit data (y) is a (n_questions, ) pd.Series, with n_questions < n_pairs
+
+    """
     def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
         ClassifierMixin.__init__(self)
         self.ixname = ixname
@@ -115,28 +124,6 @@ class ClusterClassifier(ClassifierMixin):
         self.fit(X=X, y=y)
         y_pred = self.predict(X=X)
         return y_pred
-
-
-
-
-def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, ixnamepairs):
-    if showcols is None:
-        showcols = X[0].columns.intersection(X[1].columns)
-    X_data = cartesian_join(
-        left=X[0][showcols],
-        right=X[1][showcols],
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
-    ).set_index(ixnamepairs)
-    mycols = list()
-    for c in showcols:
-        mycols.append(c + '_' + lsuffix)
-        mycols.append(c + '_' + rsuffix)
-    X_data = X_data[mycols]
-    if showscores is not None:
-        for c in showscores:
-            X_data[c] = X_score[:, c]
-    return X_data
 
 
 def _check_ncluster_nquestions(n_questions, n_pairs, n_clusters):

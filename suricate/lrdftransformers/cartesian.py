@@ -266,3 +266,23 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
         )
 
     return dfnew
+
+
+def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, ixnamepairs):
+    if showcols is None:
+        showcols = X[0].columns.intersection(X[1].columns)
+    X_data = cartesian_join(
+        left=X[0][showcols],
+        right=X[1][showcols],
+        lsuffix=lsuffix,
+        rsuffix=rsuffix
+    ).set_index(ixnamepairs)
+    mycols = list()
+    for c in showcols:
+        mycols.append(c + '_' + lsuffix)
+        mycols.append(c + '_' + rsuffix)
+    X_data = X_data[mycols]
+    if showscores is not None:
+        for c in showscores:
+            X_data[c] = X_score[:, c]
+    return X_data

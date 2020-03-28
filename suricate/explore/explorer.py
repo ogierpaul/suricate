@@ -3,6 +3,8 @@ import pandas as pd
 from suricate.explore import SimpleQuestions, HardQuestions, ClusterClassifier, cluster_composition, KBinsCluster
 from suricate.preutils import concatixnames
 
+#TODO: Prio 1 Write Documentation
+
 class Explorer(ClassifierMixin):
     def __init__(self, cluster=None, n_simple = 10, n_hard=10, ixname='ix', lsuffix='left', rsuffix='right'):
         """
