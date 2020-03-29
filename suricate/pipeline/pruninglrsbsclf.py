@@ -76,7 +76,7 @@ class PruningLrSbsClf(ClassifierMixin):
             self.lrmodel.fit(X=X, y=y_lr)
 
         # Get the first score
-        X_lr_score = self.lrmodel.transformer.transform(X=X)
+        X_lr_score = self.lrmodel.transformer._transform(X=X)
 
         # If fit is true, slice this score according to scope of y_lr
         if fit is True:
@@ -113,7 +113,7 @@ class PruningLrSbsClf(ClassifierMixin):
         # And Transform (Second scoring engine)
         if fit is True:
             self.sbsmodel.transformer.fit(X=X_Sbs)
-        X_sbs_score = self.sbsmodel.transformer.transform(X=X_Sbs)
+        X_sbs_score = self.sbsmodel.transformer._transform(X=X_Sbs)
 
         # Merge the output of the two scores
         X_final_score = np.hstack((X_lr_score.values, X_sbs_score))

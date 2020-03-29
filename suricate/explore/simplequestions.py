@@ -4,6 +4,13 @@ from sklearn.base import TransformerMixin
 from suricate.explore.questions import _Questions
 
 class SimpleQuestions(_Questions):
+    """
+    From a 1d Vector with the cluster classification of the pairs,
+    generate for each cluster a number of sample pairs (questions).
+
+    This is a simple questions generator because we just use the cluster number to ask the questions,
+    we do not use any labellized (supervized) data. It is usually the first step in a deduplication process.
+    """
     def __init__(self, n_questions=10):
         """
 
@@ -30,7 +37,15 @@ class SimpleQuestions(_Questions):
 
 
     def predict(self, X):
-        return self.transform(X)
+        """
+        Args:
+            X (pd.Series): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
+
+        Returns:
+            pd.MultiIndex: index number  of lines to take; dimension maximum is (n_clusters * n_questions, ) \
+                (some clusters may have a size inferior to n_questions because there is not enough samples to take)
+        """
+        return self._transform(X)
 
     def fit_predict(self,X, y=None):
         return self.fit_transform(X, y=y)

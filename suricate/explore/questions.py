@@ -4,19 +4,22 @@ from sklearn.base import TransformerMixin
 
 
 class _Questions(TransformerMixin):
+    """
+    Base class for the Simple Questions and Hard Questions.
+    For each cluster of the self.clusters, will generate at most self.n_questions
+    """
     def __init__(self, n_questions=10):
         """
 
         Args:
             n_questions (int): number of lr_explore to be asked for each cluster
-            isseries: if the input data is a serie or not
         """
         TransformerMixin.__init__(self)
         self.n_questions = n_questions
         self.n_clusters = None
         self.clusters = None
 
-    def transform(self, X):
+    def _transform(self, X):
         """
         Args:
             X (pd.Series): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
@@ -40,7 +43,15 @@ class _Questions(TransformerMixin):
         return questions
 
     def predict(self, X):
-        return self.transform(X)
+        """
+        Generate sample indexes.
+        Args:
+            X:
+
+        Returns:
+            pd.MultiIndex
+        """
+        return self._transform(X)
 
     def fit_predict(self,X, y=None):
         return self.fit_transform(X, y=y)

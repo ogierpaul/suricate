@@ -5,6 +5,23 @@ from suricate.explore.questions import _Questions
 
 
 class HardQuestions(_Questions):
+    """
+    From:
+    - a 1d Vector with the cluster classification of the pairs
+    - and with a number of labellized pairs
+
+    Identify (Fit step):
+    - Clusters where each of the sample labellized pairs are not matching (nomatch_cluster)
+    - Clusters where each of the sample labellized pairs are matching (allmatch_cluster)
+    - Clusters where some of the sample labellized pairs are matching, and some don't (mixedmatch_cluster)
+
+    Then (Transform step)
+    - For each of the mixed_match clusters, generate number of questions (Hard questions)
+
+    This is a hard questions generator because we using labellized (supervized) data,
+    we focus on the similarity cluster where some match and others don't, where the answer is not so obvious: the
+    frontier between matches and non-matches.
+    """
     def __init__(self, n_questions=10):
         _Questions.__init__(self, n_questions=n_questions)
         self.n_questions = n_questions
@@ -29,6 +46,12 @@ class HardQuestions(_Questions):
     def fit(self, X, y):
         """
         Fit the transformer with the maximum number of clusters
+        Identify (Fit step):
+        - Clusters where each of the sample labellized pairs are not matching (nomatch_cluster)
+        - Clusters where each of the sample labellized pairs are matching (allmatch_cluster)
+        - Clusters where some of the sample labellized pairs are matching, and some don't (mixedmatch_cluster)
+        Clusters that do not appear on y_true will be added to nomatch cluster
+
         Args:
             X (pd.Series): Matrix of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
             y (pd.Series): series of correct answers, (n_answers, 2), where: \
@@ -79,3 +102,18 @@ class HardQuestions(_Questions):
         self.clusters = self.mixedmatch
 
         return self
+
+    def predict(self, X):
+        """
+        Args:
+            X (pd.Series): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs
+
+        Returns:
+            pd.MultiIndex: index number  of lines to take; dimension maximum is \
+             (n_mixedmatch_clusters * n_questions, ) \
+             (some clusters may have a size inferior to n_questions because there is not enough samples to take)
+        """
+        return self._transform(X)
+
+
+

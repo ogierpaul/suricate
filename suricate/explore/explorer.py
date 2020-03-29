@@ -71,7 +71,7 @@ class Explorer(ClassifierMixin):
         y_cluster = self.pred_cluster(X=X)
         y_cluster = pd.Series(data=y_cluster, name='y_cluster', index=ix)
         self._simplequestions.fit(X=y_cluster)
-        ix_questions = self._simplequestions.transform(X=y_cluster)
+        ix_questions = self._simplequestions._transform(X=y_cluster)
         return ix_questions
 
     def ask_hard(self, X, y, ix, fit_cluster = False):
@@ -89,7 +89,7 @@ class Explorer(ClassifierMixin):
         y_cluster = self.pred_cluster(X=X)
         y_cluster = pd.Series(data=y_cluster, name='y_cluster', index=ix)
         self._hardquestions.fit(X=y_cluster, y=y)
-        ix_questions = self._hardquestions.transform(X=y_cluster)
+        ix_questions = self._hardquestions._transform(X=y_cluster)
         return ix_questions
 
     def fit(self, X, y, fit_cluster = True):

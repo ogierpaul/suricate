@@ -158,8 +158,8 @@ def _transform_tkscore(left,
     """
     assert isinstance(left, pd.Series)
     assert isinstance(right, pd.Series)
-    tkl = vectorizer.transform(_fillwithblanks(left.values))
-    tkr = vectorizer.transform(_fillwithblanks(right.values))
+    tkl = vectorizer._transform(_fillwithblanks(left.values))
+    tkr = vectorizer._transform(_fillwithblanks(right.values))
     score = np.nan_to_num(cosine_similarity(tkl, tkr)).reshape(-1, 1)
     return score
 
