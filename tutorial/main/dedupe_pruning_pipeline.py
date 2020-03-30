@@ -59,6 +59,7 @@ connector = LrDfConnector(
         )
     )
 explorer = Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster), n_simple=n_simplequestions, n_hard=n_pointedquestions)
+#TODO: Create that explorer pipe
 explorerpipe.fit_first(Xlr)
 simple_questions = explorerpipe.simple_questions(X)
 explorerpipe.fit_supervized(Xlr, y_true)
