@@ -55,7 +55,7 @@ def best_try():
             ]
             )
         ),
-        pruningclf=Explorer(cluster=KBinsCluster(n_clusters=n_cluster)),
+        pruningclf=Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster)),
         sbsmodel=Pipeline(steps=[
                 ('scores', FeatureUnion(transformer_list=_sbs_score_list)),
                 ('imputer', SimpleImputer(strategy='constant', fill_value=0)),

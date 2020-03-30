@@ -23,9 +23,9 @@ _score_cols = [c[0] for c in _score_list]
 def test_explorer():
     print(pd.datetime.now())
     n_rows = 200
-    n_cluster = 25
-    n_simplequestions = 20
-    n_hardquestions = 40
+    n_cluster = 10
+    n_simplequestions = 200
+    n_hardquestions = 200
     Xlr = getXlr(nrows=n_rows)
     y_true = getytrue(Xlr=Xlr)
     print(pd.datetime.now(), 'data loaded')
@@ -38,7 +38,7 @@ def test_explorer():
         )
     )
     explorer = Explorer(
-        cluster=KBinsCluster(n_clusters=n_cluster),
+        clustermixin=KBinsCluster(n_clusters=n_cluster),
         n_simple=n_simplequestions,
         n_hard=n_hardquestions
     )
@@ -48,31 +48,31 @@ def test_explorer():
     print(pd.datetime.now(), 'score ok')
     # ixc is the index corresponding to the score matrix
     ixc = connector.getindex(X=Xlr)
-    ix_simple = explorer.ask_simple(X=Xtc, ix=ixc, fit_cluster=True)
+    ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xtc, index=ixc), fit_cluster=True)
     print(pd.datetime.now(), 'length of ix_simple {}'.format(ix_simple.shape[0]))
     sbs_simple = connector.getsbs(X=Xlr, on_ix=ix_simple)
     print('***** SBS SIMPLE ******')
     print(sbs_simple.sample(5))
     print('*****')
     y_simple = y_true.loc[ix_simple]
-    ix_hard = explorer.ask_hard(X=Xtc, y=y_simple, ix=ixc)
+    ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xtc,index=ixc), y=y_simple)
     print(pd.datetime.now(), 'length of ix_hard {}'.format(ix_hard.shape[0]))
     sbs_hard = connector.getsbs(X=Xlr, on_ix=ix_hard)
     print(sbs_hard.sample(5))
     print('*****')
     y_train = y_true.loc[ix_simple.union(ix_hard)]
     print('length of y_train: {}'.format(y_train.shape[0]))
-    explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_train)
+    explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_train, fit_cluster=True)
     print('results of pred:\n', pd.Series(explorer.predict(X=Xtc)).value_counts())
     print('****')
 
 
 def test_pruning():
     print('start', pd.datetime.now())
-    n_rows = 500
-    n_cluster = 25
-    n_simplequestions = 50
-    n_hardquestions = 50
+    n_rows = 200
+    n_cluster = 10
+    n_simplequestions = 200
+    n_hardquestions = 200
     Xlr = getXlr(nrows=n_rows)
     y_true = getytrue(Xlr=Xlr)
     print(pd.datetime.now(), 'data loaded')
@@ -85,7 +85,7 @@ def test_pruning():
         )
     )
     explorer = Explorer(
-        cluster=KBinsCluster(n_clusters=n_cluster),
+        clustermixin=KBinsCluster(n_clusters=n_cluster),
         n_simple = n_simplequestions,
         n_hard=n_hardquestions
     )
@@ -97,8 +97,8 @@ def test_pruning():
     ixc = connector.getindex(X=Xlr)
     y_true = y_true.loc[ixc]
 
-    ix_simple = explorer.ask_simple(X=Xtc, ix=ixc, fit_cluster=True)
-    ix_hard = explorer.ask_hard(X=Xtc, y=y_true.loc[ix_simple], ix=ixc)
+    ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xtc, index=ixc), fit_cluster=True)
+    ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xtc, index=ixc), y=y_true.loc[ix_simple])
     ix_train = ix_simple.union(ix_hard)
     print('number of training samples:{}'.format(ix_train.shape[0]))
     X_train = pd.DataFrame(data=Xtc, index=ixc).loc[ix_train]

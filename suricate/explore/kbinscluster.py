@@ -4,6 +4,11 @@ from sklearn.base import ClusterMixin
 from sklearn.preprocessing import KBinsDiscretizer
 
 class KBinsCluster(ClusterMixin):
+    """
+    This cluster transformer takes as input a similarity matrix X of size (n_samples, n_features).
+    It then sums the score along the n_features axis, and discretize (i.e. Cluster) the scores using the KBinsDiscretizer
+    From sklearn
+    """
     def __init__(self, n_clusters):
         self.n_clusters = n_clusters
         self.kb = KBinsDiscretizer(n_bins=n_clusters, strategy='uniform', encode='ordinal')

@@ -16,7 +16,7 @@ All sub-modules of suricate:
 |base|explanation of |Ok|Ok (none)|None|Ok|
 |data|Done|Ok|Ok|No|Ok|
 |dbconnectors|
-|explore|Prio1|Ok|Ok|Todo|Todo|
+|explore|Ok|Ok|Ok|Todo|Ok|
 |lrdftransformers|important features ok, some cleaning to do|ok|ok|to review|core is ok|
 |pipeline|
 |preutils|

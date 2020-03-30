@@ -5,7 +5,7 @@
 * Can be used then for labelling the data by taking samples for each cluster for manual labelling
 
 ## Module Details
-### Questions
+### Base
 * Base class for the Simple and Hard Questions
 * Used to extract samples from each cluster
 * Fit with the vector containing the cluster classification of the pairs
@@ -36,10 +36,19 @@ This is a hard questions generator because we using labellized (supervized) data
 we focus on the similarity cluster where some match and others don't, where the answer is not so obvious: the
 frontier between matches and non-matches.
 
-### Explorer
-
 ### Cluster Classifier
+This Classifier predicts for each cluster if the cluster is :
+- no match
+- all match
+- mixed match
 
+Input data (X) is a (n_pairs, ) pd.Series containing cluster values    
+Fit data (y) is a (n_questions, ) pd.Series, with n_questions < n_pairs
 
 ### KBins Cluster
+* This cluster transformer takes as input a similarity matrix X of size (n_samples, n_features).
+* It then sums the score along the n_features axis
+* discretize (i.e. Cluster) the scores using the KBinsDiscretizer grom sklearn
+* Used to cluster the data according to the similarity score
 
+### Explorer

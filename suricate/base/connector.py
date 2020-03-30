@@ -2,7 +2,6 @@ from sklearn.base import TransformerMixin
 from suricate.preutils import concatixnames
 import pandas as pd
 
-# TODO: Create a Readme.md
 
 class ConnectorMixin(TransformerMixin):
     def __init__(self, ixname='ix', lsuffix='left', rsuffix='right'):

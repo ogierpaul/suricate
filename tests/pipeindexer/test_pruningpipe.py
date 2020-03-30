@@ -53,7 +53,7 @@ def test_pruningpipe():
                 ('imputer', SimpleImputer(strategy='constant', fill_value=0))]
             )
         ),
-        pruningclf=Explorer(cluster=KBinsCluster(n_clusters=n_cluster)),
+        pruningclf=Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster)),
         sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
         classifier=LogisticRegressionCV()
     )
@@ -107,7 +107,7 @@ def test_esconnector():
     print(pd.datetime.now(), 'data loaded')
     pipe = PruningPipe(
         connector=escon,
-        pruningclf=Explorer(cluster=KBinsCluster(n_clusters=n_cluster)),
+        pruningclf=Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster)),
         sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
         classifier=LogisticRegressionCV()
     )
