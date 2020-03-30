@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
-from suricate.explore.questions import _Questions
+from suricate.explore.base import QuestionsMixin
 
-class SimpleQuestions(_Questions):
+class SimpleQuestions(QuestionsMixin):
     """
     From a 1d Vector with the cluster classification of the pairs,
     generate for each cluster a number of sample pairs (questions).
@@ -17,7 +17,7 @@ class SimpleQuestions(_Questions):
         Args:
             n_questions (int): number of lr_explore to be asked for each cluster
         """
-        _Questions.__init__(self, n_questions=n_questions)
+        QuestionsMixin.__init__(self, n_questions=n_questions)
 
     def fit(self, X, y=None):
         """
@@ -36,7 +36,7 @@ class SimpleQuestions(_Questions):
         return self
 
 
-    def predict(self, X):
+    def transform(self, X):
         """
         Args:
             X (pd.Series): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs

@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.base import TransformerMixin
 
 
-class _Questions(TransformerMixin):
+class QuestionsMixin(TransformerMixin):
     """
     Base class for the Simple Questions and Hard Questions.
     For each cluster of the self.clusters, will generate at most self.n_questions
@@ -42,7 +42,7 @@ class _Questions(TransformerMixin):
             questions = questions.union(sample_ix)
         return questions
 
-    def predict(self, X):
+    def transform(self, X):
         """
         Generate sample indexes.
         Args:

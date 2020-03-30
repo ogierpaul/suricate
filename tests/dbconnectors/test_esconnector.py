@@ -43,7 +43,7 @@ def test_init(esconnectornew):
 
 def test_empty_create_index():
     esclient = elasticsearch.Elasticsearch()
-    nrows =400
+    nrows =200
     if True:
         right = getright(nrows=nrows)
         try:
@@ -73,7 +73,7 @@ def test_empty_create_index():
         esclient.indices.create(index="right", body=request_body)
         index_with_es(client=esclient, df=right, index="right", ixname="ix", reset_index=True, doc_type='_doc')
         import time
-        time.sleep(1)
+        time.sleep(5)
     pass
     catcount = esclient.count(index="right")['count']
     assert catcount == nrows

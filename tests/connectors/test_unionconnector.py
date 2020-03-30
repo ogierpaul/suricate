@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from suricate.lrdftransformers import VectorizerConnector, FuzzyConnector
+from suricate.lrdftransformers import VectorizerConnector, LrApplyComparator
 from suricate.data.base import ix_names
 from suricate.data.circus import getXlr, getytrue
 from suricate.preutils.indextools import createmultiindex
@@ -18,8 +18,8 @@ def test_makeunion_y_true():
     stages = [
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='name', analyzer='word'),
-        FuzzyConnector(on='name', compfunc='simple'),
-        FuzzyConnector(on='name', compfunc='token')
+        LrApplyComparator(on='name', compfunc='simple'),
+        LrApplyComparator(on='name', compfunc='token')
     ]
     pipe = make_union(*stages)
     pipe.fit(X=X)

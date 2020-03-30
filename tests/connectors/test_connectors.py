@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.pipeline import make_union
 
 from suricate.lrdftransformers import CartesianLr, ExactConnector, \
-    VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
+    VectorizerConnector, LrApplyComparator, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
 from suricate.data.base import ix_names
 from suricate.data.foo import getleft, getright, getXsbs, getXlr, getytrue
 left = getleft()
@@ -159,7 +159,7 @@ def test_fuzzy():
     ixname = ix_names['ixname']
     lsuffix = ix_names['lsuffix']
     rsuffix = ix_names['rsuffix']
-    connector = FuzzyConnector(
+    connector = LrApplyComparator(
         on='name',
         ixname=ixname,
         lsuffix=lsuffix,
@@ -175,7 +175,7 @@ def test_fuzzy_2():
     ixname = ix_names['ixname']
     lsuffix = ix_names['lsuffix']
     rsuffix = ix_names['rsuffix']
-    connector = FuzzyConnector(
+    connector = LrApplyComparator(
         on='name',
         ixname=ixname,
         lsuffix=lsuffix,

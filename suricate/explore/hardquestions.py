@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 from suricate.explore import cluster_composition
-from suricate.explore.questions import _Questions
+from suricate.explore.base import QuestionsMixin
 
 
-class HardQuestions(_Questions):
+class HardQuestions(QuestionsMixin):
     """
     From:
     - a 1d Vector with the cluster classification of the pairs
@@ -23,7 +23,7 @@ class HardQuestions(_Questions):
     frontier between matches and non-matches.
     """
     def __init__(self, n_questions=10):
-        _Questions.__init__(self, n_questions=n_questions)
+        QuestionsMixin.__init__(self, n_questions=n_questions)
         self.n_questions = n_questions
         # number of unique clusters
         self.n_clusters = None
@@ -103,7 +103,7 @@ class HardQuestions(_Questions):
 
         return self
 
-    def predict(self, X):
+    def transform(self, X):
         """
         Args:
             X (pd.Series): Vector of shape (n_pairs, 1) or (n_pairs,) with the cluster classifications of the pairs

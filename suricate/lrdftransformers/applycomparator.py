@@ -4,7 +4,7 @@ from suricate.lrdftransformers.base import LrDfTransformerMixin
 from suricate.preutils.scores import exact_score, simple_score, token_score, contains_score, vincenty_score
 
 
-class FuzzyConnector(LrDfTransformerMixin):
+class LrApplyComparator(LrDfTransformerMixin):
     def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
                  scoresuffix='fuzzy', compfunc='simple', **kwargs):
         """
