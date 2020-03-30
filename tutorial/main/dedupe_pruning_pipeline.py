@@ -51,16 +51,23 @@ y_true = getytrue().loc[ixc]
 print(y_true.value_counts())
 print(pd.datetime.now(), 'data loaded')
 
-
-## Define the pruning pipe
-pipe = PruningPipe(
-    connector=LrDfConnector(
+## Explore the data:
+connector = LrDfConnector(
         scorer=Pipeline(steps=[
             ('scores', FeatureUnion(_lr_score_list)),
             ('imputer', SimpleImputer(strategy='constant', fill_value=0))]
         )
-    ),
-    pruningclf=Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster)),
+    )
+explorer = Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster), n_simple=n_simplequestions, n_hard=n_pointedquestions)
+explorerpipe.fit_first(Xlr)
+simple_questions = explorerpipe.simple_questions(X)
+explorerpipe.fit_supervized(Xlr, y_true)
+y_true = explorerpipe.hard_questions(X)
+
+## Define the pruning pipe
+pipe = PruningPipe(
+    connector=connector,
+    pruningclf=explorer,
     sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
     classifier=LogisticRegressionCV()
 )

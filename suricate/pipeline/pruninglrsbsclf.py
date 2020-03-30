@@ -8,7 +8,7 @@ from suricate.pipeline.pipelrclf import PipeLrClf
 from suricate.pipeline.pipesbsclf import PipeSbsClf
 from suricate.preutils import concatixnames, createmultiindex
 
-# TODO: Seems obsolete
+# TODO: IsObsolete
 
 class PruningLrSbsClf(ClassifierMixin):
     def __init__(self,
