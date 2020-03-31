@@ -130,5 +130,13 @@ def test_transform(esconnectornew):
     assert isinstance(X, pd.DataFrame)
     assert X.shape[1] == 2
 
-
+def test_getsbs(esconnectornew):
+    df_left = getleft(nrows=50)
+    Xtc = esconnectornew.fit_transform(X=df_left)
+    ix = Xtc.index
+    X_sbs = esconnectornew.getsbs(X=df_left, on_ix=ix)
+    assert X_sbs.index.equals(ix)
+    for c in df_left.columns:
+        assert c + '_left' in X_sbs.columns
+    return True
 

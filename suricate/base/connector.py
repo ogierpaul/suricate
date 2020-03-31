@@ -41,8 +41,8 @@ class ConnectorMixin(TransformerMixin):
         """
 
         Args:
-            X:
-            on_ix (pd.MultiIndex):
+            X: input data
+            on_ix (pd.MultiIndex): Optional, specify the index on which you want the side-by-side view
 
         Returns:
             pd.DataFrame
@@ -73,6 +73,18 @@ class ConnectorMixin(TransformerMixin):
             pd.DataFrame
         """
         return pd.DataFrame()
+
+    def fit_transform(self, X, y=None, **fit_params):
+        """
+        Will send back the similarity matrix of the connector with the index as DataFrame
+        Args:
+            X: input data
+            y:
+            **fit_params:
+
+        Returns:
+            pd.DataFrame
+        """
 
     def multiindex21column(self, on_ix, sep='-'):
         """

@@ -58,12 +58,11 @@ connector = LrDfConnector(
             ('imputer', SimpleImputer(strategy='constant', fill_value=0))]
         )
     )
+
 explorer = Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster), n_simple=n_simplequestions, n_hard=n_pointedquestions)
-#TODO: Create that explorer pipe
-explorerpipe.fit_first(Xlr)
-simple_questions = explorerpipe.simple_questions(X)
-explorerpipe.fit_supervized(Xlr, y_true)
-y_true = explorerpipe.hard_questions(X)
+
+Xtc = connector.fit_transform(X=Xlr)
+
 
 ## Define the pruning pipe
 pipe = PruningPipe(
