@@ -8,6 +8,7 @@ class Explorer(ClassifierMixin):
     """
     Most important piece of the explorer module.
     The Explorer class is a classifier that:
+    * Takes as input a score matrix or similarity matrix
     * Using the cluster class provided, cluster the data according to the similarity matrix provided
     * Using the SimpleQuestions and HardQuestions classes, generate indexes of pairs needed
     * Using the ClusterClassifier class, classify the input data as a match or potentially not a match
@@ -33,7 +34,7 @@ class Explorer(ClassifierMixin):
             rsuffix=self.rsuffix
         )
         if clustermixin is None:
-            clustermixin = KBinsCluster(n_clusters=25)
+            clustermixin = KBinsCluster(n_clusters=10)
         self._clustermixin = clustermixin
         self._simplequestions = SimpleQuestions(n_questions=n_simple)
         self._hardquestions = HardQuestions(n_questions=n_hard)
