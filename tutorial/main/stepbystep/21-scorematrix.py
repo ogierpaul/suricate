@@ -5,8 +5,9 @@ import pandas as pd
 escon = getesconnector()
 engine = create_engine_ready()
 
-nrows = 10
-df_left = pd.read_sql(sql="SELECT * FROM df_left LIMIT {}".format(nrows), con=engine)
+# nrows = 10
+# df_left = pd.read_sql(sql="SELECT * FROM df_left LIMIT {}".format(nrows), con=engine)
+df_left = pd.read_sql(sql="SELECT * FROM df_left", con=engine)
 df_left.set_index('ix', drop=True, inplace=True)
 Xtc = escon.fit_transform(X=df_left)
 ix = Xtc.index

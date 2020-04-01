@@ -74,12 +74,11 @@ class Explorer(ClassifierMixin):
         generate for each cluster a number of sample pairs (questions).
         If fit_cluster is True, fits the ClusterMixIn on X first.
         Args:
-            X (pd.DataFrame): score matrix with index
-            ix (pd.Index): index of X. Important to generate the index of the questions.
+            X (pd.DataFrame): score matrix with index (MultiIndex)
             fit_cluster (bool): Fit the clustermixin on X, default False
 
         Returns:
-            pd.Index
+            pd.MultiIndex
         """
         if fit_cluster is True:
             self.fit_cluster(X=X)

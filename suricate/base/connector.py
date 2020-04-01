@@ -103,3 +103,19 @@ class ConnectorMixin(TransformerMixin):
         df[self.ixname] = df[[self.ixnameleft, self.ixnameright]].astype(str).agg(str(sep).join, axis=1)
         df.set_index(self.ixname, inplace=True, drop=True)
         return df.index
+
+def multiindex21column(on_ix, sep='-', ixname='ix', ixnameleft='ix_left', ixnameright='ix_right'):
+    """
+
+    Args:
+        on_ix (pd.MultiIndex): two level multi index (ix_left, ix_right)
+        sep: separator
+
+    Returns:
+        pd.Index: name 'ix', concatenation of ix_left, sep, on ix_right
+    """
+    df = pd.DataFrame(index=on_ix)
+    df.reset_index(inplace=True, drop=False)
+    df[ixname] = df[[ixnameleft, ixnameright]].astype(str).agg(str(sep).join, axis=1)
+    df.set_index(ixname, inplace=True, drop=True)
+    return df.index
