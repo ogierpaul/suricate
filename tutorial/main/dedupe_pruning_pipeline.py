@@ -5,8 +5,6 @@ from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactC
 from suricate.sbsdftransformers import FuncSbsComparator
 from suricate.preutils import createmultiindex
 
-
-
 import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
@@ -37,9 +35,9 @@ _sbs_score_list = [
 ]
 
 n_rows = 500 # Number of rows to compare in each datasets
-n_cluster = 25 # Number of clusters used in the exploratory step
-n_simplequestions = 50 # Number of questions per cluster
-n_pointedquestions = 50 # Number of additional questions for clusters with mixed matches
+n_cluster = 10 # Number of clusters used in the exploratory step
+n_simplequestions = 100 # Number of questions per cluster
+n_pointedquestions = 100 # Number of additional questions for clusters with mixed matches
 
 
 ##Load the data
@@ -58,10 +56,26 @@ connector = LrDfConnector(
             ('imputer', SimpleImputer(strategy='constant', fill_value=0))]
         )
     )
-
+### Fit the cluster non-supervizes
 explorer = Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster), n_simple=n_simplequestions, n_hard=n_pointedquestions)
-
 Xtc = connector.fit_transform(X=Xlr)
+explorer.fit_cluster(X=Xtc)
+
+### Ask simple questions
+ix_simple = explorer.ask_simple(X=Xtc)
+Sbs_simple = connector.getsbs(X=Xlr, on_ix=ix_simple)
+y_simple = y_true.loc[ix_simple]
+
+### Fit the cluser with supervized data
+explorer.fit(X=Xtc, y=y_simple, fit_cluster=False)
+
+### Ask hard (pointed) questions
+ix_hard = explorer.ask_hard(X=Xtc, y=y_simple)
+Sbs_hard = connector.getsbs(X=Xlr, on_ix=ix_hard)
+y_hard = y_true.loc[ix_hard]
+
+### Obtain the results of the labels
+y_questions = y_true.loc[ix_hard.union(ix_simple)]
 
 
 ## Define the pruning pipe
@@ -71,7 +85,7 @@ pipe = PruningPipe(
     sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
     classifier=LogisticRegressionCV()
 )
-pipe.fit(X=Xlr, y=y_true)
+pipe.fit(X=Xlr, y=y_questions)
 
 ## Predict
 y_pred = pipe.predict(X=Xlr)
