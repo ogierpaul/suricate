@@ -1,1 +1,1 @@
-SELECT COUNT(*)
+SELECT * FROM df_right LIMIT 5;
