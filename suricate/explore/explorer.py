@@ -126,7 +126,8 @@ class Explorer(ClassifierMixin):
         if fit_cluster is True:
             self.fit_cluster(X=X)
         y_cluster = pd.Series(data=self._clustermixin.predict(X=X), index=X.index)
-        self._clusterclassifier.fit(X=y_cluster, y=y)
+        if not y is None:
+            self._clusterclassifier.fit(X=y_cluster, y=y)
         return self
 
 
