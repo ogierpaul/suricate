@@ -85,6 +85,8 @@ class ConnectorMixin(TransformerMixin):
         Returns:
             pd.DataFrame
         """
+        self.fit(X=X, y=y, **fit_params)
+        return self.transform(X=X)
 
     def multiindex21column(self, on_ix, sep='-'):
         """
@@ -98,6 +100,6 @@ class ConnectorMixin(TransformerMixin):
         """
         df = pd.DataFrame(index=on_ix)
         df.reset_index(inplace=True, drop=False)
-        df[self.ixname] = df[self.ixnameleft] + sep + df[self.ixnameright]
+        df[self.ixname] = df[[self.ixnameleft, self.ixnameright]].astype(str).agg(str(sep).join, axis=1)
         df.set_index(self.ixname, inplace=True, drop=True)
         return df.index
