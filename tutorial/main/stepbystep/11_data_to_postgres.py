@@ -10,8 +10,8 @@ engine = create_engine_ready()
 
 from suricate.data.companies import getleft, getright
 
-df_left=getleft(nrows=200)
-df_right = getright(nrows=None)
+df_left_raw=getleft(nrows=None)
+df_right_raw = getright(nrows=None)
 
 def prepare_left(df):
     """
@@ -37,8 +37,8 @@ def prepare_right(df):
     df2 = df
     return df2
 
-df_left = prepare_left(df_left)
-df_right = prepare_right(df_right)
+df_left = prepare_left(df_left_raw)
+df_right = prepare_right(df_right_raw)
 assert df_left.columns.equals(df_right.columns)
 print(df_left.shape[0])
 print(df_right.shape[0])

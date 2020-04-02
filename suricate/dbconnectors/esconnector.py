@@ -4,6 +4,7 @@ import pandas as pd
 from suricate.base import ConnectorMixin
 from suricate.lrdftransformers.cartesian import create_lrdf_sbs
 import numpy as np
+import time
 
 ixname = 'ix'
 ixname_left = 'ix_left'
@@ -335,6 +336,7 @@ def index_with_es(client, df, index, doc_type="_doc", ixname='ix', reset_index=T
     dump = df_to_dump(df=df, reset_index=reset_index, ixname=ixname)
     for d in dump:
         client.index(index=index, body=d['body'], id=d[ixname], doc_type=doc_type)
+    time.sleep(5)
     pass
 
 

@@ -3,11 +3,13 @@ import pandas as pd
 from suricate.dbconnectors.esconnector import index_with_es
 from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 engine = create_engine_ready()
+import time
 
-nrows = 200
 
-## Load the Right data from sql
-df_right = pd.read_sql(sql="SELECT * FROM df_right LIMIT {}".format(nrows), con=engine)
+## Load the Right data from sql to put it to ES
+# nrows = 200
+# df_right = pd.read_sql(sql="SELECT * FROM df_right LIMIT {}".format(nrows), con=engine)
+df_right = pd.read_sql(sql="SELECT * FROM df_right", con=engine)
 df_right.set_index('ix', drop=True, inplace=True)
 
 ## Put the data to ES, drop the index first and then re create
@@ -32,16 +34,15 @@ if True:
                     "street": {"type": "text"},
                     "city": {"type": "text"},
                     "postalcode": {"type": "text"},
-                    "countrycode": {"type": "keyword"},
-                    "duns": {"type": "text"}
+                    "countrycode": {"type": "keyword"}
                 }
             }
         }
     }
     esclient.indices.create(index=es_indice, body=request_body)
     index_with_es(client=esclient, df=df_right, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
-    import time
     time.sleep(5)
 pass
 catcount = esclient.count(index=es_indice)['count']
-assert catcount == nrows
+assert catcount == df_right.shape[0]
+print(catcount)

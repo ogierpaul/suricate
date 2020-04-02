@@ -17,30 +17,15 @@ GROUP BY
 ORDER BY avg_score DESC;
 
 
-WITH possible_false_positives AS (
+WITH possible_problems AS (
     SELECT ix, avg_score, cluster_output.y_true
-    FROM
-    cluster_output
-    WHERE
-    avg_score>20 AND avg_score <35
-    AND cluster_output.y_true = 0)
+    FROM cluster_output
+    WHERE (avg_score > 35 AND cluster_output.y_true = 0)
+       OR (avg_score < 15 AND cluster_output.y_true = 1)
+)
 SELECT
     *
 FROM
-     possible_false_positives
-LEFT JOIN es_sbs USING(ix)
-ORDER BY avg_score DESC;
-
-WITH possible_false_negatives AS (
-    SELECT ix, avg_score, cluster_output.y_true
-    FROM
-    cluster_output
-    WHERE
-    avg_score <20
-    AND cluster_output.y_true = 1)
-SELECT
-    *
-FROM
-     possible_false_negatives
+     possible_problems
 LEFT JOIN es_sbs USING(ix)
 ORDER BY avg_score DESC;

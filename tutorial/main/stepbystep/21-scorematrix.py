@@ -19,3 +19,5 @@ for x in Xtc, Xsbs:
     x.set_index('ix',drop=False)
 Xtc.to_sql(name='es_scores', con=engine, if_exists='replace')
 Xsbs.to_sql(name='es_sbs', con=engine, if_exists='replace')
+print(df_left.shape[0])
+print(Xsbs.shape[0])
