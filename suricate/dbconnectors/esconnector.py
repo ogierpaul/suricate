@@ -130,9 +130,6 @@ class EsConnector(ConnectorMixin):
 
     def transform(self, X):
         """
-        # TODO: check use of suffixes and column names
-        # TODO: We only take score information at the moment
-        # TODO: Check why we have so low recall and precision rate
         Args:
             X (pd.DataFrame): left data
 

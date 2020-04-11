@@ -15,6 +15,5 @@ Testing resume:
 * Guest cannot run query, even though the rights have been given to him in the user interface, neither in the workspace nor through the API
 * The issue potentially lies with the blocking of query rights for the guest mode
 
-
-
+http://localhost:3000/guest?populate=queryId&item_id=4&query_parameters={"nodeid":1}
 
