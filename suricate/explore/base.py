@@ -55,3 +55,42 @@ class QuestionsMixin(TransformerMixin):
 
     def fit_predict(self,X, y=None):
         return self.fit_transform(X, y=y)
+
+def cluster_stats(X, y_cluster, y_true):
+    """
+
+    Args:
+        X (pd.DataFrame): similarity matrix (n_samples, n_features)
+        y_cluster (pd.Series): y_cluster (n_samples, )
+        y_true (pd.Series): y_true, labelled data (n_y_true, )
+    Returns:
+        pd.DataFrame: (n_clusters, 2):
+    """
+    y_avg_score = pd.Series(data=X.mean(axis=1), name='avg_score', index=X.index)
+    X = pd.DataFrame(index=X.index)
+    X['y_cluster'] = y_cluster
+    X['avg_score'] = y_avg_score
+    X_pivot = pd.pivot_table(data=X, index='y_cluster', values='avg_score', aggfunc=np.mean)
+    X_matches = cluster_matches(y_cluster=y_cluster, y_true=y_true, normalize=False)
+    y_pct_match = X_matches[1]/(X_matches[0]+ X_matches[1])
+    X_pivot['pct_match'] = y_pct_match
+    X_pivot.sort_values(by='pct_match', ascending=False, inplace=True)
+    return X_pivot
+
+
+def cluster_matches(y_cluster, y_true, normalize='index'):
+    """
+
+    Args:
+        y_cluster (pd.Series): series with index
+        y_true (pd.Series): series with index
+        normalize:
+
+    Returns:
+        pd.DataFrame: cols [0,1], index = (n_clusters)
+    """
+    ix_common = y_cluster.index.intersection(y_true.index)
+    df = pd.crosstab(index=y_cluster.loc[ix_common], columns=y_true.loc[ix_common], normalize=normalize)
+    df.sort_values(by=1, ascending=False, inplace=True)
+    assert isinstance(df, pd.DataFrame)
+    return df

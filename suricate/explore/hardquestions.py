@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from suricate.explore import cluster_composition
+from suricate.explore import cluster_matches
 from suricate.explore.base import QuestionsMixin
 
 
@@ -65,7 +65,7 @@ class HardQuestions(QuestionsMixin):
         self.n_clusters = np.unique(X).shape[0]
 
         # clusters composition, how many matches have been found, from y_true (supervised data)
-        df_cluster_composition = cluster_composition(y_cluster=X, y_true=y)
+        df_cluster_composition = cluster_matches(y_cluster=X, y_true=y)
 
         # clusters where no match has been found
         self.nomatch = df_cluster_composition.loc[

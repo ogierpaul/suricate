@@ -21,7 +21,7 @@ class KBinsCluster(ClusterMixin):
             X (pd.DataFrame/np.ndarray): raw score input
 
         Returns:
-            ScoreCluster
+            ClusterMixin
         """
         self.kb.fit(X=self._sumscore(X=X))
         self.fitted = True

@@ -13,7 +13,7 @@ from suricate.preutils import createmultiindex
 # ESCONNECTOR
 from suricate.dbconnectors import EsConnector
 import elasticsearch
-from suricate.preutils.metrics import get_commonscores
+from suricate.metrics.metrics import get_commonscores
 
 _lr_score_list = [
     ('name_vecword', VectorizerConnector(on='name', analyzer='word', ngram_range=(1, 2))),

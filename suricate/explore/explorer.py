@@ -1,6 +1,7 @@
 from sklearn.base import TransformerMixin, ClusterMixin, ClassifierMixin
 import pandas as pd
-from suricate.explore import SimpleQuestions, HardQuestions, ClusterClassifier, cluster_composition, KBinsCluster
+import numpy as np
+from suricate.explore import SimpleQuestions, HardQuestions, ClusterClassifier, KBinsCluster
 from suricate.preutils import concatixnames
 
 
@@ -13,7 +14,7 @@ class Explorer(ClassifierMixin):
     * Using the SimpleQuestions and HardQuestions classes, generate indexes of pairs needed
     * Using the ClusterClassifier class, classify the input data as a match or potentially not a match
     """
-    def __init__(self, clustermixin=None, n_simple = 10, n_hard=10, ixname='ix', lsuffix='left', rsuffix='right'):
+    def  __init__(self, clustermixin=None, n_simple = 10, n_hard=10, ixname='ix', lsuffix='left', rsuffix='right'):
         """
 
         Args:
@@ -155,7 +156,7 @@ class Explorer(ClassifierMixin):
         """
         Same as self.predict
         Args:
-            X (pd.DataFrame/np.ndarray):
+            X (pd.DataFrame/np.ndarray): similarity matrix
 
         Returns:
             np.ndarray: (0 for sure non matches, 1 for mixed matches, 2 for sure positive matches)

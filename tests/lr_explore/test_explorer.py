@@ -1,5 +1,5 @@
 from suricate.data.companies import getXlr, getytrue
-from suricate.explore import Explorer, KBinsCluster
+from suricate.explore import Explorer, KBinsCluster, cluster_matches, cluster_stats
 from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactConnector
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
@@ -114,5 +114,18 @@ def test_pruning():
     print('***\npruning scores:\n')
     print('precision score:{}\n recall score:{}\n balanced accuracy score:{}'.format(
         precision, recall, accuracy))
+
+def test_cluster_composition():
+    X = pd.DataFrame(
+        data={
+            'name_score': [0, 0.2, 0.3, 0.5, 0.9, 1.0],
+            'street_score': [0.1, 0.25, 0.5, 0.5, 0.8, 0.95],
+              },
+        index=list('abcdef')
+    )
+    y_cluster = pd.Series(data=[0, 0, 0, 1, 1, 1], index=list('abcdef'), name='y_cluster')
+    y_true = pd.Series(data=[0, 0, 1, 1, 1], index=['a', 'b', 'c', 'e', 'f'], name='y_true')
+    print(cluster_matches(y_cluster=y_cluster, y_true=y_true))
+    print(cluster_stats(X=X, y_cluster=y_cluster, y_true=y_true))
 
 

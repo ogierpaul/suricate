@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
-
+from suricate.explore import cluster_matches
 from suricate.preutils import concatixnames
 
 
@@ -69,7 +69,7 @@ class ClusterClassifier(ClassifierMixin):
         self.clusters = np.unique(X)
 
         # clusters composition, how many matches have been found, from y_true (supervised data)
-        df_cluster_composition = cluster_composition(y_cluster=X, y_true=y)
+        df_cluster_composition = cluster_matches(y_cluster=X, y_true=y)
 
         # clusters where no match has been found
         self.nomatch = df_cluster_composition.loc[
@@ -144,19 +144,3 @@ def _check_ncluster_nquestions(n_questions, n_pairs, n_clusters):
     else:
         return True
 
-def cluster_composition(y_cluster, y_true, normalize='index'):
-    """
-
-    Args:
-        y_cluster (pd.Series): series with index
-        y_true (pd.Series): series with index
-        normalize:
-
-    Returns:
-
-    """
-    ix_common = y_cluster.index.intersection(y_true.index)
-    df = pd.crosstab(index=y_cluster.loc[ix_common], columns=y_true.loc[ix_common], normalize=normalize)
-    df.sort_values(by=1, ascending=False, inplace=True)
-    assert isinstance(df, pd.DataFrame)
-    return df

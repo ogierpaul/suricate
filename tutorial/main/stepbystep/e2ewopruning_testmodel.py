@@ -1,0 +1,121 @@
+from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from suricate.data.companies import getleft, getright
+import pandas as pd
+import  numpy as np
+
+engine = create_engine_ready()
+
+# filefolder = '~/'
+# leftpath = 'left.csv'
+# rightpath = 'right.csv'
+# df_left = pd.read_csv(filefolder + leftpath, index_col=0, sep='|', encoding='utf-8')
+# df_right = pd.read_csv(filefolder + rightpath, index_col=0, sep='|', encoding='utf-8')
+df_left_raw = getleft(nrows=None)
+df_right_raw = getright(nrows=None)
+
+
+from sklearn.model_selection import train_test_split
+
+def rebuild_ytrue(ix):
+    y_true_saved = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true.y_true = 1", con=engine).set_index(
+        ['ix_left', 'ix_right'],
+        drop=True)['y_true']
+    y = pd.Series(index=ix, data = np.zeros(shape=len(ix)), name='y_true')
+    ix_common = y_true_saved.index.intersection(ix)
+    y.loc[ix_common] = y_true_saved.loc[ix_common]
+    return y
+
+
+def prepare_left(df):
+    """
+
+    Args:
+        df:
+
+    Returns:
+        pd.DataFrame
+    """
+    df2 = df
+    return df2
+
+
+def prepare_right(df):
+    """
+
+    Args:
+        df:
+
+    Returns:
+        pd.DataFrame
+    """
+    df2 = df
+    return df2
+
+
+df_left = prepare_left(df_left_raw)
+df_right = prepare_right(df_right_raw)
+assert df_left.columns.equals(df_right.columns)
+print(pd.datetime.now(),' | ', 'number of rows on left:{}'.format(df_left.shape[0]))
+print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_right.shape[0]))
+
+
+import pandas as pd
+
+from tutorial.main.stepbystep.stepbysteputils.esconnector import getesconnector
+
+escon = getesconnector()
+
+
+from suricate.sbsdftransformers import FuncSbsComparator
+from sklearn.pipeline import FeatureUnion
+
+
+_sbs_score_list = [
+    ('name_fuzzy', FuncSbsComparator(on='name', comparator='fuzzy')),
+    ('street_fuzzy', FuncSbsComparator(on='street', comparator='fuzzy')),
+    ('name_token', FuncSbsComparator(on='name', comparator='token')),
+    ('street_token', FuncSbsComparator(on='street', comparator='token')),
+    ('city_fuzzy', FuncSbsComparator(on='city', comparator='fuzzy')),
+    ('postalcode_fuzzy', FuncSbsComparator(on='postalcode', comparator='fuzzy')),
+    ('postalcode_contains', FuncSbsComparator(on='postalcode', comparator='contains'))
+]
+
+scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)
+
+from suricate.pipeline import PartialClf
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import Normalizer
+from sklearn.decomposition import PCA
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import precision_score, recall_score, accuracy_score
+
+
+Xtc = escon.fit_transform(X=df_left)
+ix_con = Xtc.index
+Xsbs = escon.getsbs(X=df_left, on_ix=ix_con)
+scores_further = scorer_sbs.fit_transform(X=Xsbs)
+scores_further = pd.DataFrame(data=scores_further, index=ix_con, columns=[c[0] for c in _sbs_score_list])
+scores_further = pd.concat([Xtc[['es_score']], scores_further], axis=1, ignore_index=False)
+y_true = rebuild_ytrue(ix=ix_con)
+
+X = scores_further
+from sklearn.model_selection import cross_validate
+scoring = ['precision', 'recall', 'accuracy']
+print(pd.datetime.now(), ' | starting score')
+pipe1 = Pipeline(steps=[
+    ('Impute', SimpleImputer(strategy='constant', fill_value=0)),
+    ('Scaler', Normalizer()),
+    ('PCA', PCA(n_components=4)),
+    ('Predictor', GradientBoostingClassifier(n_estimators=1000, max_depth=5))
+])
+
+scores1 = cross_validate(estimator=pipe1, X=X, y=y_true, scoring=scoring, cv=5)
+scores2 = cross_validate(estimator=pipe2, X=X, y=y_true, scoring=scoring, cv=5)
+for c in scoring:
+    print(pd.datetime.now(), ' | {} score1: {}'.format(c, np.average(scores1['test_'+c])))
+    print(pd.datetime.now(), ' | {} score2: {}'.format(c, np.average(scores2['test_'+c])))
+
+
+
+

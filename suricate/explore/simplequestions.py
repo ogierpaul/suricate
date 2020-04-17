@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from sklearn.base import TransformerMixin
 from suricate.explore.base import QuestionsMixin
 
 class SimpleQuestions(QuestionsMixin):

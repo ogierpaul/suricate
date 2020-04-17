@@ -1,7 +1,7 @@
 import pandas as pd
 
 from suricate.lrdftransformers.base import LrDfTransformerMixin
-from suricate.preutils.scores import exact_score, simple_score, token_score, contains_score, vincenty_score
+from suricate.preutils.similarityscores import exact_score, simple_score, token_score, contains_score, vincenty_score
 
 
 class LrApplyComparator(LrDfTransformerMixin):

@@ -1,6 +1,6 @@
 from sklearn.base import TransformerMixin
 
-from suricate.preutils.scores import exact_score, simple_score, token_score, vincenty_score, contains_score
+from suricate.preutils.similarityscores import exact_score, simple_score, token_score, vincenty_score, contains_score
 from suricate.sbsdftransformers.base import BaseSbsComparator
 
 

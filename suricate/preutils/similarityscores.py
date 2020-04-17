@@ -1,7 +1,7 @@
 import pandas as pd
 from fuzzywuzzy.fuzz import ratio as simpleratio, token_sort_ratio as tokenratio
 from geopy.distance import vincenty
-from suricate.preutils.metrics import navalue_score
+from suricate.metrics.metrics import navalue_score
 
 
 def exact_score(left, right):
