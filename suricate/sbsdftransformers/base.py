@@ -32,12 +32,9 @@ class BaseSbsComparator(TransformerMixin):
         Returns:
             np.ndarray
         """
-        if self.n_jobs == 1:
-            return self._stransform(X)
-        else:
-            return self._ptransform(X)
+        return self._transform(X)
 
-    def _stransform(self, X):
+    def _transform(self, X):
         """
         Pandas apply function on rows (axis=1).
         Args:
@@ -55,23 +52,6 @@ class BaseSbsComparator(TransformerMixin):
         ).values.reshape(-1, 1)
         return y
 
-    def _ptransform(self, X):
-        #TODO: Remove
-        """
-        Use of dask dataframe API to parall
-        Args:
-            X:
-
-        Returns:
-            np.array
-        """
-        y = dd.from_pandas(
-            X.reset_index(drop=True),
-            npartitions=self.n_jobs
-        ).map_partitions(
-            func=self.transform
-        )
-        return y
 
     def fit(self, *_):
         return self
