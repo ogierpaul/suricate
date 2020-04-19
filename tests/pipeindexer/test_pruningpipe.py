@@ -1,7 +1,7 @@
 from suricate.pipeline.pruningpipe import PruningPipe
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 from suricate.explore import Explorer, KBinsCluster
-from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactConnector
+from suricate.dftransformers import DfConnector, VectorizerConnector, ExactConnector
 from suricate.sbsdftransformers import FuncSbsComparator
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
@@ -41,13 +41,13 @@ def test_pruningpipe():
     n_cluster = 25
     n_simplequestions = 50
     n_pointedquestions = 50
-    Xlr = getXlr(nrows=n_rows)
-    ixc = createmultiindex(X=Xlr)
+    Xst = getXst(nrows=n_rows)
+    ixc = createmultiindex(X=Xst)
     y_true = getytrue()
     y_true = y_true.loc[ixc]
     print(pd.datetime.now(), 'data loaded')
     pipe = PruningPipe(
-        connector=LrDfConnector(
+        connector=DfConnector(
             scorer=Pipeline(steps=[
                 ('scores', FeatureUnion(_lr_score_list)),
                 ('imputer', SimpleImputer(strategy='constant', fill_value=0))]
@@ -57,8 +57,8 @@ def test_pruningpipe():
         sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
         classifier=LogisticRegressionCV()
     )
-    pipe.fit(X=Xlr, y=y_true)
-    y_pred = pipe.predict(X=Xlr)
+    pipe.fit(X=Xst, y=y_true)
+    y_pred = pipe.predict(X=Xst)
     precision = precision_score(y_true=y_true, y_pred=y_pred)
     recall = recall_score(y_true=y_true, y_pred=y_pred)
     accuracy = balanced_accuracy_score(y_true=y_true, y_pred=y_pred)
@@ -71,8 +71,8 @@ def test_esconnector():
     print('start', pd.datetime.now())
     n_rows = 500
     n_cluster = 25
-    Xlr = getXlr(nrows=n_rows)
-    left = Xlr[0]
+    Xst = getXst(nrows=n_rows)
+    left = Xst[0]
     esclient = elasticsearch.Elasticsearch()
     scoreplan = {
         'name': {
@@ -101,7 +101,7 @@ def test_esconnector():
         explain=False,
         size=20
     )
-    ixc = createmultiindex(X=Xlr)
+    ixc = createmultiindex(X=Xst)
     y_true = getytrue()
     y_true = y_true.loc[ixc]
     print(pd.datetime.now(), 'data loaded')

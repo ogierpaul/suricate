@@ -8,14 +8,14 @@ engine = create_engine_ready()
 n_questions = 100
 
 # nrows = 50
-# Xtc = pd.read_sql(sql="SELECT * FROM es_scores LIMIT {}".format(nrows), con=engine).set_index(['ix_left', 'ix_right'], drop=True)[['ix', 'es_score']]
-# Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs LIMIT {}".format(nrows), con=engine).set_index(['ix_left', 'ix_right'], drop=True)
-Xtc = pd.read_sql(sql="SELECT * FROM es_scores", con=engine).set_index(['ix_left', 'ix_right'], drop=True)[['ix', 'es_score']]
-Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs", con=engine).set_index(['ix_left', 'ix_right'], drop=True)
+# Xtc = pd.read_sql(sql="SELECT * FROM es_scores LIMIT {}".format(nrows), con=engine).set_index(['ix_source', 'ix_target'], drop=True)[['ix', 'es_score']]
+# Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs LIMIT {}".format(nrows), con=engine).set_index(['ix_source', 'ix_target'], drop=True)
+Xtc = pd.read_sql(sql="SELECT * FROM es_scores", con=engine).set_index(['ix_source', 'ix_target'], drop=True)[['ix', 'es_score']]
+Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs", con=engine).set_index(['ix_source', 'ix_target'], drop=True)
 
 
 # REBUILD Y_true
-y_true = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true.y_true = 1", con=engine).set_index(['ix_left', 'ix_right'], drop=True)
+y_true = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true.y_true = 1", con=engine).set_index(['ix_source', 'ix_target'], drop=True)
 y_truetemp=Xtc[['ix']]
 y_truetemp['y_true']=0
 y_truetemp.loc[y_true.index.intersection(Xtc.index), 'y_true'] = y_true.loc[y_true.index.intersection(Xtc.index), 'y_true']
@@ -34,7 +34,7 @@ X_cluster['y_true'] = y_true['y_true']
 X_cluster['ix']=Xtc['ix']
 X_cluster.reset_index(inplace=True, drop=False)
 X_cluster.set_index('ix', inplace=True)
-X_cluster = X_cluster[[ 'ix_left', 'ix_right', 'avg_score', 'y_cluster','y_true']]
+X_cluster = X_cluster[[ 'ix_source', 'ix_target', 'avg_score', 'y_cluster','y_true']]
 X_cluster.to_sql('cluster_output', con=engine, if_exists='replace')
 
 ### Ask simple questions

@@ -20,13 +20,13 @@ myscores = {
 def test_simplescore():
     df = X_sbs.copy()
     for k in myscores.keys():
-        df[k] = df.apply(lambda r: myscores[k](r['name_left'], r['name_right']), axis=1)
+        df[k] = df.apply(lambda r: myscores[k](r['name_source'], r['name_target']), axis=1)
     print(df.transpose())
     assert True
 
 def test_contain():
     df = X_sbs.copy()
-    y = df.apply(lambda r: contains_score(r['name_left'], r['name_right']), axis=1)
+    y = df.apply(lambda r: contains_score(r['name_source'], r['name_target']), axis=1)
     print(y)
     assert True
 

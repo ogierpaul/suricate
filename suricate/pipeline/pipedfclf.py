@@ -5,13 +5,13 @@ from sklearn.base import TransformerMixin, ClassifierMixin
 from suricate.preutils import concatixnames, createmultiindex, addsuffix
 
 # THIS SHOULD BE OBSOLETE
-class PipeLrClf(ClassifierMixin):
+class PipeDfClf(ClassifierMixin):
     def __init__(self,
                  transformer,
                  classifier,
                  ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
+                 source_suffix='source',
+                 target_suffix='target',
                  **kwargs):
         """
 
@@ -19,19 +19,19 @@ class PipeLrClf(ClassifierMixin):
             transformer (TransformerMixin): Transformer --> CLF
             classifier (ClassifierMixin):
             ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            source_suffix (str):
+            target_suffix (str):
             n_jobs (int):
             pruning_ths (float): return only the pairs which have a score greater than the store_ths
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.fitted = False
         self.transformer = transformer
@@ -42,8 +42,8 @@ class PipeLrClf(ClassifierMixin):
         """
         Fit the transformer
         Args:
-            X (list): list of [df_left, df_right]
-            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true}
+            X (list): list of [df_source, df_target]
+            y (pd.Series): pairs {['ix_source', 'ix_target']: y_true}
 
         Returns:
             self
@@ -56,13 +56,13 @@ class PipeLrClf(ClassifierMixin):
     def slice(self, X, X_score, y=None):
         """
         Transform X_score, output of X through the score,  into X_slice, sliced according to y_true (pd.Series)
-        X [df_left, df_right] -[scorer]-> X_score -[reindex]-> X_score.loc[y_true.index]
+        X [df_source, df_target] -[scorer]-> X_score -[reindex]-> X_score.loc[y_true.index]
         Into
         Args:
-            X (list) : is a list containing (df_left, df_right)
-            X_score (np.ndarray): X is a numpy.ndarray which is a cartesian product of df_left and df_right
+            X (list) : is a list containing (df_source, df_target)
+            X_score (np.ndarray): X is a numpy.ndarray which is a cartesian product of df_source and df_target
             y (pd.Series/np.ndarray): y is either: /
-                - pd.Series containing the supervised scores: pairs {['ix_left', 'ix_right']: y_true} which can be a slice of x
+                - pd.Series containing the supervised scores: pairs {['ix_source', 'ix_target']: y_true} which can be a slice of x
                 - numpy.ndarray of [0,1 ,0 ,1 ...] which must be same length as x
                 - None --> return X
 
@@ -108,14 +108,14 @@ class PipeLrClf(ClassifierMixin):
         Create a side by side table from a list of pairs (as a DataFrame)
         Args:
             X
-            y (pd.DataFrame/pd.Series): of the form {['ix_left', 'ix_right']:['y_true']}
+            y (pd.DataFrame/pd.Series): of the form {['ix_source', 'ix_target']:['y_true']}
             use_cols (list): columns to use
 
         Returns:
-            pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
+            pd.DataFrame {['ix_source', 'ix_target'] : ['name_source', 'name_target', .....]}
         """
-        left = X[0]
-        right = X[1]
+        source = X[0]
+        target = X[1]
 
         if y is None:
             xpairs = pd.DataFrame(index=createmultiindex(X=X, names=self.ixnamepairs))
@@ -128,16 +128,16 @@ class PipeLrClf(ClassifierMixin):
         xpairs = xpairs.reset_index(drop=False)
 
         if use_cols is None or len(use_cols) == 0:
-            use_cols = left.columns.intersection(right.columns)
-        xleft = left[use_cols].copy().reset_index(drop=False)
-        xright = right[use_cols].copy().reset_index(drop=False)
-        xleft = addsuffix(xleft, self.lsuffix).set_index(self.ixnameleft)
-        xright = addsuffix(xright, self.rsuffix).set_index(self.ixnameright)
+            use_cols = source.columns.intersection(target.columns)
+        xsource = source[use_cols].copy().reset_index(drop=False)
+        xright = target[use_cols].copy().reset_index(drop=False)
+        xsource = addsuffix(xsource, self.source_suffix).set_index(self.ixnamesource)
+        xright = addsuffix(xright, self.target_suffix).set_index(self.ixnametarget)
 
         sbs = xpairs.join(
-            xleft, on=self.ixnameleft, how='left'
+            xsource, on=self.ixnamesource, how='left'
         ).join(
-            xright, on=self.ixnameright, how='left'
+            xright, on=self.ixnametarget, how='left'
         ).set_index(
             self.ixnamepairs
         )

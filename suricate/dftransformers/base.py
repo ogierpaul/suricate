@@ -4,25 +4,25 @@ from sklearn.base import TransformerMixin
 
 from suricate.preutils import concatixnames, addsuffix, createmultiindex
 
-class LrDfTransformerMixin(TransformerMixin):
+class DfTransformerMixin(TransformerMixin):
     def __init__(self, on=None, ixname='ix',
-                 lsuffix='left', rsuffix='right', scoresuffix='score', **kwargs):
+                 source_suffix='source', target_suffix='target', scoresuffix='score', **kwargs):
         """
         Args:
             ixname (str): name of the index, default 'ix'
-            lsuffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_left'
-            rsuffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
+            source_suffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_source'
+            target_suffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
             on (str): name of the column on which to do the join
             scoresuffix (str): suffix to be attached to the on column name
         """
         TransformerMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.on = on
         self.scoresuffix = scoresuffix
@@ -37,7 +37,7 @@ class LrDfTransformerMixin(TransformerMixin):
         """
         Return the cartesian product index of both dataframes
         Args:
-            X (list): [df_left, df_right]
+            X (list): [df_source, df_target]
             y (pd.Series/pd.DataFrame/pd.MultiIndex): dummy, not used
 
         Returns:
@@ -50,10 +50,10 @@ class LrDfTransformerMixin(TransformerMixin):
         """
         Transform and add index and name to transform it into a series
         Args:
-            X (list): [df_left, df_right]
+            X (list): [df_source, df_target]
 
         Returns:
-            pd.Series: {['ix_left', 'ix_right']:score}
+            pd.Series: {['ix_source', 'ix_target']:score}
         """
         return pd.Series(
             data=self.transform(X=X),
@@ -64,15 +64,15 @@ class LrDfTransformerMixin(TransformerMixin):
         """
         Create a side by side table from a list of pairs (as a DataFrame)
         Args:
-            X (list): of the form [df_left, df_right]
-            y (pd.DataFrame/pd.Series): of the form {['ix_left', 'ix_right']:['y_true']}
+            X (list): of the form [df_source, df_target]
+            y (pd.DataFrame/pd.Series): of the form {['ix_source', 'ix_target']:['y_true']}
             use_cols (list): columns to use
 
         Returns:
-            pd.DataFrame {['ix_left', 'ix_right'] : ['name_left', 'name_right', .....]}
+            pd.DataFrame {['ix_source', 'ix_target'] : ['name_source', 'name_target', .....]}
         """
-        left = X[0]
-        right = X[1]
+        source = X[0]
+        target = X[1]
 
         if y is None:
             xpairs = pd.DataFrame(index=self._getindex(X=X))
@@ -86,15 +86,15 @@ class LrDfTransformerMixin(TransformerMixin):
 
         if use_cols is None or len(use_cols) == 0:
             use_cols = left.columns.intersection(right.columns)
-        xleft = left[use_cols].copy().reset_index(drop=False)
-        xright = right[use_cols].copy().reset_index(drop=False)
-        xleft = addsuffix(xleft, self.lsuffix).set_index(self.ixnameleft)
-        xright = addsuffix(xright, self.rsuffix).set_index(self.ixnameright)
+        xsource = left[use_cols].copy().reset_index(drop=False)
+        xtarget = right[use_cols].copy().reset_index(drop=False)
+        xsource = addsuffix(xsource, self.source_suffix).set_index(self.ixnamesource)
+        xtarget = addsuffix(xtarget, self.target_suffix).set_index(self.ixnametarget)
 
         sbs = xpairs.join(
-            xleft, on=self.ixnameleft, how='left'
+            xsource, on=self.ixnamesource, how='left'
         ).join(
-            xright, on=self.ixnameright, how='left'
+            xtarget, on=self.ixnametarget, how='left'
         ).set_index(
             self.ixnamepairs
         )
@@ -109,14 +109,14 @@ class LrDfTransformerMixin(TransformerMixin):
 
     def transform(self, X):
         """
-        X (list): [left_df, right_df]
+        X (list): [df_source, df_target]
         Returns:
-            np.ndarray: of shape(n_samples_left * n_samples_right, 1)
+            np.ndarray: of shape(n_samples_source * n_samples_target, 1)
         """
-        left = X[0]
-        right = X[1]
-        assert isinstance(left, pd.DataFrame)
-        assert isinstance(right, pd.DataFrame)
+        source = X[0]
+        target = X[1]
+        assert isinstance(source, pd.DataFrame)
+        assert isinstance(target, pd.DataFrame)
         ix = self._getindex(X=X)
         score = self._transform(X=X)
         return score
@@ -132,85 +132,85 @@ class LrDfTransformerMixin(TransformerMixin):
         """
         return np.zeros(shape=(X[0].shape[0] * X[1].shape[0], 1))
 
-    def _toseries(self, left, right, on_ix):
+    def _toseries(self, source, target, on_ix):
         """
         convert to series without nulls and copy
         Args:
-            left (pd.Series/pd.DataFrame):
-            right (pd.Series/pd.DataFrame):
+            source (pd.Series/pd.DataFrame):
+            target (pd.Series/pd.DataFrame):
 
         Returns:
             pd.Series, pd.Series
         """
-        newleft = pd.Series()
-        newright = pd.Series()
-        if isinstance(left, pd.DataFrame):
-            newleft = left[self.on].dropna().copy()
-        if isinstance(right, pd.DataFrame):
-            newright = right[self.on].dropna().copy()
-        if isinstance(left, pd.Series):
-            newleft = left.dropna().copy()
-        if isinstance(right, pd.Series):
-            newright = right.dropna().copy()
-        for s, c in zip(['left', 'right'], [left, right]):
+        newsource = pd.Series()
+        newtarget = pd.Series()
+        if isinstance(source, pd.DataFrame):
+            newsource = source[self.on].dropna().copy()
+        if isinstance(target, pd.DataFrame):
+            newtarget = target[self.on].dropna().copy()
+        if isinstance(source, pd.Series):
+            newsource = source.dropna().copy()
+        if isinstance(target, pd.Series):
+            newtarget = target.dropna().copy()
+        for s, c in zip(['source', 'target'], [source, target]):
             if not isinstance(c, pd.Series) and not isinstance(c, pd.DataFrame):
                 raise TypeError('type {} not Series or DataFrame for side {}'.format(type(c), s))
         if on_ix is not None:
-            newleft = newleft.loc[on_ix.levels[0].intersection(newleft.index)]
-            newleft.index.name = self.ixname
-            newright = newright.loc[on_ix.levels[1].intersection(newright.index)]
-            newright.index.name = self.ixname
-        return newleft, newright
+            newsource = newsource.loc[on_ix.levels[0].intersection(newsource.index)]
+            newsource.index.name = self.ixname
+            newtarget = newtarget.loc[on_ix.levels[1].intersection(newtarget.index)]
+            newtarget.index.name = self.ixname
+        return newsource, newtarget
 
-    def _todf(self, left, right, on_ix=None):
+    def _todf(self, source, target, on_ix=None):
         """
         convert to dataframe with one column withoutnulls and copy
         Args:
-            left (pd.Series/pd.DataFrame):
-            right (pd.Series/pd.DataFrame):
+            source (pd.Series/pd.DataFrame):
+            target (pd.Series/pd.DataFrame):
 
         Returns:
             pd.DataFrame, pd.DataFrame
         """
-        newleft = pd.DataFrame()
-        newright = pd.DataFrame()
-        if isinstance(left, pd.DataFrame):
+        newsource = pd.DataFrame()
+        newtarget = pd.DataFrame()
+        if isinstance(source, pd.DataFrame):
             if self.on is not None and self.on != 'none':
-                newleft = left[[self.on]].dropna(subset=[self.on]).copy()
+                newsource = source[[self.on]].dropna(subset=[self.on]).copy()
             else:
-                newleft = left.copy()
-        if isinstance(right, pd.DataFrame):
+                newsource = source.copy()
+        if isinstance(target, pd.DataFrame):
             if self.on is not None and self.on != 'none':
-                newright = right[[self.on]].dropna(subset=[self.on]).copy()
+                newtarget = target[[self.on]].dropna(subset=[self.on]).copy()
             else:
-                newright = right.copy()
+                newtarget = target.copy()
 
-        if isinstance(left, pd.Series):
-            newleft = pd.DataFrame(left.dropna().copy())
-        if isinstance(right, pd.Series):
-            newright = pd.DataFrame(right.dropna().copy())
-        for s, c in zip(['left', 'right'], [left, right]):
+        if isinstance(source, pd.Series):
+            newsource = pd.DataFrame(source.dropna().copy())
+        if isinstance(target, pd.Series):
+            newtarget = pd.DataFrame(target.dropna().copy())
+        for s, c in zip(['source', 'target'], [source, target]):
             if not isinstance(c, pd.Series) and not isinstance(c, pd.DataFrame):
                 raise TypeError('type {} not Series or DataFrame for side {}'.format(type(c), s))
         if on_ix is None:
-            return newleft, newright
+            return newsource, newtarget
         else:
-            newleft = newleft.loc[on_ix.levels[0].intersection(newleft.index)]
-            newleft.index.name = self.ixname
-            newright = newright.loc[on_ix.levels[1].intersection(newright.index)]
-            newright.index.name = self.ixname
-            return newleft, newright
+            newsource = newsource.loc[on_ix.levels[0].intersection(newsource.index)]
+            newsource.index.name = self.ixname
+            newtarget = newtarget.loc[on_ix.levels[1].intersection(newtarget.index)]
+            newtarget.index.name = self.ixname
+            return newsource, newtarget
 
-class LrDfIndexEncoder(TransformerMixin):
-    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right'):
+class DfIndexEncoder(TransformerMixin):
+    def __init__(self, ixname='ix', source_suffix='source', target_suffix='target'):
         TransformerMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.index = pd.Index
         self.dfnum = pd.DataFrame()
@@ -221,7 +221,7 @@ class LrDfIndexEncoder(TransformerMixin):
         """
 
         Args:
-            X (list): [left_df, right_df]
+            X (list): [df_source, df_target]
             y: dummy, not used
 
         Returns:

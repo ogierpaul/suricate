@@ -7,9 +7,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer, Normalizer
 
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 from suricate.explore import SimpleQuestions, HardQuestions
-from suricate.lrdftransformers import VectorizerConnector, ExactConnector, LrDfVisualHelper
+from suricate.dftransformers import VectorizerConnector, ExactConnector, DfVisualHelper
 from suricate.preutils import createmultiindex
 
 
@@ -17,7 +17,7 @@ from suricate.preutils import createmultiindex
 @pytest.fixture
 def fixture_data():
     # Load the data
-    X_lr = getXlr(nrows=200)
+    X_lr = getXst(nrows=200)
     return X_lr
 
 
@@ -84,7 +84,7 @@ def test_ask_simple_questions_return_multiindex(fixture_data, fixture_scores):
     assert ix_questions.shape[0] <= n_questions * n_clusters
     assert ix_questions.shape[0] > 0
 
-    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
+    X_sbs = DfVisualHelper().fit_transform(X=X_lr)
     X_questions = X_sbs.loc[ix_questions]
     assert X_questions.shape[0] == ix_questions.shape[0]
 
@@ -93,7 +93,7 @@ def test_build_questions_cluster_score(fixture_data, fixture_scores):
     X_lr = fixture_data
     scorer = fixture_scores
     cluster = KMeans(n_clusters=10)
-    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
+    X_sbs = DfVisualHelper().fit_transform(X=X_lr)
     X_score = scorer.fit_transform(X=X_lr)
     y_cluster = cluster.fit_predict(X=X_score)
     y_score = np.mean(X_score, axis=1)
@@ -126,7 +126,7 @@ def test_hardquestions(fixture_data, fixture_scores):
     assert ix_questions.ndim == 1
     assert ix_questions.shape[0] <= n_questions * n_clusters
     assert ix_questions.shape[0] > 0
-    X_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
+    X_sbs = DfVisualHelper().fit_transform(X=X_lr)
     X_questions = X_sbs.loc[ix_questions]
     assert X_questions.shape[0] == ix_questions.shape[0]
 

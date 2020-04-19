@@ -1,5 +1,5 @@
 import pytest
-from suricate.data.companies import getleft, getright
+from suricate.data.companies import getsource, gettarget
 from suricate.dbconnectors.esconnector import EsConnector, unpack_allhits,  index_with_es
 import elasticsearch
 import pandas as pd
@@ -45,7 +45,7 @@ def test_empty_create_index():
     esclient = elasticsearch.Elasticsearch()
     nrows =200
     if True:
-        right = getright(nrows=nrows)
+        right = gettarget(nrows=nrows)
         try:
             esclient.indices.delete(index='right')
         except:
@@ -80,26 +80,26 @@ def test_empty_create_index():
 
 def test_index_all():
     esclient = elasticsearch.Elasticsearch()
-    right = getright(nrows=None)
+    right = gettarget(nrows=None)
     index_with_es(client=esclient, df=right, index="right", ixname="ix", reset_index=True, doc_type='_doc')
     pass
 
 def test_create_query(esconnectornew):
-    df_left = getleft(nrows=10)
-    record = df_left.sample().iloc[0]
+    df_source = getsource(nrows=10)
+    record = df_source.sample().iloc[0]
     q = esconnectornew._write_es_query(record)
     print(q)
 
 def test_getresults(esconnectornew):
-    df_left = getleft(nrows=10)
-    record = df_left.sample().iloc[0]
+    df_source = getsource(nrows=10)
+    record = df_source.sample().iloc[0]
     q = esconnectornew._write_es_query(record)
     r = esconnectornew.client.search(body=q, index="right")
     print(r)
 
 def test_search_record(esconnectornew):
-    df_left = getleft(nrows=100)
-    record = df_left.sample().iloc[0]
+    df_source = getsource(nrows=100)
+    record = df_source.sample().iloc[0]
     res = esconnectornew.search_record(record=record)
     score = unpack_allhits(res)
     assert len(score) <= esconnectornew.size
@@ -110,14 +110,14 @@ def test_search_record(esconnectornew):
 
 
 def test_scorecols_datacols(esconnectornew):
-    df_left = getleft(nrows=10)
-    for c in df_left.sample(1).index:
-        record = df_left.loc[c]
+    df_source = getsource(nrows=10)
+    for c in df_source.sample(1).index:
+        record = df_source.loc[c]
         res = esconnectornew.search_record(record=record)
         score = unpack_allhits(res)
         df = pd.DataFrame.from_dict(score, orient='columns').rename(
                 columns={
-                    'ix': 'ix_right'
+                    'ix': 'ix_target'
                 })
         scorecols = pd.Index(['es_rank', 'es_score'])
         assert df.columns.contains(scorecols[0])
@@ -125,18 +125,18 @@ def test_scorecols_datacols(esconnectornew):
 
 
 def test_transform(esconnectornew):
-    df_left = getleft(nrows=100)
-    X = esconnectornew.fit_transform(X=df_left)
+    df_source = getsource(nrows=100)
+    X = esconnectornew.fit_transform(X=df_source)
     assert isinstance(X, pd.DataFrame)
     assert X.shape[1] == 2
 
 def test_getsbs(esconnectornew):
-    df_left = getleft(nrows=50)
-    Xtc = esconnectornew.fit_transform(X=df_left)
+    df_source = getsource(nrows=50)
+    Xtc = esconnectornew.fit_transform(X=df_source)
     ix = Xtc.index
-    X_sbs = esconnectornew.getsbs(X=df_left, on_ix=ix)
+    X_sbs = esconnectornew.getsbs(X=df_source, on_ix=ix)
     assert X_sbs.index.equals(ix)
-    for c in df_left.columns:
-        assert c + '_left' in X_sbs.columns
+    for c in df_source.columns:
+        assert c + '_source' in X_sbs.columns
     return True
 

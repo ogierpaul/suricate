@@ -8,8 +8,8 @@ class PartialClf(ClassifierMixin):
     def __init__(self,
                  classifier,
                  ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
+                 source_suffix='source',
+                 target_suffix='target',
                  **kwargs):
         """
         This is a wrapper around a classifier that allows it to train on partial data
@@ -18,17 +18,17 @@ class PartialClf(ClassifierMixin):
         Args:
             classifier (ClassifierMixin): Classifier to use. Should be the output of the pipeline
             ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            source_suffix (str):
+            target_suffix (str):
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.fitted = False
         self.classifier = classifier
@@ -39,7 +39,7 @@ class PartialClf(ClassifierMixin):
         Fit the classifier on the common index beetween X and y
         Args:
             X (pd.DataFrame): similarity matrix
-            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true}
+            y (pd.Series): pairs {['ix_source', 'ix_target']: y_true}
 
         Returns:
             self
@@ -57,7 +57,7 @@ class PartialClf(ClassifierMixin):
         Predict the matches, call predict on X
         Args:
             X (pd.DataFrame): similarity matrix
-            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true}
+            y (pd.Series): pairs {['ix_source', 'ix_target']: y_true}
 
         Returns:
             pd.Series
@@ -69,7 +69,7 @@ class PartialClf(ClassifierMixin):
         Predict the probability matches, call predict_proba on X
         Args:
             X (pd.DataFrame): similarity matrix
-            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true}
+            y (pd.Series): pairs {['ix_source', 'ix_target']: y_true}
 
         Returns:
             pd.Series

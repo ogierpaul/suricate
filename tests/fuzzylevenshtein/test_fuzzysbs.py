@@ -1,8 +1,8 @@
 from suricate.sbsdftransformers import FuncSbsComparator
-from suricate.data.circus import getXsbs, getXlr
+from suricate.data.circus import getXsbs, getXst
 
 # from ..data.circus import circus_sbs, X_lr
-X_lr = getXlr()
+X_lr = getXst()
 X_sbs = getXsbs()
 
 def test_cclr():

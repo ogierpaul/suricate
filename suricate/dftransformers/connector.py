@@ -1,23 +1,23 @@
 from sklearn.base import TransformerMixin
 from suricate.preutils import createmultiindex
-from suricate.lrdftransformers import LrDfVisualHelper, create_lrdf_sbs
+from suricate.dftransformers import DfVisualHelper, create_sbs
 import pandas as pd
 from suricate.base import ConnectorMixin
 
-class LrDfConnector(ConnectorMixin):
+class DfConnector(ConnectorMixin):
     """
     This connector (see the base class for connectors) will connect two dataframes, (one 'left' and one 'right').
     """
-    def __init__(self, scorer, ixname='ix', lsuffix='left', rsuffix='right'):
+    def __init__(self, scorer, ixname='ix', source_suffix='source', target_suffix='target'):
         """
 
         Args:
             ixname:
-            lsuffix:
-            rsuffix:
+            source_suffix:
+            target_suffix:
             scorer (TransformerMixin): score pipeline or featureunion
         """
-        ConnectorMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
+        ConnectorMixin.__init__(self, ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix)
         self.scorer = scorer
 
     def fit(self, X, y=None):
@@ -28,7 +28,7 @@ class LrDfConnector(ConnectorMixin):
         """
 
         Args:
-            X (list): [df_left, df_right]
+            X (list): [df_source, df_target]
 
         Returns:
             pd.DataFrame: with index
@@ -43,11 +43,11 @@ class LrDfConnector(ConnectorMixin):
     def getsbs(self, X, on_ix=None):
         if on_ix is None:
             on_ix = self.getindex(X=X)
-        Xt = create_lrdf_sbs(X=X, on_ix=on_ix, ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        Xt = create_sbs(X=X, on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
         return Xt
 
-    def fetch_left(self, X, ix):
+    def fetch_source(self, X, ix):
         return X[0].loc[ix]
 
-    def fetch_right(self, X, ix):
+    def fetch_target(self, X, ix):
         return X[1].loc[ix]

@@ -10,8 +10,8 @@ class SingleGrouping:
                  dedupe,
                  data=None,
                  ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
+                 source_suffix='source',
+                 target_suffix='target',
                  gidname='gid',
                  verbose=False):
         """
@@ -20,18 +20,18 @@ class SingleGrouping:
             dedupe (suricate.LrDuplicateFinder):
             data (pd.DataFrame): None
             ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            source_suffix (str):
+            target_suffix (str):
             gidname (str)
             verbose (bool):
         """
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.dedupe = dedupe
         self.verbose = verbose
@@ -40,8 +40,8 @@ class SingleGrouping:
             self.data = data
         else:
             self.data = pd.DataFrame()
-        # self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
-        #     ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix
+        # self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
+        #     ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix
         # )
 
     def launchdedupe(self, data, n_batches=None, n_records=3):
@@ -101,8 +101,8 @@ class SingleGrouping:
             startix = self.data.index[0]
             y_proba = pd.DataFrame(
                 {
-                    self.ixnameleft: [startix],
-                    self.ixnameright: [None],
+                    self.ixnamesource: [startix],
+                    self.ixnametarget: [None],
                     'y_proba': [0]
                 }
             )
@@ -120,13 +120,13 @@ class SingleGrouping:
             pd.DataFrame
         """
         refdata = self.data.dropna(subset=[self.gidname])
-        # results: {rangeix: [ixnameleft, gidname]}
+        # results: {rangeix: [ixnamesource, gidname]}
         results = calc_existinggid(
             y_proba=y_proba,
             refdata=refdata,
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix,
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix,
             gidname=self.gidname
         )
         # update refdata
@@ -137,15 +137,15 @@ class SingleGrouping:
         return self.data
 
 
-def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='right', gidname='gid'):
+def calc_existinggid(y_proba, refdata, ixname='ix', source_suffix='source', target_suffix='target', gidname='gid'):
     """
 
     Args:
-        y_proba (pd.DataFrame/pd.Series): {[ixnameleft, ixnameright] : ['y_proba']
+        y_proba (pd.DataFrame/pd.Series): {[ixnamesource, ixnametarget] : ['y_proba']
         refdata (pd.DataFrame): {ixname:[gidname, cols..]}
         ixname (str):
-        lsuffix (str):
-        rsuffix (str):
+        source_suffix (str):
+        target_suffix (str):
         gidname (str):
 
     Returns:
@@ -156,7 +156,7 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
         """
         Return the most common gid
         Args:
-            r (pd.Series): {'ixnameright':'gid'} for a common ixnameleft
+            r (pd.Series): {'ixnametarget':'gid'} for a common ixnamesource
 
         Returns:
             str
@@ -168,8 +168,8 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
         else:
             return r.iloc[0]
 
-    ixnameleft, ixnameright, ixnamepairs = concatixnames(
-        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    ixnamesource, ixnametarget, ixnamepairs = concatixnames(
+        ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix
     )
 
     if isinstance(y_proba, pd.Series):
@@ -183,7 +183,7 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
         assert gidname in refdata.columns
         assert refdata.index.name == ixname
         ref = refdata[[gidname]].copy()
-        ref.index.name = ixnameright
+        ref.index.name = ixnametarget
         ref.reset_index(drop=False, inplace=True)
 
     # Select positive matches
@@ -196,28 +196,28 @@ def calc_existinggid(y_proba, refdata, ixname='ix', lsuffix='left', rsuffix='rig
     )
     # Select left ixes that are NOT in pos matches
     no_matches_atall = y_proba.loc[
-        ~(y_proba[ixnameleft].isin(pos_matches[ixnameleft].values)),
-        ixnameleft
+        ~(y_proba[ixnamesource].isin(pos_matches[ixnamesource].values)),
+        ixnamesource
     ].unique()
-    results = pd.DataFrame(data=no_matches_atall, columns=[ixnameleft])
+    results = pd.DataFrame(data=no_matches_atall, columns=[ixnamesource])
     results[gidname] = None
-    # results :{ rangeix: [ixnameleft, gidname]}
+    # results :{ rangeix: [ixnamesource, gidname]}
 
     # merge the two to get the the gids
     gids = pd.merge(
         left=pos_matches,
         right=ref,
-        left_on=[ixnameright],
-        right_on=[ixnameright],
+        left_on=[ixnametarget],
+        right_on=[ixnametarget],
         how='inner'
     )
-    gb = gids.groupby([ixnameleft])
+    gb = gids.groupby([ixnamesource])
     wg = pd.DataFrame(gb[gidname].apply(goodgids)).reset_index(drop=False)
     assert isinstance(wg, pd.DataFrame), print(type(wg))
-    for c in [ixnameleft, gidname]:
+    for c in [ixnamesource, gidname]:
         assert c in wg.columns
-    results = pd.concat([results, wg[[ixnameleft, gidname]]], axis=0, ignore_index=True)
-    results = results.rename(columns={ixnameleft: ixname}).set_index(ixname)[gidname]
+    results = pd.concat([results, wg[[ixnamesource, gidname]]], axis=0, ignore_index=True)
+    results = results.rename(columns={ixnamesource: ixname}).set_index(ixname)[gidname]
     return results
 
 

@@ -1,25 +1,25 @@
 import pandas as pd
 
-from suricate.lrdftransformers.base import LrDfTransformerMixin
+from suricate.dftransformers.base import DfTransformerMixin
 from suricate.preutils.similarityscores import exact_score, simple_score, token_score, contains_score, vincenty_score
 
 
-class LrApplyComparator(LrDfTransformerMixin):
-    def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right',
+class DfApplyComparator(DfTransformerMixin):
+    def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target',
                  scoresuffix='fuzzy', compfunc='simple', **kwargs):
         """
 
         Args:
             on:
             ixname:
-            lsuffix:
-            rsuffix:
+            source_suffix:
+            target_suffix:
             scoresuffix:
             compfunc (str): ['exact', 'simple', 'token', 'vincenty', 'contain']
             **kwargs:
         """
-        LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                                      scoresuffix=scoresuffix + '_' + compfunc, **kwargs)
+        DfTransformerMixin.__init__(self, ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix, on=on,
+                                    scoresuffix=scoresuffix + '_' + compfunc, **kwargs)
         self.on = on
         assert compfunc in ['exact', 'simple', 'token', 'vincenty', 'contain']
         if compfunc == 'simple':
@@ -40,22 +40,22 @@ class LrApplyComparator(LrDfTransformerMixin):
             X:
 
         Returns:
-            np.array: of shape(n_samples_left * n_samples_right, 1)
+            np.array: of shape(n_samples_source * n_samples_target, 1)
         """
-        left = X[0]
-        right = X[1]
-        colnameleft = self.on + '_' + self.lsuffix
-        colnameright = self.on + '_' + self.rsuffix
+        source = X[0]
+        target = X[1]
+        colnameleft = self.on + '_' + self.source_suffix
+        colnameright = self.on + '_' + self.target_suffix
         sbs = pd.DataFrame(
             index=self._getindex(X=X)
         ).reset_index(
             drop=False
         ).join(
-            left[self.on], on=self.ixnameleft, how='left'
+            left[self.on], on=self.ixnamesource, how='left'
         ).rename(
             columns={self.on: colnameleft}
         ).join(
-            right[self.on], on=self.ixnameright, how='left'
+            right[self.on], on=self.ixnametarget, how='left'
         ).rename(
             columns={self.on: colnameright}
         ).set_index(

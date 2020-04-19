@@ -8,13 +8,13 @@ import time
 
 ## Load the Right data from sql to put it to ES
 # nrows = 200
-# df_right = pd.read_sql(sql="SELECT * FROM df_right LIMIT {}".format(nrows), con=engine)
-df_right = pd.read_sql(sql="SELECT * FROM df_right", con=engine)
-df_right.set_index('ix', drop=True, inplace=True)
+# df_target = pd.read_sql(sql="SELECT * FROM df_target LIMIT {}".format(nrows), con=engine)
+df_target = pd.read_sql(sql="SELECT * FROM df_target", con=engine)
+df_target.set_index('ix', drop=True, inplace=True)
 
 ## Put the data to ES, drop the index first and then re create
 esclient = elasticsearch.Elasticsearch()
-es_indice = 'df_right'
+es_indice = 'df_target'
 if True:
     try:
         esclient.indices.delete(index=es_indice)
@@ -40,9 +40,9 @@ if True:
         }
     }
     esclient.indices.create(index=es_indice, body=request_body)
-    index_with_es(client=esclient, df=df_right, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
+    index_with_es(client=esclient, df=df_target, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
     time.sleep(5)
 pass
 catcount = esclient.count(index=es_indice)['count']
-assert catcount == df_right.shape[0]
+assert catcount == df_target.shape[0]
 print(catcount)

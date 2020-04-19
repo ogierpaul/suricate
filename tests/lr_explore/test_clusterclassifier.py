@@ -6,17 +6,17 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import Normalizer
 
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 from suricate.explore import ClusterClassifier
 from suricate.explore import SimpleQuestions
-from suricate.lrdftransformers import VectorizerConnector, ExactConnector
+from suricate.dftransformers import VectorizerConnector, ExactConnector
 from suricate.preutils import createmultiindex
 
 
 @pytest.fixture
 def fixture_data():
     # Load the data
-    X_lr = getXlr(nrows=300)
+    X_lr = getXst(nrows=300)
     return X_lr
 
 
@@ -51,7 +51,7 @@ def test_clusterclassifier(fixture_scores, fixture_data):
     n_clusters = 10
     n_questions = 200
     X_lr = fixture_data
-    y_true = getytrue(Xlr=X_lr)
+    y_true = getytrue(Xst=X_lr)
     X_raw = fixture_scores.fit_transform(X=X_lr)
     X_reduced = PCA(n_components=3).fit_transform(X_raw)
     cluster = KMeans(n_clusters=n_clusters)

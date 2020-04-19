@@ -11,15 +11,15 @@ from sklearn.ensemble import GradientBoostingClassifier
 engine = create_engine_ready()
 
 Xscores = pd.read_sql(sql="SELECT * FROM scores_final", con=engine).set_index(
-    ['ix_left', 'ix_right'], drop=True)
+    ['ix_source', 'ix_target'], drop=True)
 ix_double = Xscores.index
 ix_single = Xscores['ix']
-# Xtc = pd.read_sql(sql="SELECT * FROM es_scores", con=engine).set_index(['ix_left', 'ix_right'], drop=True)[['ix', 'es_score']]
-# Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs", con=engine).set_index(['ix_left', 'ix_right'], drop=True)
+# Xtc = pd.read_sql(sql="SELECT * FROM es_scores", con=engine).set_index(['ix_source', 'ix_target'], drop=True)[['ix', 'es_score']]
+# Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs", con=engine).set_index(['ix_source', 'ix_target'], drop=True)
 
 
 # REBUILD Y_true
-y_true = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true = 1", con=engine).set_index(['ix_left', 'ix_right'],
+y_true = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true = 1", con=engine).set_index(['ix_source', 'ix_target'],
                                                                                         drop=True)
 y_truetemp = pd.DataFrame(ix_single)
 y_truetemp['y_true'] = 0

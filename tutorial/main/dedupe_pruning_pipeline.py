@@ -1,7 +1,7 @@
 from suricate.pipeline.pruningpipe import PruningPipe
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 from suricate.explore import Explorer, KBinsCluster
-from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactConnector
+from suricate.dftransformers import DfConnector, VectorizerConnector, ExactConnector
 from suricate.sbsdftransformers import FuncSbsComparator
 from suricate.preutils import createmultiindex
 
@@ -42,15 +42,15 @@ n_pointedquestions = 100 # Number of additional questions for clusters with mixe
 
 ##Load the data
 print('start', pd.datetime.now())
-Xlr = getXlr(nrows=n_rows)
-ixc = createmultiindex(X=Xlr)
-# Load the vector corresponding to Xlr
+Xst = getXst(nrows=n_rows)
+ixc = createmultiindex(X=Xst)
+# Load the vector corresponding to Xst
 y_true = getytrue().loc[ixc]
 print(y_true.value_counts())
 print(pd.datetime.now(), 'data loaded')
 
 ## Explore the data:
-connector = LrDfConnector(
+connector = DfConnector(
         scorer=Pipeline(steps=[
             ('scores', FeatureUnion(_lr_score_list)),
             ('imputer', SimpleImputer(strategy='constant', fill_value=0))]
@@ -58,12 +58,12 @@ connector = LrDfConnector(
     )
 ### Fit the cluster non-supervizes
 explorer = Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster), n_simple=n_simplequestions, n_hard=n_pointedquestions)
-Xtc = connector.fit_transform(X=Xlr)
+Xtc = connector.fit_transform(X=Xst)
 explorer.fit_cluster(X=Xtc)
 
 ### Ask simple questions
 ix_simple = explorer.ask_simple(X=Xtc)
-Sbs_simple = connector.getsbs(X=Xlr, on_ix=ix_simple)
+Sbs_simple = connector.getsbs(X=Xst, on_ix=ix_simple)
 y_simple = y_true.loc[ix_simple]
 
 ### Fit the cluser with supervized data
@@ -71,7 +71,7 @@ explorer.fit(X=Xtc, y=y_simple, fit_cluster=False)
 
 ### Ask hard (pointed) questions
 ix_hard = explorer.ask_hard(X=Xtc, y=y_simple)
-Sbs_hard = connector.getsbs(X=Xlr, on_ix=ix_hard)
+Sbs_hard = connector.getsbs(X=Xst, on_ix=ix_hard)
 y_hard = y_true.loc[ix_hard]
 
 ### Obtain the results of the labels
@@ -85,10 +85,10 @@ pipe = PruningPipe(
     sbsmodel=FeatureUnion(transformer_list=_sbs_score_list),
     classifier=LogisticRegressionCV()
 )
-pipe.fit(X=Xlr, y=y_questions)
+pipe.fit(X=Xst, y=y_questions)
 
 ## Predict
-y_pred = pipe.predict(X=Xlr)
+y_pred = pipe.predict(X=Xst)
 precision = precision_score(y_true=y_true, y_pred=y_pred)
 recall = recall_score(y_true=y_true, y_pred=y_pred)
 accuracy = balanced_accuracy_score(y_true=y_true, y_pred=y_pred)

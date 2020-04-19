@@ -6,7 +6,7 @@ nrows = None
 _folder_companydf = 'companydata'
 
 
-def getleft(nrows=nrows):
+def getsource(nrows=nrows):
     """
 
     Args:
@@ -15,10 +15,10 @@ def getleft(nrows=nrows):
     Returns:
         pd.DataFrame
     """
-    left = open_csv(filename='left.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
-    return left
+    df = open_csv(filename='source.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
+    return df
 
-def getright(nrows=nrows):
+def gettarget(nrows=nrows):
     """
 
     Args:
@@ -27,38 +27,34 @@ def getright(nrows=nrows):
     Returns:
         pd.DataFrame
     """
-    right = open_csv(filename='right.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
-    return right
+    df = open_csv(filename='target.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
+    return df
 
-def gettrainingdata(nrows=nrows):
-    training_data = open_csv(filename='trainingdata.csv', foldername=_folder_companydf, index_col=[0,1], nrows=nrows)
-    return training_data
-
-def getytrue(Xlr=None):
+def getytrue(Xst=None):
     """
 
     Args:
-        Xlr: left and right dataframe for which to get the labelling
+        Xst: source and target dataframe for which to get the labelling
 
     Returns:
         pd.Series: supervised training data
     """
-    if Xlr is None:
-        Xlr = getXlr()
-    ix_all = createmultiindex(X=Xlr)
+    if Xst is None:
+        Xst = getXst()
+    ix_all = createmultiindex(X=Xst)
     y_true = pd.Series(data=zeros(shape=(ix_all.shape[0],)), index=ix_all, name='y_true').fillna(0)
     y_saved = open_csv(filename='ytrue.csv', foldername=_folder_companydf, index_col=[0, 1])['y_true']
     y_true.loc[y_saved.index.intersection(ix_all)] = y_saved
     return y_true
 
-def getXlr(nrows=nrows):
+def getXst(nrows=nrows):
     """
 
     Args:
         nrows (int): number of rows to load
 
     Returns:
-        list: length2 with 2 dataframes, left and right
+        list: length2 with 2 dataframes, source and target
     """
-    X_lr = [getleft(nrows=nrows), getright(nrows=nrows)]
-    return X_lr
+    X = [getsource(nrows=nrows), gettarget(nrows=nrows)]
+    return X

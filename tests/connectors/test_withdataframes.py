@@ -1,12 +1,12 @@
 from sklearn.pipeline import make_union
 
-from suricate.lrdftransformers import VectorizerConnector, ExactConnector
+from suricate.dftransformers import VectorizerConnector, ExactConnector
 from suricate.data.base import ix_names
-from suricate.data.companies import getleft, getright,  getXlr, getytrue
-left = getleft(nrows=100)
-right = getright(nrows=100)
-X_lr = getXlr(nrows=100)
-y_true = getytrue(Xlr=X_lr)
+from suricate.data.companies import getsource, gettarget,  getXst, getytrue
+left = getsource(nrows=100)
+right = gettarget(nrows=100)
+X_lr = getXst(nrows=100)
+y_true = getytrue(Xst=X_lr)
 
 def test_loaddata():
     print(ix_names['ixname'])

@@ -1,24 +1,24 @@
 from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
-from suricate.data.companies import getleft, getright
+from suricate.data.companies import getsource, gettarget
 import pandas as pd
 import  numpy as np
 
 engine = create_engine_ready()
 
 # filefolder = '~/'
-# leftpath = 'left.csv'
-# rightpath = 'right.csv'
-# df_left = pd.read_csv(filefolder + leftpath, index_col=0, sep='|', encoding='utf-8')
-# df_right = pd.read_csv(filefolder + rightpath, index_col=0, sep='|', encoding='utf-8')
-df_left_raw = getleft(nrows=500)
-df_right_raw = getright(nrows=None)
+# leftpath = 'source.csv'
+# rightpath = 'target.csv'
+# df_source = pd.read_csv(filefolder + leftpath, index_col=0, sep='|', encoding='utf-8')
+# df_target = pd.read_csv(filefolder + rightpath, index_col=0, sep='|', encoding='utf-8')
+df_source_raw = getsource(nrows=500)
+df_target_raw = gettarget(nrows=None)
 
 
 from sklearn.model_selection import train_test_split
 
 def rebuild_ytrue(ix):
     y_true_saved = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true.y_true = 1", con=engine).set_index(
-        ['ix_left', 'ix_right'],
+        ['ix_source', 'ix_target'],
         drop=True)['y_true']
     y = pd.Series(index=ix, data = np.zeros(shape=len(ix)), name='y_true')
     ix_common = y_true_saved.index.intersection(ix)
@@ -26,7 +26,7 @@ def rebuild_ytrue(ix):
     return y
 
 
-def prepare_left(df):
+def prepare_source(df):
     """
 
     Args:
@@ -39,7 +39,7 @@ def prepare_left(df):
     return df2
 
 
-def prepare_right(df):
+def prepare_target(df):
     """
 
     Args:
@@ -52,11 +52,11 @@ def prepare_right(df):
     return df2
 
 
-df_left = prepare_left(df_left_raw)
-df_right = prepare_right(df_right_raw)
-assert df_left.columns.equals(df_right.columns)
-print(pd.datetime.now(),' | ', 'number of rows on left:{}'.format(df_left.shape[0]))
-print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_right.shape[0]))
+df_source = prepare_source(df_source_raw)
+df_target = prepare_target(df_target_raw)
+assert df_source.columns.equals(df_target.columns)
+print(pd.datetime.now(),' | ', 'number of rows on left:{}'.format(df_source.shape[0]))
+print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_target.shape[0]))
 
 
 import pandas as pd
@@ -101,7 +101,7 @@ pred = PartialClf(classifier=pipe)
 
 
 
-left_train, left_test = train_test_split(df_left_raw, train_size=0.5)
+left_train, left_test = train_test_split(df_source_raw, train_size=0.5)
 
 Xtc_train = escon.fit_transform(X=left_train)
 ix_con_train = Xtc_train.index

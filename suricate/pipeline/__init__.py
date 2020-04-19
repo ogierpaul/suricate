@@ -1,4 +1,4 @@
-from suricate.pipeline.pipelrclf import PipeLrClf
+from suricate.pipeline.pipedfclf import PipeDfClf
 from suricate.pipeline.pipesbsclf import PipeSbsClf
-from suricate.pipeline.pruninglrsbsclf import PruningLrSbsClf
+from suricate.pipeline.pruningdfsbsclf import PruningDfSbsClf
 from suricate.pipeline.partialclf import PartialClf

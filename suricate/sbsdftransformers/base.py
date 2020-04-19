@@ -5,18 +5,18 @@ from sklearn.base import TransformerMixin
 
 
 class BaseSbsComparator(TransformerMixin):
-    def __init__(self, on_left='left', on_right='right', compfunc=None, n_jobs=1, *args, **kwargs):
+    def __init__(self, on_source='source', on_target='target', compfunc=None, n_jobs=1, *args, **kwargs):
         """
         base class for all transformers
         Args:
-            on_left (str):
-            on_right (str):
+            on_source (str): name of suffix
+            on_target (str):
             compfunc (callable): ['fuzzy', 'token', 'exact']
             n_jobs (int): number of parallel jobs. If n_jobs>1, will call the dask dataframe API
         """
         TransformerMixin.__init__(self)
-        self.left = on_left
-        self.right = on_right
+        self.left = on_source
+        self.right = on_target
         if compfunc is None:
             raise ValueError('comparison function not provided with function', compfunc)
         assert callable(compfunc)
@@ -25,7 +25,7 @@ class BaseSbsComparator(TransformerMixin):
 
     def transform(self, X):
         """
-        Apply the compfunc to the on_left and on_right column
+        Apply the compfunc to the on_source and on_target column
         Args:
             X (pd.DataFrame):
 
@@ -56,6 +56,7 @@ class BaseSbsComparator(TransformerMixin):
         return y
 
     def _ptransform(self, X):
+        #TODO: Remove
         """
         Use of dask dataframe API to parall
         Args:

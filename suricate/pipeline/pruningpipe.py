@@ -14,8 +14,8 @@ class PruningPipe(ClassifierMixin):
                  sbsmodel,
                  classifier,
                  ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
+                 source_suffix='source',
+                 target_suffix='target',
                  **kwargs):
         """
 
@@ -25,17 +25,17 @@ class PruningPipe(ClassifierMixin):
             sbsmodel (TransformerMixin): Side-by-Side scorer, Can be FeatureUnion, Pipeline...
             classifier (ClassifierMixin): Classifier used to do the prediction
             ixname (str): 'ix'
-            lsuffix (str): 'left'
-            rsuffix (str): 'right'
+            source_suffix (str): 'left'
+            target_suffix (str): 'right'
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.fitted = False
         self.connector = connector
@@ -49,7 +49,7 @@ class PruningPipe(ClassifierMixin):
         Fit the transformer
         Args:
             X (pd.DataFrame): input for the connector
-            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the training
+            y (pd.Series): pairs {['ix_source', 'ix_target']: y_true} for the training
 
         Returns:
             self
@@ -62,7 +62,7 @@ class PruningPipe(ClassifierMixin):
         # Add as well as sure matches y_pred_lr == 2.0
         Args:
             X: input data to the connector
-            y_true (pd.Series): training data, with MultiIndex {('ix_left', 'ix_right'): 0 or 1}
+            y_true (pd.Series): training data, with MultiIndex {('ix_source', 'ix_target'): 0 or 1}
             fit (bool): True: fit all transformers / classifiers and return self. False: return y_pred
             proba (bool): Only works if fit is False. If fit is False and proba is True: return y_proba. If fit if False and proba is False: return y_pred
 
@@ -140,7 +140,7 @@ class PruningPipe(ClassifierMixin):
             X: input data for the connector
 
         Returns:
-            pd.Series: with MultiIndex {('ix_left', 'ix_right'): 0 or 1}
+            pd.Series: with MultiIndex {('ix_source', 'ix_target'): 0 or 1}
         """
 
         return self._pipe(X=X, fit=False, proba=False)
@@ -151,7 +151,7 @@ class PruningPipe(ClassifierMixin):
             X: input data for the connector
 
         Returns:
-            pd.Series: with MultiIndex {('ix_left', 'ix_right'): proba between 0 and 1}
+            pd.Series: with MultiIndex {('ix_source', 'ix_target'): proba between 0 and 1}
         """
         return self._pipe(X=X, fit=False, proba=True)
 

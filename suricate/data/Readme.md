@@ -7,9 +7,9 @@ We have three datasets:
 
 ## Loading the datasets
 Each dataset can be accessed by three methods:
-* getleft(), getright(): returns left and right datasets as Pandas DataFrame
-* getXlr(): returns a list of length 2 containing the left and right datasets
-* getXsbs(): returns a Pandas DataFrame containing the cartesian product of the left and right datasets (not available for companies because it would be too huge)
+* getsource(), gettarget(): returns source and target datasets as Pandas DataFrame
+* getXst(): returns a list of length 2 containing the source and target datasets
+* getXsbs(): returns a Pandas DataFrame containing the cartesian product of the source and target datasets (not available for companies because it would be too huge)
 * getytrue(): returns a Pandas Series containing the matching information for the datasets
 
 ## Dataset description

@@ -4,22 +4,22 @@ import pandas as pd
 
 
 class ConnectorMixin(TransformerMixin):
-    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right'):
+    def __init__(self, ixname='ix', source_suffix='source', target_suffix='target'):
         """
 
         Args:
             ixname: 'ix'
-            lsuffix: 'left'
-            rsuffix: 'right'
+            source_suffix: 'source'
+            target_suffix: 'target'
         """
         TransformerMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
 
     def fit(self, X, y=None):
@@ -50,7 +50,7 @@ class ConnectorMixin(TransformerMixin):
         Xt = pd.DataFrame()
         return Xt
 
-    def fetch_left(self, X, ix):
+    def fetch_source(self, X, ix):
         """
 
         Args:
@@ -62,7 +62,7 @@ class ConnectorMixin(TransformerMixin):
         """
         return pd.DataFrame()
 
-    def fetch_right(self, X, ix):
+    def fetch_target(self, X, ix):
         """
 
         Args:
@@ -92,30 +92,30 @@ class ConnectorMixin(TransformerMixin):
         """
 
         Args:
-            on_ix (pd.MultiIndex): two level multi index (ix_left, ix_right)
+            on_ix (pd.MultiIndex): two level multi index (ix_source, ix_target)
             sep: separator
 
         Returns:
-            pd.Index: name 'ix', concatenation of ix_left, sep, on ix_right
+            pd.Index: name 'ix', concatenation of ix_source, sep, on ix_target
         """
         df = pd.DataFrame(index=on_ix)
         df.reset_index(inplace=True, drop=False)
-        df[self.ixname] = df[[self.ixnameleft, self.ixnameright]].astype(str).agg(str(sep).join, axis=1)
+        df[self.ixname] = df[[self.ixnamesource, self.ixnametarget]].astype(str).agg(str(sep).join, axis=1)
         df.set_index(self.ixname, inplace=True, drop=True)
         return df.index
 
-def multiindex21column(on_ix, sep='-', ixname='ix', ixnameleft='ix_left', ixnameright='ix_right'):
+def multiindex21column(on_ix, sep='-', ixname='ix', ixnamesource='ix_source', ixnametarget='ix_target'):
     """
 
     Args:
-        on_ix (pd.MultiIndex): two level multi index (ix_left, ix_right)
+        on_ix (pd.MultiIndex): two level multi index (ix_source, ix_target)
         sep: separator
 
     Returns:
-        pd.Index: name 'ix', concatenation of ix_left, sep, on ix_right
+        pd.Index: name 'ix', concatenation of ix_source, sep, ix_target
     """
     df = pd.DataFrame(index=on_ix)
     df.reset_index(inplace=True, drop=False)
-    df[ixname] = df[[ixnameleft, ixnameright]].astype(str).agg(str(sep).join, axis=1)
+    df[ixname] = df[[ixnamesource, ixnametarget]].astype(str).agg(str(sep).join, axis=1)
     df.set_index(ixname, inplace=True, drop=True)
     return df.index

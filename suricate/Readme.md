@@ -25,19 +25,19 @@ All sub-modules of suricate:
 
 ## Usage Guide
 ### Purpose
-* Two different datasets (left and right) with possible common entities
+* Two different datasets (source and target) with possible common entities
 * Target is to find duplicates : entities in right that are essentially the same as entities in right , +/- typos, missing fields...
 * Use Similarity Functions and Machine Learning to identify duplicates automatically
 
 ### Deduplication Pipeline
 #### 0. Output
-* The output of the deduplication pipeline is a vector that identify, for each pair of records from left and right datasets:
+* The output of the deduplication pipeline is a vector that identify, for each pair of records from source and target datasets:
     * 1 if the pair is a duplicate
     * 0 if the pair is not a duplicate (no match)
 
-#### 2. Connector to link Left and Right Datasets
-* Will make the link between left and right datasets, whatever the data source (pandas DataFrame, Elastic Search index, Postgre sql database...)
-* Is a transformer that transform the left and right datasets into a similarity matrix
+#### 2. Connector to link source and target Datasets
+* Will make the link between source and target datasets, whatever the data source (pandas DataFrame, Elastic Search index, Postgre sql database...)
+* Is a transformer that transform the source and target datasets into a similarity matrix
 * Similarity matrix: Each row corresponds to a pair of (left, right) records, the colums corresponding to different scores
 * Will also provide a Side-by-Side view of the data
 
@@ -57,7 +57,7 @@ All sub-modules of suricate:
 
 ##### Similarity Matrix:
 
-|Multiindex (ix_left, ix_right)|exact_score|fuzzy_score|
+|Multiindex (ix_source, ix_target)|exact_score|fuzzy_score|
 |---|---|---|
 |(1,a)|1|1|
 |(1,b)|0|0|
@@ -65,7 +65,7 @@ All sub-modules of suricate:
 |(2,b)|0|0.7|
 
 ##### Side-by-side  View
-|Multiindex (ix_left, ix_right)|name_left|name_right|
+|Multiindex (ix_source, ix_target)|name_source|name_target|
 |---|---|---|
 |(1,a)|foo|foo|
 |(1,b)|foo|baz|
@@ -73,7 +73,7 @@ All sub-modules of suricate:
 |(2,b)|bar|baz|
 
 ##### Note
-* The example above show a full cartesian join between left and right datasets. A full cartesian join does not offer the best performance for scaling.
+* The example above show a full cartesian join between source and target datasets. A full cartesian join does not offer the best performance for scaling.
 * While a LrDfConnector will do a full cartesian join, we built more advanced connectors for scaling (For Example, using Elastic Search as the *right* datasets, we only return the n-best matches from the right_datasets for each row of the left_dataset)
 
 ### 2. Explorer phase using non-supervised techniques
@@ -100,7 +100,7 @@ All sub-modules of suricate:
  
  #### Example of side-by-side view, similarity matrix, and prediction
  
-|Multiindex (ix_left, ix_right)|name_left|name_right|exact_score|fuzzy_score|y_pred|result|
+|Multiindex (ix_source, ix_target)|name_source|name_target|exact_score|fuzzy_score|y_pred|result|
 |---|---|---|---|---|---|---|
 |(1,a)|foo|foo|1|1|1|Match|
 |(1,b)|foo|baz|0|0|0|No|

@@ -3,40 +3,40 @@ import pandas as pd
 from sklearn.base import ClassifierMixin
 from sklearn.metrics.classification import accuracy_score
 
-from suricate.lrdftransformers import cartesian_join
-from suricate.pipeline.pipelrclf import PipeLrClf
+from suricate.dftransformers import cartesian_join
+from suricate.pipeline.pipedfclf import PipeDfClf
 from suricate.pipeline.pipesbsclf import PipeSbsClf
 from suricate.preutils import concatixnames, createmultiindex
 
 # TODO: IsObsolete
 
-class PruningLrSbsClf(ClassifierMixin):
+class PruningDfSbsClf(ClassifierMixin):
     def __init__(self,
                  lrmodel,
                  sbsmodel,
                  ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
+                 source_suffix='source',
+                 target_suffix='target',
                  **kwargs):
         """
 
         Args:
-            lrmodel (PipeLrClf): LrModel
+            lrmodel (PipeDfClf): LrModel
             sbsmodel (PipeSbsClf): SbSModel
             ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            source_suffix (str):
+            target_suffix (str):
             n_jobs (int):
             pruning_ths (float): return only the pairs which have a score greater than the store_ths
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.fitted = False
         self.lrmodel = lrmodel
@@ -47,9 +47,9 @@ class PruningLrSbsClf(ClassifierMixin):
         """
         Fit the transformer
         Args:
-            X (pd.DataFrame): side by side [name_left; name_right, ...]
-            y_lr (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the pruning model
-            y_sbs (pd.Series): pairs {['ix_left', 'ix_right']: y_true} for the predictive model
+            X (pd.DataFrame): side by side [name_source; name_target, ...]
+            y_lr (pd.Series): pairs {['ix_source', 'ix_target']: y_true} for the pruning model
+            y_sbs (pd.Series): pairs {['ix_source', 'ix_target']: y_true} for the predictive model
 
         Returns:
             self
@@ -61,7 +61,7 @@ class PruningLrSbsClf(ClassifierMixin):
         # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
         # Add as well as sure matches y_pred_lr == 2.0
         Args:
-            X (list): [df_left, df_right]
+            X (list): [df_source, df_target]
             y_lr (pd.Series): training data for the first model (LrModel)
             y_sbs (pd.Series): training data for the second model (SbsModel)
             fit (bool): True: fit all transformers / classifiers and return self. False: return y_pred
@@ -104,10 +104,10 @@ class PruningLrSbsClf(ClassifierMixin):
 
         # Create the input dataframe needed for the SbsModel
         X_Sbs = cartesian_join(
-            left=X[0],
-            right=X[1],
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix,
+            source=X[0],
+            target=X[1],
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix,
             on_ix=ix_sbs
         )
         # And Transform (Second scoring engine)
@@ -137,7 +137,7 @@ class PruningLrSbsClf(ClassifierMixin):
         # select only positive matches y_pred_lr == 1.0 from first classifier for further scoring
         # Add as well as sure matches from y_pred_lr == 2.0 (Case of clusterer for example)
         Args:
-            X: [df_left, df_right]
+            X: [df_source, df_target]
 
         Returns:
             np.ndarray

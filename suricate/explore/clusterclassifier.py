@@ -16,15 +16,15 @@ class ClusterClassifier(ClassifierMixin):
     Fit data (y) is a (n_questions, ) pd.Series, with n_questions < n_pairs
 
     """
-    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
+    def __init__(self, ixname='ix', source_suffix='source', target_suffix='target', **kwargs):
         ClassifierMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         # clusters
         self.clusters = None

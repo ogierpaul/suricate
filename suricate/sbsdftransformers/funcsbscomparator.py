@@ -9,13 +9,13 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
     Compare two columns of a dataframe with one another using functions from fuzzywuzzy library
     """
 
-    def __init__(self, on, ixname='ix', lsuffix='left', rsuffix='right', comparator='fuzzy', *args, **kwargs):
+    def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target', comparator='fuzzy', *args, **kwargs):
         """
         Args:
             comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token', 'contains', 'vincenty' ]
             ixname (str): name of the index, default 'ix'
-            lsuffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_left'
-            rsuffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
+            source_suffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_source'
+            target_suffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
             on (str): name of the column on which to do the join
             *args:
             **kwargs:
@@ -36,8 +36,8 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
         BaseSbsComparator.__init__(
             self,
             compfunc=compfunc,
-            on_left=on + '_' + lsuffix,
-            on_right=on + '_' + rsuffix,
+            on_source=on + '_' + source_suffix,
+            on_target=on + '_' + target_suffix,
             *args,
             **kwargs
         )

@@ -3,21 +3,21 @@ import pandas as pd
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import FeatureUnion
 
-from suricate.lrdftransformers import LrDfTransformerMixin
+from suricate.dftransformers import DfTransformerMixin
 from suricate.preutils import concatixnames, createmultiindex
 import itertools
 
 #TODO: Check Documentation and relevance of each of those cartesian operations
 
-class CartesianLr(LrDfTransformerMixin):
+class CartesianSt(DfTransformerMixin):
     """
-    This transformer returns the cartesian product of left and right indexes
+    This transformer returns the cartesian product of source and target indexes
     """
 
-    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', on='all',
+    def __init__(self, ixname='ix', source_suffix='source', target_suffix='target', on='all',
                  scoresuffix='cartesianscore', **kwargs):
-        LrDfTransformerMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix, on=on,
-                                      scoresuffix=scoresuffix, **kwargs)
+        DfTransformerMixin.__init__(self, ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix, on=on,
+                                    scoresuffix=scoresuffix, **kwargs)
 
     def _transform(self, X):
         """
@@ -26,8 +26,8 @@ class CartesianLr(LrDfTransformerMixin):
             X (list):
 
         Returns:
-            np.ndarray: transformer returns the cartesian product of left and right indexes \
-                of shape(n_samples_left * n_samples_right, 1)
+            np.ndarray: transformer returns the cartesian product of source and target indexes \
+                of shape(n_samples_source * n_samples_target, 1)
         """
         return np.ones(shape=(X[0].shape[0] * X[1].shape[0], 1))
 
@@ -38,15 +38,15 @@ class CartesianDataPasser(TransformerMixin):
     It returns the cartesian join of the two dataframes with all their columns
     """
 
-    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', **kwargs):
+    def __init__(self, ixname='ix', source_suffix='source', target_suffix='target', **kwargs):
         TransformerMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
 
     def fit(self, X=None):
@@ -59,18 +59,18 @@ class CartesianDataPasser(TransformerMixin):
         return self
 
     def _transform(self, X, y=None):
-        return cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        return cartesian_join(source=X[0], target=X[1], source_suffix=self.source_suffix, target_suffix=self.target_suffix)
 
-class LrDfVisualHelper(TransformerMixin):
-    def __init__(self, ixname='ix', lsuffix='left', rsuffix='right', usecols=None, **kwargs):
+class DfVisualHelper(TransformerMixin):
+    def __init__(self, ixname='ix', source_suffix='source', target_suffix='target', usecols=None, **kwargs):
         TransformerMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.usecols = usecols
         pass
@@ -79,7 +79,7 @@ class LrDfVisualHelper(TransformerMixin):
         """
         Return the cartesian product index of both dataframes
         Args:
-            X (list): [df_left, df_right]
+            X (list): [df_source, df_target]
             y (pd.Series/pd.DataFrame/pd.MultiIndex): dummy, not used
 
         Returns:
@@ -95,74 +95,74 @@ class LrDfVisualHelper(TransformerMixin):
         """
 
         Args:
-            X (list): [df_left, df_right]
+            X (list): [df_source, df_target]
             y: dummy
 
         Returns:
-            pd.DataFrame: with index [ix_left, ix_right]
+            pd.DataFrame: with index [ix_source, ix_target]
         """
-        X_sbs = cartesian_join(left=X[0], right=X[1], lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        X_sbs = cartesian_join(source=X[0], target=X[1], source_suffix=self.source_suffix, target_suffix=self.target_suffix)
         # Re-arrange the columns to put the same columns side-by-side
-        mycols = [self.ixnameleft, self.ixnameright]
+        mycols = [self.ixnamesource, self.ixnametarget]
         if self.usecols is None:
             usecols = X[0].columns
         else:
             usecols = self.usecols
         for c in usecols:
-            mycols.append(c + '_' + self.lsuffix)
-            mycols.append(c + '_' + self.rsuffix)
+            mycols.append(c + '_' + self.source_suffix)
+            mycols.append(c + '_' + self.target_suffix)
         X_sbs = X_sbs[mycols].set_index(self.ixnamepairs)
         return X_sbs
 
 
-def create_lrdf_sbs(X, on_ix=None, ixname = 'ix', lsuffix='left', rsuffix='right'):
+def create_sbs(X, on_ix=None, ixname ='ix', source_suffix='source', target_suffix='target'):
     """
 
     Args:
-        X (list): [df_left, df_right]
-        on_ix (pd.MultiIndex): collection of pairs ('ix_left', 'ix_right')
+        X (list): [df_source, df_target]
+        on_ix (pd.MultiIndex): collection of pairs ('ix_source', 'ix_target')
 
     Returns:
-        pd.DataFrame, of shape (len(on_ix), df.shape[1] * 2 [{('ix_left', 'ix_right'):('name_left', 'name_right', ...}]
+        pd.DataFrame, of shape (len(on_ix), df.shape[1] * 2 [{('ix_source', 'ix_target'):('name_source', 'name_target', ...}]
     """
     usecols = X[0].columns.intersection(X[1].columns)
-    # Check on_ix is contained into the cartesian join of df_left and df_right
-    allix = createmultiindex(X=X, names={'{}_{}'.format(ixname, lsuffix), '{}_{}'.format(ixname, rsuffix)})
+    # Check on_ix is contained into the cartesian join of df_source and df_target
+    allix = createmultiindex(X=X, names={'{}_{}'.format(ixname, source_suffix), '{}_{}'.format(ixname, target_suffix)})
     if len(on_ix.difference(allix)) > 0:
         raise IndexError(
-            'Indexes called {} not found in cartesian product of left and right dataframe'.format(
+            'Indexes called {} not found in cartesian product of source and target dataframe'.format(
                 on_ix.difference(allix)
             )
         )
 
-    # Rename the left and right dataframe with suffix
-    df_left = X[0][usecols]
-    df_left.columns = ['{}_{}'.format(c, lsuffix) for c in usecols]
-    df_right = X[1][usecols]
-    df_right.columns = [c + '_' + rsuffix for c in usecols]
+    # Rename the source and target dataframe with suffix
+    df_source = X[0][usecols]
+    df_source.columns = ['{}_{}'.format(c, source_suffix) for c in usecols]
+    df_target = X[1][usecols]
+    df_target.columns = [c + '_' + target_suffix for c in usecols]
     # Join on the index
     Xsbs = pd.DataFrame(index=on_ix).reset_index(drop=False)
-    Xsbs = Xsbs.join(df_left, on='{}_{}'.format(ixname, lsuffix), how='left')
-    Xsbs = Xsbs.join(df_right, on='{}_{}'.format(ixname, rsuffix), how='left')
+    Xsbs = Xsbs.join(df_source, on='{}_{}'.format(ixname, source_suffix), how='left')
+    Xsbs = Xsbs.join(df_target, on='{}_{}'.format(ixname, target_suffix), how='left')
     # Re-order the columns
-    order_cols = [('{}_{}'.format(c, lsuffix), '{}_{}'.format(c, rsuffix)) for c in usecols]
+    order_cols = [('{}_{}'.format(c, source_suffix), '{}_{}'.format(c, target_suffix)) for c in usecols]
     order_cols = list(itertools.chain(*order_cols))
     Xsbs = Xsbs.set_index(
-        ['{}_{}'.format(ixname, lsuffix), '{}_{}'.format(ixname, rsuffix)],
+        ['{}_{}'.format(ixname, source_suffix), '{}_{}'.format(ixname, target_suffix)],
         drop=True
     )
     Xsbs = Xsbs.loc[:, order_cols]
     return Xsbs
 
 
-def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
+def cartesian_join(source, target, source_suffix='source', target_suffix='target', on_ix=None):
     """
 
     Args:
-        left (pd.DataFrame): table 1
-        right (pd.DataFrame): table 2
-        lsuffix (str):
-        rsuffix (str):
+        source (pd.DataFrame): table 1
+        target (pd.DataFrame): table 2
+        source_suffix (str):
+        target_suffix (str):
         on_ix (MultiIndex):
 
     Returns:
@@ -180,7 +180,7 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
         1	baz
 
         cartesian_join(df1, df2)
-            index_left	a_left	index_right	b_right
+            index_source	a_source	index_target	b_target
         0	0	        foo	    0	        foz
         1	0	        foo	    1	        baz
         2	1	        bar	    0	        foz
@@ -206,7 +206,7 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
 
             rename_with_suffix(df, 'right')
 
-                index_right	a_right
+                index_target	a_target
             0	0	        foo
             1	1	        bar
         """
@@ -234,53 +234,53 @@ def cartesian_join(left, right, lsuffix='left', rsuffix='right', on_ix=None):
     if on_ix is None:
         # hack to create a column name unknown to both df1 and df2
         tempcolname = 'f1b3'
-        while tempcolname in left.columns or tempcolname in right.columns:
+        while tempcolname in source.columns or tempcolname in target.columns:
             tempcolname += 'f'
 
         # create a new df1 with renamed cols
-        df1new = rename_with_suffix(left, lsuffix)
-        df2new = rename_with_suffix(right, rsuffix)
+        df1new = rename_with_suffix(source, source_suffix)
+        df2new = rename_with_suffix(target, target_suffix)
         df1new[tempcolname] = 0
         df2new[tempcolname] = 0
         dfnew = pd.merge(df1new, df2new, on=tempcolname).drop([tempcolname], axis=1)
         del df1new, df2new, tempcolname
     else:
-        ixname = left.index.name
-        ixnameleft = ixname + '_' + lsuffix
-        ixnameright = ixname + '_' + rsuffix
+        ixname = source.index.name
+        ixnamesource = ixname + '_' + source_suffix
+        ixnametarget = ixname + '_' + target_suffix
         dfnew = pd.DataFrame(
             index=on_ix
         ).reset_index(
             drop=False
         ).join(
-            rename_with_suffix(left, lsuffix).set_index(ixnameleft),
-            on=ixnameleft,
+            rename_with_suffix(source, source_suffix).set_index(ixnamesource),
+            on=ixnamesource,
             how='left'
         ).join(
-            rename_with_suffix(right, rsuffix).set_index(ixnameright),
-            on=ixnameright,
+            rename_with_suffix(target, target_suffix).set_index(ixnametarget),
+            on=ixnametarget,
             how='left'
         ).set_index(
-            [ixnameleft, ixnameright],
+            [ixnamesource, ixnametarget],
             drop=True
         )
 
     return dfnew
 
 
-def _return_cartesian_data(X, X_score, showcols, showscores, lsuffix, rsuffix, ixnamepairs):
+def _return_cartesian_data(X, X_score, showcols, showscores, source_suffix, target_suffix, ixnamepairs):
     if showcols is None:
         showcols = X[0].columns.intersection(X[1].columns)
     X_data = cartesian_join(
-        left=X[0][showcols],
-        right=X[1][showcols],
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
+        source=X[0][showcols],
+        target=X[1][showcols],
+        source_suffix=source_suffix,
+        target_suffix=target_suffix
     ).set_index(ixnamepairs)
     mycols = list()
     for c in showcols:
-        mycols.append(c + '_' + lsuffix)
-        mycols.append(c + '_' + rsuffix)
+        mycols.append(c + '_' + source_suffix)
+        mycols.append(c + '_' + target_suffix)
     X_data = X_data[mycols]
     if showscores is not None:
         for c in showscores:

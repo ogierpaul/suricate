@@ -1,25 +1,25 @@
 import pytest
 import pandas as pd
-from suricate.data.circus import getleft, getright, getXlr, getXsbs, getytrue
+from suricate.data.circus import getsource, gettarget, getXst, getXsbs, getytrue
 
-def test_left():
-    print(getleft())
-    assert isinstance(getleft(), pd.DataFrame)
-    assert getleft().shape[0] == 6
-    assert getleft().shape[1] == 1
+def test_source():
+    print(getsource())
+    assert isinstance(getsource(), pd.DataFrame)
+    assert getsource().shape[0] == 6
+    assert getsource().shape[1] == 1
 
     pass
 
-def test_right():
-    print(getright())
-    assert isinstance(getright(), pd.DataFrame)
-    assert getright().shape[0] == 6
-    assert getright().shape[1] == 1
+def test_target():
+    print(gettarget())
+    assert isinstance(gettarget(), pd.DataFrame)
+    assert gettarget().shape[0] == 6
+    assert gettarget().shape[1] == 1
     pass
 
 def test_X_lr():
-    print(getXlr())
-    X = getXlr()
+    print(getXst())
+    X = getXst()
     assert isinstance(X, list)
     assert len(X) == 2
     assert isinstance(X[0], pd.DataFrame)

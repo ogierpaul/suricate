@@ -10,13 +10,13 @@ Duplicate records, or record matching, may occur in different environments:
 - Finding a person between two databases (ex: online survey with email vs windows login)
 - ...
 
-The aim is to compare a dataframe (left) with another (right)
+The aim is to compare a dataframe (target) with another (right)
 - create a similarity matrix between the two set of records
 - label the data as 0 --> not a match and 1 --> match
 - train a Classifier on the data
 - predict
 
 ### Basic structure
-- Lr (left right) Transformers deal with a variable X=[df_left, df_right] where df_left and df_right have the columns = ['name', 'city', ...]
-- Sbs (Side by Side) deal with a variable X=['name_left', 'name_right', 'city_left', 'city_right', ...] (the records are compared side by side)
+- Lr (source target) Transformers deal with a variable X=[df_source, df_target] where df_source and df_target have the columns = ['name', 'city', ...]
+- Sbs (Side by Side) deal with a variable X=['name_source', 'name_target', 'city_source', 'city_target', ...] (the records are compared side by side)
 

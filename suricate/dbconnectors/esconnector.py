@@ -2,14 +2,14 @@ from copy import deepcopy
 import elasticsearch
 import pandas as pd
 from suricate.base import ConnectorMixin
-from suricate.lrdftransformers.cartesian import create_lrdf_sbs
+from suricate.dftransformers.cartesian import create_sbs
 import numpy as np
 import time
 
 ixname = 'ix'
-ixname_left = 'ix_left'
-ixname_right = 'ix_right'
-ixname_pairs = [ixname_left, ixname_right]
+ixnamesource = 'ix_source'
+ixnametarget = 'ix_target'
+ixname_pairs = [ixnamesource, ixnametarget]
 
 
 class EsConnector(ConnectorMixin):
@@ -18,10 +18,10 @@ class EsConnector(ConnectorMixin):
     Attributes:
         client (elasticsearch.Elasticsearch):
         ixname (str): this is the name of the index column in output dataframes. The unique identifier is taken from the id in elastic search
-        lsuffix:
+        source_suffix:
     """
     def __init__(self, client, index, scoreplan,   doc_type='_doc', size=30, explain=True,
-                 ixname='ix', lsuffix='left', rsuffix='right',
+                 ixname='ix', source_suffix='source', target_suffix='target',
                  es_id='es_id', es_score='es_score', suffix_score='es', es_rank='es_rank'):
         """
 
@@ -33,14 +33,14 @@ class EsConnector(ConnectorMixin):
             size (int): max number of hits from ES
             explain (bool): get detailed scores
             ixname (str): default 'ix', index name (in the sense of unique identified of record)
-            lsuffix (str): 'left'
-            rsuffix (str): 'rigth;
+            source_suffix (str): 'left'
+            target_suffix (str): 'rigth;
             es_score (str): 'es_score'
             es_id (str): 'es_id'
             suffix_score (str): 'es'
             es_rank (str):'es_rank'
         """
-        ConnectorMixin.__init__(self, ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix)
+        ConnectorMixin.__init__(self, ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix)
         self.client = client
         assert isinstance(self.client, elasticsearch.client.Elasticsearch)
         self.index = index
@@ -57,7 +57,7 @@ class EsConnector(ConnectorMixin):
         if self.explain is True:
             self.outcols += [c + '_' + self.suffix_score for c in self.usecols]
 
-    def fetch_left(self, X, ix):
+    def fetch_source(self, X, ix):
         """
         Args:
             X: input data (left)
@@ -68,7 +68,7 @@ class EsConnector(ConnectorMixin):
         """
         return X.loc[ix]
 
-    def fetch_right(self, ix=None, X=None):
+    def fetch_target(self, ix=None, X=None):
         """
         Args:
             X: dummy, input data to be given to the connector
@@ -103,17 +103,17 @@ class EsConnector(ConnectorMixin):
     def getsbs(self, X, on_ix=None):
         """
         Args:
-            X (pd.DataFrame): input data (left)
+            X (pd.DataFrame): input data (source)
             on_ix (pd.MultiIndex):
 
         Returns:
             pd.DataFrame
         """
-        ix_left = np.unique(on_ix.get_level_values(self.ixnameleft))
-        ix_right = np.unique(on_ix.get_level_values(self.ixnameright))
-        left = self.fetch_left(X=X, ix=ix_left)
-        right = self.fetch_right(ix=ix_right)
-        df = create_lrdf_sbs(X=[left, right], on_ix=on_ix, ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        ix_source = np.unique(on_ix.get_level_values(self.ixnamesource))
+        ix_target = np.unique(on_ix.get_level_values(self.ixnametarget))
+        source = self.fetch_source(X=X, ix=ix_source)
+        target = self.fetch_target(ix=ix_target)
+        df = create_sbs(X=[source, target], on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
         return df
 
     def fit(self, X=None, y=None):
@@ -131,21 +131,21 @@ class EsConnector(ConnectorMixin):
     def transform(self, X):
         """
         Args:
-            X (pd.DataFrame): left data
+            X (pd.DataFrame): source data
 
         Returns:
-            pd.DataFrame: X_score ({['ix_left', 'ix_right'}: 'es_score', 'es_rank'])
+            pd.DataFrame: X_score ({['ix_source', 'ix_target'}: 'es_score', 'es_rank'])
         """
-        alldata = pd.DataFrame(columns=[self.ixnameleft, self.ixnameright, self.es_score, self.es_rank])
+        alldata = pd.DataFrame(columns=[self.ixnamesource, self.ixnametarget, self.es_score, self.es_rank])
         for lix in X.index:
             record = X.loc[lix]
             res = self.search_record(record)
             score = unpack_allhits(res)
             df = pd.DataFrame.from_dict(score, orient='columns').rename(
                 columns={
-                    'ix': self.ixnameright
+                    'ix': self.ixnametarget
                 })
-            df[self.ixnameleft] = lix
+            df[self.ixnamesource] = lix
             df = df[alldata.columns]
             alldata = pd.concat([alldata, df], axis=0, ignore_index=True)
         Xt = alldata.set_index(self.ixnamepairs)

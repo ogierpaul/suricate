@@ -3,9 +3,9 @@ import pandas as pd
 
 from suricate.preutils import createmultiindex
 from suricate.pipeline.pruningpipe import PruningPipe
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 from suricate.explore import Explorer, KBinsCluster
-from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactConnector
+from suricate.dftransformers import DfConnector, VectorizerConnector, ExactConnector
 from suricate.sbsdftransformers import FuncSbsComparator
 
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -42,12 +42,12 @@ def best_try():
     n_cluster = 25
     n_simplequestions = 100
     n_hardquestions = 100
-    Xlr = getXlr(nrows=n_rows)
-    ixc = createmultiindex(X=Xlr)
-    y_true = getytrue(Xlr=Xlr)
+    Xst = getXst(nrows=n_rows)
+    ixc = createmultiindex(X=Xst)
+    y_true = getytrue(Xst=Xst)
     print(pd.datetime.now(), 'data loaded')
     pipe = PruningPipe(
-        connector=LrDfConnector(
+        connector=DfConnector(
             scorer=Pipeline(steps=[
                 ('scores', FeatureUnion(_lr_score_list)),
                 ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
@@ -64,8 +64,8 @@ def best_try():
         ,
         classifier=GradientBoostingClassifier(n_estimators=500)
     )
-    pipe.fit(X=Xlr, y=y_true)
-    y_pred = pipe.predict(X=Xlr)
+    pipe.fit(X=Xst, y=y_true)
+    y_pred = pipe.predict(X=Xst)
     precision = precision_score(y_true=y_true, y_pred=y_pred)
     recall = recall_score(y_true=y_true, y_pred=y_pred)
     accuracy = balanced_accuracy_score(y_true=y_true, y_pred=y_pred)

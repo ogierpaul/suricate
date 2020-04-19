@@ -1,6 +1,6 @@
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 from suricate.explore import Explorer, KBinsCluster, cluster_matches, cluster_stats
-from suricate.lrdftransformers import LrDfConnector, VectorizerConnector, ExactConnector
+from suricate.dftransformers import DfConnector, VectorizerConnector, ExactConnector
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import precision_score, recall_score,  balanced_accuracy_score
@@ -26,10 +26,10 @@ def test_explorer():
     n_cluster = 10
     n_simplequestions = 200
     n_hardquestions = 200
-    Xlr = getXlr(nrows=n_rows)
-    y_true = getytrue(Xlr=Xlr)
+    Xst = getXst(nrows=n_rows)
+    y_true = getytrue(Xst=Xst)
     print(pd.datetime.now(), 'data loaded')
-    connector = LrDfConnector(
+    connector = DfConnector(
         scorer=Pipeline(
             steps=[
                 ('scores', FeatureUnion(_score_list)),
@@ -42,22 +42,22 @@ def test_explorer():
         n_simple=n_simplequestions,
         n_hard=n_hardquestions
     )
-    connector.fit(X=Xlr)
+    connector.fit(X=Xst)
     # Xtc is the transformed output from the connector, i.e. the score matrix
-    Xtc = connector.transform(X=Xlr)
+    Xtc = connector.transform(X=Xst)
     print(pd.datetime.now(), 'score ok')
     # ixc is the index corresponding to the score matrix
-    ixc = connector.getindex(X=Xlr)
+    ixc = connector.getindex(X=Xst)
     ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xtc, index=ixc), fit_cluster=True)
     print(pd.datetime.now(), 'length of ix_simple {}'.format(ix_simple.shape[0]))
-    sbs_simple = connector.getsbs(X=Xlr, on_ix=ix_simple)
+    sbs_simple = connector.getsbs(X=Xst, on_ix=ix_simple)
     print('***** SBS SIMPLE ******')
     print(sbs_simple.sample(5))
     print('*****')
     y_simple = y_true.loc[ix_simple]
     ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xtc,index=ixc), y=y_simple)
     print(pd.datetime.now(), 'length of ix_hard {}'.format(ix_hard.shape[0]))
-    sbs_hard = connector.getsbs(X=Xlr, on_ix=ix_hard)
+    sbs_hard = connector.getsbs(X=Xst, on_ix=ix_hard)
     print(sbs_hard.sample(5))
     print('*****')
     y_train = y_true.loc[ix_simple.union(ix_hard)]
@@ -73,10 +73,10 @@ def test_pruning():
     n_cluster = 10
     n_simplequestions = 200
     n_hardquestions = 200
-    Xlr = getXlr(nrows=n_rows)
-    y_true = getytrue(Xlr=Xlr)
+    Xst = getXst(nrows=n_rows)
+    y_true = getytrue(Xst=Xst)
     print(pd.datetime.now(), 'data loaded')
-    connector = LrDfConnector(
+    connector = DfConnector(
         scorer=Pipeline(
             steps=[
                 ('scores', FeatureUnion(_score_list)),
@@ -89,12 +89,12 @@ def test_pruning():
         n_simple = n_simplequestions,
         n_hard=n_hardquestions
     )
-    connector.fit(X=Xlr)
+    connector.fit(X=Xst)
     # Xtc is the transformed output from the connector, i.e. the score matrix
-    Xtc = connector.transform(X=Xlr)
+    Xtc = connector.transform(X=Xst)
     print(pd.datetime.now(), 'score ok')
     # ixc is the index corresponding to the score matrix
-    ixc = connector.getindex(X=Xlr)
+    ixc = connector.getindex(X=Xst)
     y_true = y_true.loc[ixc]
 
     ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xtc, index=ixc), fit_cluster=True)

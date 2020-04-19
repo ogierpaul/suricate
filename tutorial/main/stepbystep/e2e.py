@@ -2,23 +2,23 @@
 ## Pruning pipeline using Elastic search
 
 from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
-from suricate.data.companies import getleft, getright
+from suricate.data.companies import getsource, gettarget
 import pandas as pd
 import  numpy as np
 
 engine = create_engine_ready()
 
 # filefolder = '~/'
-# leftpath = 'left.csv'
-# rightpath = 'right.csv'
-# df_left = pd.read_csv(filefolder + leftpath, index_col=0, sep='|', encoding='utf-8')
-# df_right = pd.read_csv(filefolder + rightpath, index_col=0, sep='|', encoding='utf-8')
-df_left_raw = getleft(nrows=100)
-df_right_raw = getright(nrows=100)
+# leftpath = 'source.csv'
+# rightpath = 'target.csv'
+# df_source = pd.read_csv(filefolder + leftpath, index_col=0, sep='|', encoding='utf-8')
+# df_target = pd.read_csv(filefolder + rightpath, index_col=0, sep='|', encoding='utf-8')
+df_source_raw = getsource(nrows=100)
+df_target_raw = gettarget(nrows=100)
 
 def rebuild_ytrue(ix):
     y_true_saved = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true.y_true = 1", con=engine).set_index(
-        ['ix_left', 'ix_right'],
+        ['ix_source', 'ix_target'],
         drop=True)['y_true']
     y = pd.Series(index=ix, data = np.zeros(shape=len(ix)), name='y_true')
     ix_common = y_true_saved.index.intersection(ix)
@@ -27,7 +27,7 @@ def rebuild_ytrue(ix):
 
 
 
-def prepare_left(df):
+def prepare_source(df):
     """
 
     Args:
@@ -40,7 +40,7 @@ def prepare_left(df):
     return df2
 
 
-def prepare_right(df):
+def prepare_target(df):
     """
 
     Args:
@@ -53,11 +53,11 @@ def prepare_right(df):
     return df2
 
 
-df_left = prepare_left(df_left_raw)
-df_right = prepare_right(df_right_raw)
-assert df_left.columns.equals(df_right.columns)
-print(pd.datetime.now(),' | ', 'number of rows on left:{}'.format(df_left.shape[0]))
-print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_right.shape[0]))
+df_source = prepare_source(df_source_raw)
+df_target = prepare_target(df_target_raw)
+assert df_source.columns.equals(df_target.columns)
+print(pd.datetime.now(),' | ', 'number of rows on left:{}'.format(df_source.shape[0]))
+print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_target.shape[0]))
 
 
 ## Push the data to ES
@@ -70,7 +70,7 @@ import time
 
 ## Put the data to ES, drop the index first and then re create
 esclient = elasticsearch.Elasticsearch()
-es_indice = 'df_right'
+es_indice = 'df_target'
 
 print(pd.datetime.now(),' | ', 'Start pushing to ES')
 
@@ -99,11 +99,11 @@ if True:
         }
     }
     esclient.indices.create(index=es_indice, body=request_body)
-    index_with_es(client=esclient, df=df_right, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
+    index_with_es(client=esclient, df=df_target, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
     time.sleep(5)
 pass
 catcount = esclient.count(index=es_indice)['count']
-assert catcount == df_right.shape[0]
+assert catcount == df_target.shape[0]
 print(pd.datetime.now(),' | ', 'pushed to es_sql indice {}'.format(es_indice))
 print(pd.datetime.now(),' | ', 'number of docs: {}'.format(catcount))
 
@@ -114,7 +114,7 @@ from tutorial.main.stepbystep.stepbysteputils.esconnector import getesconnector
 print(pd.datetime.now(),' | ', 'Starting connection')
 escon = getesconnector()
 
-Xtc = escon.fit_transform(X=df_left)
+Xtc = escon.fit_transform(X=df_source)
 print(pd.datetime.now(),' | ', 'Finished connection')
 print(pd.datetime.now(),' | ', 'number of pairs {}'.format(Xtc.shape[0]))
 print(pd.datetime.now(),' | ', 'Connection scores sample:')
@@ -122,7 +122,7 @@ print(Xtc.sample(5))
 
 ix_con_multi = Xtc.index
 print(pd.datetime.now(),' | ', 'Starting side-by-side build')
-Xsbs = escon.getsbs(X=df_left, on_ix=ix_con_multi)
+Xsbs = escon.getsbs(X=df_source, on_ix=ix_con_multi)
 print(pd.datetime.now(),' | ', 'Finished side-by-side build')
 print(pd.datetime.now(),' | ', 'Side by side pairs sample:')
 print(Xsbs.sample(5))
@@ -239,9 +239,9 @@ print(y_pred.value_counts())
 
 
 print(pd.datetime.now(),' | ', 'Starting saving the results to SQL')
-df_left.to_sql(name='df_left', con=engine, if_exists='replace', index=True)
-df_right.to_sql(name='df_right', con=engine, if_exists='replace', index=True)
-print(pd.datetime.now(),' | ', 'pushed to sql tables df_left and df_right')
+df_source.to_sql(name='df_source', con=engine, if_exists='replace', index=True)
+df_target.to_sql(name='df_target', con=engine, if_exists='replace', index=True)
+print(pd.datetime.now(),' | ', 'pushed to sql tables df_source and df_target')
 
 Xtc.reset_index(
     drop=False
@@ -270,7 +270,7 @@ X_cluster.reset_index(
 ).set_index(
     'ix'
 )[
-    ['ix_left', 'ix_right', 'avg_score', 'y_cluster', 'y_true']
+    ['ix_source', 'ix_target', 'avg_score', 'y_cluster', 'y_true']
 ].to_sql('cluster_output', con=engine, if_exists='replace')
 print(pd.datetime.now(),' | ', 'Pushed X_cluster to SQL with name cluster_output')
 

@@ -14,7 +14,7 @@ class Explorer(ClassifierMixin):
     * Using the SimpleQuestions and HardQuestions classes, generate indexes of pairs needed
     * Using the ClusterClassifier class, classify the input data as a match or potentially not a match
     """
-    def  __init__(self, clustermixin=None, n_simple = 10, n_hard=10, ixname='ix', lsuffix='left', rsuffix='right'):
+    def  __init__(self, clustermixin=None, n_simple = 10, n_hard=10, ixname='ix', source_suffix='source', target_suffix='target'):
         """
 
         Args:
@@ -22,24 +22,24 @@ class Explorer(ClassifierMixin):
             n_simple (int): number of simple questions per cluster
             n_hard (int): number of hard questions per cluster
             ixname (str): default 'ix'
-            lsuffix (str): default 'left'
-            rsuffix (str): default 'right'
+            source_suffix (str): default 'left'
+            target_suffix (str): default 'right'
         """
         TransformerMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         if clustermixin is None:
             clustermixin = KBinsCluster(n_clusters=10)
         self._clustermixin = clustermixin
         self._simplequestions = SimpleQuestions(n_questions=n_simple)
         self._hardquestions = HardQuestions(n_questions=n_hard)
-        self._clusterclassifier = ClusterClassifier(ixname=self.ixname, lsuffix=self.lsuffix, rsuffix=self.rsuffix)
+        self._clusterclassifier = ClusterClassifier(ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
         pass
 
     def fit_cluster(self, X, y=None):

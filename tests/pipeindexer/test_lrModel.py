@@ -4,17 +4,17 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 
 from suricate.preutils.functionclassifier import FunctionClassifier
-from suricate.lrdftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser, LrDfVisualHelper
-from suricate.pipeline import PipeLrClf, PipeSbsClf, PruningLrSbsClf
+from suricate.dftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser, DfVisualHelper
+from suricate.pipeline import PipeDfClf, PipeSbsClf, PruningDfSbsClf
 from suricate.sbsdftransformers import FuncSbsComparator
 
-from suricate.data.companies import getXlr, getytrue
+from suricate.data.companies import getXst, getytrue
 
-# from ..data.dataframes import X_lr, y_true, df_left, df_right
+# from ..data.dataframes import X_lr, y_true, df_source, df_target
 
 def test_lrmodel():
-    X_lr = getXlr(nrows=100)
-    y_true = getytrue(Xlr=X_lr)
+    X_lr = getXst(nrows=100)
+    y_true = getytrue(Xst=X_lr)
     scorer = make_union(*[
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='street', analyzer='char'),
@@ -25,16 +25,16 @@ def test_lrmodel():
     imp = SimpleImputer(strategy='constant', fill_value=0)
     transformer = make_pipeline(*[scorer, imp])
     clf = Classifier()
-    mypipe = PipeLrClf(transformer=transformer, classifier=clf)
+    mypipe = PipeDfClf(transformer=transformer, classifier=clf)
     X_score = mypipe.transformer.fit_transform(X=X_lr)
     mypipe.fit(X=X_lr, y=y_true)
     print(mypipe.score(X=X_lr, y=y_true))
 
 
 def test_sbsmodel():
-    X_lr = getXlr(nrows=100)
-    y_true = getytrue(Xlr=X_lr)
-    df_sbs = LrDfVisualHelper().fit_transform(X=X_lr)
+    X_lr = getXst(nrows=100)
+    y_true = getytrue(Xst=X_lr)
+    df_sbs = DfVisualHelper().fit_transform(X=X_lr)
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
         FuncSbsComparator(on='name', comparator='fuzzy'),
@@ -50,8 +50,8 @@ def test_sbsmodel():
 
 
 def test_pipeModel():
-    X_lr = getXlr(nrows=100)
-    y_true = getytrue(Xlr=X_lr)
+    X_lr = getXst(nrows=100)
+    y_true = getytrue(Xst=X_lr)
     transformer1 = make_union(*[
         VectorizerConnector(on='name', analyzer='word'),
         VectorizerConnector(on='street', analyzer='word'),
@@ -79,7 +79,7 @@ def test_pipeModel():
         return y_return
 
     clf1 = FunctionClassifier(func=myfunc)
-    lrmodel = PipeLrClf(
+    lrmodel = PipeDfClf(
         transformer=transformer1,
         classifier=clf1
     )
@@ -95,6 +95,6 @@ def test_pipeModel():
     transformer2 = make_pipeline(*[transformer2, imp2])
     clf = Classifier()
     sbsmodel = PipeSbsClf(transformer=transformer2, classifier=clf)
-    totalpipe = PruningLrSbsClf(lrmodel=lrmodel, sbsmodel=sbsmodel)
+    totalpipe = PruningDfSbsClf(lrmodel=lrmodel, sbsmodel=sbsmodel)
     totalpipe.fit(X=X_lr, y_lr=y_true, y_sbs=y_true)
     print(totalpipe.score(X=X_lr, y=y_true))
