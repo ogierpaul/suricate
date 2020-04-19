@@ -66,9 +66,9 @@ class SingleGrouping:
             new = self._choosenextrecord(n_records)
             if new is not None:
                 y_proba = self.dedupe.predict(
-                    left=new,
-                    right=refdata.dropna(subset=[self.gidname]),
-                    addmissingleft=True,
+                    source=new,
+                    target=refdata.dropna(subset=[self.gidname]),
+                    addmissingsource=True,
                     verbose=True
                 )
                 self._updategids(y_proba=y_proba)

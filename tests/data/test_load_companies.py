@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 from numpy import unique
 from suricate.data.base import create_path, open_csv
-from suricate.data.companies import getsource, gettarget, gettrainingdata, _folder_companydf, getytrue, getXst
+from suricate.data.companies import getsource, gettarget, _folder_companydf, getytrue, getXst
 from suricate.preutils import createmultiindex
 
 def test_create_path():
@@ -32,11 +32,6 @@ def test_load_target():
     print(df.sample(10))
     assert isinstance(df, pd.DataFrame)
 
-
-def test_load_trainingdata():
-    df = gettrainingdata()
-    print(df.sample(10))
-    assert isinstance(df, pd.DataFrame)
 
 def test_load_ytrue():
     ix_all = createmultiindex(X=getXst())
