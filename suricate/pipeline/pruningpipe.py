@@ -79,16 +79,16 @@ class PruningPipe(ClassifierMixin):
             self.connector.fit(X=X)
 
         ## Get the first score
-        Xtc = self.connector.transform(X=X) # score matrix
-        ixc = Xtc.index # index of Xc
+        Xst = self.connector.transform(X=X) # score matrix
+        ixc = Xst.index # index of Xc
 
         # Second model: Explorer
         ## Fit the explorer
         if fit is True:
-            self.pruningclf.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_true, fit_cluster=True)
+            self.pruningclf.fit(X=pd.DataFrame(data=Xst, index=ixc), y=y_true, fit_cluster=True)
         ## Get the pruning classifier
         y_pruning = pd.Series(
-            data=self.pruningclf.predict(X=Xtc),
+            data=self.pruningclf.predict(X=Xst),
             index=ixc
         )
 
@@ -100,14 +100,14 @@ class PruningPipe(ClassifierMixin):
         # select only possible (mixed) matches from first classifier
         ix_mix = y_pruning.loc[y_pruning == 1].index
         Xs_mix = self.connector.getsbs(X=X, on_ix=ix_mix) # side by side view of ix_mix
-        Xtc_mix = Xtc.loc[ix_mix]
+        Xst_mix = Xst.loc[ix_mix]
         # And Transform (Second scoring engine)
         if fit is True:
             self.sbsmodel.fit(X=Xs_mix)
         Xts_mix = self.sbsmodel.transform(X=Xs_mix)
 
         # Merge the output of the two scores
-        Xtf = np.hstack((Xtc_mix.values, Xts_mix))
+        Xtf = np.hstack((Xst_mix.values, Xts_mix))
 
         if fit is True:
             # select only the intersection of y_true and ix_mix:

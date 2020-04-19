@@ -51,11 +51,11 @@ class DfApplyComparator(DfTransformerMixin):
         ).reset_index(
             drop=False
         ).join(
-            left[self.on], on=self.ixnamesource, how='left'
+            source[self.on], on=self.ixnamesource, how='left'
         ).rename(
             columns={self.on: colnameleft}
         ).join(
-            right[self.on], on=self.ixnametarget, how='left'
+            target[self.on], on=self.ixnametarget, how='left'
         ).rename(
             columns={self.on: colnameright}
         ).set_index(

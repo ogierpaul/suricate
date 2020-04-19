@@ -114,13 +114,13 @@ from tutorial.main.stepbystep.stepbysteputils.esconnector import getesconnector
 print(pd.datetime.now(),' | ', 'Starting connection')
 escon = getesconnector()
 
-Xtc = escon.fit_transform(X=df_source)
+Xst = escon.fit_transform(X=df_source)
 print(pd.datetime.now(),' | ', 'Finished connection')
-print(pd.datetime.now(),' | ', 'number of pairs {}'.format(Xtc.shape[0]))
+print(pd.datetime.now(),' | ', 'number of pairs {}'.format(Xst.shape[0]))
 print(pd.datetime.now(),' | ', 'Connection scores sample:')
-print(Xtc.sample(5))
+print(Xst.sample(5))
 
-ix_con_multi = Xtc.index
+ix_con_multi = Xst.index
 print(pd.datetime.now(),' | ', 'Starting side-by-side build')
 Xsbs = escon.getsbs(X=df_source, on_ix=ix_con_multi)
 print(pd.datetime.now(),' | ', 'Finished side-by-side build')
@@ -144,13 +144,13 @@ y_true = rebuild_ytrue(ix= ix_con_multi)
 
 print(pd.datetime.now(),' | ', 'Starting cluster fit with unsupervized data')
 exp = Explorer(n_simple=n_questions, n_hard=n_questions)
-exp.fit_cluster(X=Xtc[['es_score']])
-y_cluster = pd.Series(data=exp.pred_cluster(X=Xtc), index=Xtc.index, name='y_cluster')
+exp.fit_cluster(X=Xst[['es_score']])
+y_cluster = pd.Series(data=exp.pred_cluster(X=Xst), index=Xst.index, name='y_cluster')
 X_cluster = pd.DataFrame(y_cluster)
 print(pd.datetime.now(),' | ', 'Done')
 
 ### Ask simple questions
-ix_simple = exp.ask_simple(X=Xtc)
+ix_simple = exp.ask_simple(X=Xst)
 Sbs_simple = Xsbs.loc[ix_simple]
 y_simple = y_true.loc[ix_simple]
 print(pd.datetime.now(),' | ', 'Result of simple questions:')
@@ -159,11 +159,11 @@ print(Sbs_simple.sample(10))
 
 ### Fit the cluser with supervized data
 print(pd.datetime.now(),' | ', 'Start fitting the cluster classifier with supervized data:')
-exp.fit(X=Xtc, y=y_simple, fit_cluster=False)
+exp.fit(X=Xst, y=y_simple, fit_cluster=False)
 print(pd.datetime.now(),' | ', 'Done')
 
 ### Ask hard (pointed) questions
-ix_hard = exp.ask_hard(X=Xtc, y=y_simple)
+ix_hard = exp.ask_hard(X=Xst, y=y_simple)
 Sbs_hard = Xsbs.loc[ix_hard]
 y_hard = y_true.loc[ix_hard]
 print(pd.datetime.now(),' | ', 'Result of hard questions:')
@@ -184,11 +184,11 @@ print(pd.datetime.now(),' | ', 'Start Pruning')
 pruning_threshold = 15
 
 ### Make the pruning step
-ix_further = Xtc.loc[Xtc['es_score'] > pruning_threshold].index
-Xtc_further = Xtc.loc[ix_further]
+ix_further = Xst.loc[Xst['es_score'] > pruning_threshold].index
+Xst_further = Xst.loc[ix_further]
 Xsbs_further = Xsbs.loc[ix_further]
 y_true_further = y_true.loc[ix_further]
-print(pd.datetime.now(),' | ', 'Pruning ratio: {}'.format(len(ix_further)/Xtc.shape[0]))
+print(pd.datetime.now(),' | ', 'Pruning ratio: {}'.format(len(ix_further)/Xst.shape[0]))
 
 
 print(pd.datetime.now(),' | ', 'Starting further scoring')
@@ -206,7 +206,7 @@ _sbs_score_list = [
 scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)
 scores_further = scorer_sbs.fit_transform(X=Xsbs_further)
 scores_further = pd.DataFrame(data=scores_further, index=ix_further, columns=[c[0] for c in _sbs_score_list])
-scores_further = pd.concat([Xtc_further, scores_further], axis=1, ignore_index=False)
+scores_further = pd.concat([Xst_further, scores_further], axis=1, ignore_index=False)
 print(pd.datetime.now(),' | ', 'Done')
 print(pd.datetime.now(),' | ', 'Scores:')
 print(scores_further.sample(10))
@@ -243,7 +243,7 @@ df_source.to_sql(name='df_source', con=engine, if_exists='replace', index=True)
 df_target.to_sql(name='df_target', con=engine, if_exists='replace', index=True)
 print(pd.datetime.now(),' | ', 'pushed to sql tables df_source and df_target')
 
-Xtc.reset_index(
+Xst.reset_index(
     drop=False
 ).set_index(
     pd.Series(data=ix_con_singlecol, name='ix')
@@ -261,7 +261,7 @@ Xsbs.reset_index(
 
 print(pd.datetime.now(), ' | ', 'Pushed Scores and Side-by-Side view to SQL with table names es_scores and es_sbs')
 
-X_cluster['avg_score'] = Xtc[['es_score']].mean(axis=1)
+X_cluster['avg_score'] = Xst[['es_score']].mean(axis=1)
 
 X_cluster['y_true'] = y_true
 X_cluster['ix'] = ix_con_singlecol

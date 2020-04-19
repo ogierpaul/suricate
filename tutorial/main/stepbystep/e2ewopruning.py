@@ -103,12 +103,12 @@ pred = PartialClf(classifier=pipe)
 
 left_train, left_test = train_test_split(df_source_raw, train_size=0.5)
 
-Xtc_train = escon.fit_transform(X=left_train)
-ix_con_train = Xtc_train.index
+Xst_train = escon.fit_transform(X=left_train)
+ix_con_train = Xst_train.index
 Xsbs_train = escon.getsbs(X=left_train, on_ix=ix_con_train)
 scores_further_train = scorer_sbs.fit_transform(X=Xsbs_train)
 scores_further_train = pd.DataFrame(data=scores_further_train, index=ix_con_train, columns=[c[0] for c in _sbs_score_list])
-scores_further_train = pd.concat([Xtc_train[['es_score']], scores_further_train], axis=1, ignore_index=False)
+scores_further_train = pd.concat([Xst_train[['es_score']], scores_further_train], axis=1, ignore_index=False)
 y_true_train = rebuild_ytrue(ix=ix_con_train)
 pred.fit(X=scores_further_train, y=y_true_train)
 y_pred_train = pred.predict(X=scores_further_train)
@@ -119,12 +119,12 @@ print(pd.datetime.now(),' | ', 'precision: {}'.format(precision_score(y_true=y_t
 print(pd.datetime.now(),' | ', 'recall: {}'.format(recall_score(y_true=y_true_train, y_pred=y_pred_train)))
 
 
-Xtc_test = escon.transform(X=left_test)
-ix_con_test = Xtc_test.index
+Xst_test = escon.transform(X=left_test)
+ix_con_test = Xst_test.index
 Xsbs_test = escon.getsbs(X=left_test, on_ix=ix_con_test)
 scores_further_test = scorer_sbs.transform(X=Xsbs_test)
 scores_further_test = pd.DataFrame(data=scores_further_test, index=ix_con_test, columns=[c[0] for c in _sbs_score_list])
-scores_further_test = pd.concat([Xtc_test[['es_score']], scores_further_test], axis=1, ignore_index=False)
+scores_further_test = pd.concat([Xst_test[['es_score']], scores_further_test], axis=1, ignore_index=False)
 y_true_test = rebuild_ytrue(ix=ix_con_test)
 y_pred_test = pred.predict(X=scores_further_test)
 

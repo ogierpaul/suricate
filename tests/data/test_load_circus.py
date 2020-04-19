@@ -17,7 +17,7 @@ def test_target():
     assert gettarget().shape[1] == 1
     pass
 
-def test_X_lr():
+def test_X_st():
     print(getXst())
     X = getXst()
     assert isinstance(X, list)

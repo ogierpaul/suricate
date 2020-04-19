@@ -43,27 +43,27 @@ def test_explorer():
         n_hard=n_hardquestions
     )
     connector.fit(X=Xst)
-    # Xtc is the transformed output from the connector, i.e. the score matrix
-    Xtc = connector.transform(X=Xst)
+    # Xst is the transformed output from the connector, i.e. the score matrix
+    Xst = connector.transform(X=Xst)
     print(pd.datetime.now(), 'score ok')
     # ixc is the index corresponding to the score matrix
     ixc = connector.getindex(X=Xst)
-    ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xtc, index=ixc), fit_cluster=True)
+    ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xst, index=ixc), fit_cluster=True)
     print(pd.datetime.now(), 'length of ix_simple {}'.format(ix_simple.shape[0]))
     sbs_simple = connector.getsbs(X=Xst, on_ix=ix_simple)
     print('***** SBS SIMPLE ******')
     print(sbs_simple.sample(5))
     print('*****')
     y_simple = y_true.loc[ix_simple]
-    ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xtc,index=ixc), y=y_simple)
+    ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xst,index=ixc), y=y_simple)
     print(pd.datetime.now(), 'length of ix_hard {}'.format(ix_hard.shape[0]))
     sbs_hard = connector.getsbs(X=Xst, on_ix=ix_hard)
     print(sbs_hard.sample(5))
     print('*****')
     y_train = y_true.loc[ix_simple.union(ix_hard)]
     print('length of y_train: {}'.format(y_train.shape[0]))
-    explorer.fit(X=pd.DataFrame(data=Xtc, index=ixc), y=y_train, fit_cluster=True)
-    print('results of pred:\n', pd.Series(explorer.predict(X=Xtc)).value_counts())
+    explorer.fit(X=pd.DataFrame(data=Xst, index=ixc), y=y_train, fit_cluster=True)
+    print('results of pred:\n', pd.Series(explorer.predict(X=Xst)).value_counts())
     print('****')
 
 
@@ -90,22 +90,22 @@ def test_pruning():
         n_hard=n_hardquestions
     )
     connector.fit(X=Xst)
-    # Xtc is the transformed output from the connector, i.e. the score matrix
-    Xtc = connector.transform(X=Xst)
+    # Xst is the transformed output from the connector, i.e. the score matrix
+    Xst = connector.transform(X=Xst)
     print(pd.datetime.now(), 'score ok')
     # ixc is the index corresponding to the score matrix
     ixc = connector.getindex(X=Xst)
     y_true = y_true.loc[ixc]
 
-    ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xtc, index=ixc), fit_cluster=True)
-    ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xtc, index=ixc), y=y_true.loc[ix_simple])
+    ix_simple = explorer.ask_simple(X=pd.DataFrame(data=Xst, index=ixc), fit_cluster=True)
+    ix_hard = explorer.ask_hard(X=pd.DataFrame(data=Xst, index=ixc), y=y_true.loc[ix_simple])
     ix_train = ix_simple.union(ix_hard)
     print('number of training samples:{}'.format(ix_train.shape[0]))
-    X_train = pd.DataFrame(data=Xtc, index=ixc).loc[ix_train]
+    X_train = pd.DataFrame(data=Xst, index=ixc).loc[ix_train]
     y_train = y_true.loc[ix_train]
 
     explorer.fit(X=X_train, y=y_train, fit_cluster=True)
-    y_pruning = explorer.predict(X=Xtc)
+    y_pruning = explorer.predict(X=Xst)
     y_pruning = pd.Series(data=y_pruning, name='y_pruning', index=ixc)
     y_pred = (y_pruning > 0).astype(int)
     precision = precision_score(y_true=y_true, y_pred=y_pred)

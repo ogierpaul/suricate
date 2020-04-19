@@ -58,19 +58,19 @@ connector = DfConnector(
     )
 ### Fit the cluster non-supervizes
 explorer = Explorer(clustermixin=KBinsCluster(n_clusters=n_cluster), n_simple=n_simplequestions, n_hard=n_pointedquestions)
-Xtc = connector.fit_transform(X=Xst)
-explorer.fit_cluster(X=Xtc)
+Xst = connector.fit_transform(X=Xst)
+explorer.fit_cluster(X=Xst)
 
 ### Ask simple questions
-ix_simple = explorer.ask_simple(X=Xtc)
+ix_simple = explorer.ask_simple(X=Xst)
 Sbs_simple = connector.getsbs(X=Xst, on_ix=ix_simple)
 y_simple = y_true.loc[ix_simple]
 
 ### Fit the cluser with supervized data
-explorer.fit(X=Xtc, y=y_simple, fit_cluster=False)
+explorer.fit(X=Xst, y=y_simple, fit_cluster=False)
 
 ### Ask hard (pointed) questions
-ix_hard = explorer.ask_hard(X=Xtc, y=y_simple)
+ix_hard = explorer.ask_hard(X=Xst, y=y_simple)
 Sbs_hard = connector.getsbs(X=Xst, on_ix=ix_hard)
 y_hard = y_true.loc[ix_hard]
 

@@ -85,9 +85,9 @@ class DfTransformerMixin(TransformerMixin):
         xpairs = xpairs.reset_index(drop=False)
 
         if use_cols is None or len(use_cols) == 0:
-            use_cols = left.columns.intersection(right.columns)
-        xsource = left[use_cols].copy().reset_index(drop=False)
-        xtarget = right[use_cols].copy().reset_index(drop=False)
+            use_cols = source.columns.intersection(target.columns)
+        xsource = source[use_cols].copy().reset_index(drop=False)
+        xtarget = target[use_cols].copy().reset_index(drop=False)
         xsource = addsuffix(xsource, self.source_suffix).set_index(self.ixnamesource)
         xtarget = addsuffix(xtarget, self.target_suffix).set_index(self.ixnametarget)
 

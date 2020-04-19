@@ -6,8 +6,8 @@ from suricate.dftransformers import CartesianSt, ExactConnector, \
     VectorizerConnector, DfApplyComparator, DfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
 from suricate.data.base import ix_names
 from suricate.data.foo import getsource, gettarget, getXsbs, getXst, getytrue
-left = getsource()
-right = gettarget()
+source = getsource()
+target = gettarget()
 X_lr = getXst()
 X_sbs = getXsbs()
 y_true = getytrue()
@@ -49,18 +49,18 @@ def test_cartesian_join():
     ixnamepairs = ix_names['ixnamepairs']
     source_suffix = ix_names['source_suffix']
     target_suffix = ix_names['target_suffix']
-    df = cartesian_join(source=left, target=right, source_suffix=source_suffix, target_suffix=target_suffix)
+    df = cartesian_join(source=source, target=target, source_suffix=source_suffix, target_suffix=target_suffix)
     # Output is a DataFrame
     assert isinstance(df, pd.DataFrame)
     # output number of rows is the multiplication of both rows
-    assert df.shape[0] == left.shape[0] * right.shape[0]
+    assert df.shape[0] == source.shape[0] * target.shape[0]
     # output number of columns are left columns + right columns + 2 columns for each indexes
-    assert df.shape[1] == 2 + left.shape[1] + right.shape[1]
+    assert df.shape[1] == 2 + source.shape[1] + target.shape[1]
     # every column of source and target, + the index, is found with a suffix in the output dataframe
-    for oldname in left.reset_index(drop=False).columns:
+    for oldname in source.reset_index(drop=False).columns:
         newname = '_'.join([oldname, source_suffix])
         assert newname in df.columns
-    for oldname in right.reset_index(drop=False).columns:
+    for oldname in target.reset_index(drop=False).columns:
         newname = '_'.join([oldname, target_suffix])
         assert newname in df.columns
 

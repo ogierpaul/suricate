@@ -91,12 +91,12 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 
 
-Xtc = escon.fit_transform(X=df_source)
-ix_con = Xtc.index
+Xst = escon.fit_transform(X=df_source)
+ix_con = Xst.index
 Xsbs = escon.getsbs(X=df_source, on_ix=ix_con)
 scores_further = scorer_sbs.fit_transform(X=Xsbs)
 scores_further = pd.DataFrame(data=scores_further, index=ix_con, columns=[c[0] for c in _sbs_score_list])
-scores_further = pd.concat([Xtc[['es_score']], scores_further], axis=1, ignore_index=False)
+scores_further = pd.concat([Xst[['es_score']], scores_further], axis=1, ignore_index=False)
 y_true = rebuild_ytrue(ix=ix_con)
 
 X = scores_further

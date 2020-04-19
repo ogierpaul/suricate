@@ -132,8 +132,8 @@ def test_transform(esconnectornew):
 
 def test_getsbs(esconnectornew):
     df_source = getsource(nrows=50)
-    Xtc = esconnectornew.fit_transform(X=df_source)
-    ix = Xtc.index
+    Xst = esconnectornew.fit_transform(X=df_source)
+    ix = Xst.index
     X_sbs = esconnectornew.getsbs(X=df_source, on_ix=ix)
     assert X_sbs.index.equals(ix)
     for c in df_source.columns:

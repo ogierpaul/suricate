@@ -14,7 +14,7 @@ Xscores = pd.read_sql(sql="SELECT * FROM scores_final", con=engine).set_index(
     ['ix_source', 'ix_target'], drop=True)
 ix_double = Xscores.index
 ix_single = Xscores['ix']
-# Xtc = pd.read_sql(sql="SELECT * FROM es_scores", con=engine).set_index(['ix_source', 'ix_target'], drop=True)[['ix', 'es_score']]
+# Xst = pd.read_sql(sql="SELECT * FROM es_scores", con=engine).set_index(['ix_source', 'ix_target'], drop=True)[['ix', 'es_score']]
 # Xsbs = pd.read_sql(sql="SELECT * FROM es_sbs", con=engine).set_index(['ix_source', 'ix_target'], drop=True)
 
 
