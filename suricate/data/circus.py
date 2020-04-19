@@ -26,7 +26,7 @@ def getsource():
 
 def gettarget():
     """
-    Identical to getleft but index is changed
+    Identical to getsource but index is changed
     Returns:
         pd.DataFrame: shape (6, 1)
     """
