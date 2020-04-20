@@ -1,7 +1,6 @@
 # Suricate
-A simple and effective framework for finding duplicate entities between datasets.
+A simple and effective framework for finding duplicate entities between datasets. It also draws heavily on fuzzy matching, using both tf-idf and python-levenshtein (fuzzywuzzy) package.
 Based on a modular architecture using Pandas and Scikit-learn base classes (transformer), it is completely customizable and pipelineable.
-It also draws heavily on fuzzy matching, using both tf-idf and python-levenshtein (fuzzywuzzy) package.
 
 ## Aim: Using machine learning to find duplicate records
 ### Examples
@@ -16,7 +15,10 @@ The aim is to compare a dataframe (target) with another (right)
 - train a Classifier on the data
 - predict
 
-### Basic structure
-- Lr (source target) Transformers deal with a variable X=[df_source, df_target] where df_source and df_target have the columns = ['name', 'city', ...]
-- Sbs (Side by Side) deal with a variable X=['name_source', 'name_target', 'city_source', 'city_target', ...] (the records are compared side by side)
-
+## Project Structure
+* suricate: python package
+    * contains the code with the base class to do the deduplication
+* tests:
+    * test library for the suricate package (in progress)
+* tutorial:
+    * Jupyter Notebooks to guide how to use the suricate package

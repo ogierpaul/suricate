@@ -1,8 +1,10 @@
 # Source-Target DataFrame Transfomers
+- Df (source target) Transformers deal with a variable X=[df_source, df_target] where df_source and df_target have the columns = ['name', 'city', ...]
+
 ## Base
 ### LrDfTransformerMixin
 * Sklearn Transfomer Mixin
-* Input: Xst = [left_dataframe, right_dataframe]
+* Input: Xst = [source_dataframe, target_dataframe]
 * Transform: Apply a similarity score method to one of the column  of the source and target dataframe
 * Output: np.ndarray: of shape(n_samples_source * n_samples_target, 1)
 
