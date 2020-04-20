@@ -128,6 +128,4 @@ def test_cluster_composition():
     print(cluster_matches(y_cluster=y_cluster, y_true=y_true))
     print(cluster_stats(X=X, y_cluster=y_cluster, y_true=y_true))
 
-#TODO: Test method Dfconnector.getindex()
-
 
