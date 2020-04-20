@@ -2,20 +2,20 @@ import pytest
 from suricate.data.companies import getsource, gettarget, getytrue
 import pandas as pd
 import  numpy as np
-from suricate.sbsdftransformers import FuncSbsComparator
+from suricate.sbstransformers import SbsApplyComparator
 from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import cross_validate
 from suricate.dbconnectors import EsConnector
 import elasticsearch
 
 _sbs_score_list = [
-    ('name_fuzzy', FuncSbsComparator(on='name', comparator='fuzzy')),
-    ('street_fuzzy', FuncSbsComparator(on='street', comparator='fuzzy')),
-    ('name_token', FuncSbsComparator(on='name', comparator='token')),
-    ('street_token', FuncSbsComparator(on='street', comparator='token')),
-    ('city_fuzzy', FuncSbsComparator(on='city', comparator='fuzzy')),
-    ('postalcode_fuzzy', FuncSbsComparator(on='postalcode', comparator='fuzzy')),
-    ('postalcode_contains', FuncSbsComparator(on='postalcode', comparator='contains'))
+    ('name_fuzzy', SbsApplyComparator(on='name', comparator='fuzzy')),
+    ('street_fuzzy', SbsApplyComparator(on='street', comparator='fuzzy')),
+    ('name_token', SbsApplyComparator(on='name', comparator='token')),
+    ('street_token', SbsApplyComparator(on='street', comparator='token')),
+    ('city_fuzzy', SbsApplyComparator(on='city', comparator='fuzzy')),
+    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='fuzzy')),
+    ('postalcode_contains', SbsApplyComparator(on='postalcode', comparator='contains'))
 ]
 
 scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)

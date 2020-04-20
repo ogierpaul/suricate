@@ -6,7 +6,7 @@ from suricate.preutils.similarityscores import exact_score, simple_score, token_
 
 class DfApplyComparator(DfTransformerMixin):
     def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target',
-                 scoresuffix='fuzzy', compfunc='simple', **kwargs):
+                 scoresuffix='fuzzy', comparator='simple', **kwargs):
         """
 
         Args:
@@ -15,22 +15,22 @@ class DfApplyComparator(DfTransformerMixin):
             source_suffix:
             target_suffix:
             scoresuffix:
-            compfunc (str): ['exact', 'simple', 'token', 'vincenty', 'contain']
+            comparator (str): ['exact', 'simple', 'token', 'vincenty', 'contain']
             **kwargs:
         """
         DfTransformerMixin.__init__(self, ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix, on=on,
-                                    scoresuffix=scoresuffix + '_' + compfunc, **kwargs)
+                                    scoresuffix=scoresuffix + '_' + comparator, **kwargs)
         self.on = on
-        assert compfunc in ['exact', 'simple', 'token', 'vincenty', 'contain']
-        if compfunc == 'simple':
+        assert comparator in ['exact', 'simple', 'token', 'vincenty', 'contain']
+        if comparator == 'simple':
             self.func = simple_score
-        elif compfunc == 'token':
+        elif comparator == 'token':
             self.func = token_score
-        elif compfunc == 'exact':
+        elif comparator == 'exact':
             self.func = exact_score
-        elif compfunc == 'vincenty':
+        elif comparator == 'vincenty':
             self.func = vincenty_score
-        elif compfunc == 'contain':
+        elif comparator == 'contain':
             self.func = contains_score
 
     def _transform(self, X):

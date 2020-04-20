@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-from dask import dataframe as dd
 from sklearn.base import TransformerMixin
 
 

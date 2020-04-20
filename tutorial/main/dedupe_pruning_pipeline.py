@@ -2,7 +2,7 @@ from suricate.pipeline.pruningpipe import PruningPipe
 from suricate.data.companies import getXst, getytrue
 from suricate.explore import Explorer, KBinsCluster
 from suricate.dftransformers import DfConnector, VectorizerConnector, ExactConnector
-from suricate.sbsdftransformers import FuncSbsComparator
+from suricate.sbstransformers import SbsApplyComparator
 from suricate.preutils import createmultiindex
 
 import pandas as pd
@@ -25,13 +25,13 @@ _lr_score_cols = [c[0] for c in _lr_score_list]
 
 # Here we define the comparison functions used for the second similarity calculation
 _sbs_score_list = [
-    ('name_fuzzy', FuncSbsComparator(on='name', comparator='fuzzy')),
-    ('street_fuzzy', FuncSbsComparator(on='street', comparator='fuzzy')),
-    ('name_token', FuncSbsComparator(on='name', comparator='token')),
-    ('street_token', FuncSbsComparator(on='street', comparator='token')),
-    ('city_fuzzy', FuncSbsComparator(on='city', comparator='fuzzy')),
-    ('postalcode_fuzzy', FuncSbsComparator(on='postalcode', comparator='fuzzy')),
-    ('postalcode_contains', FuncSbsComparator(on='postalcode', comparator='contains')),
+    ('name_fuzzy', SbsApplyComparator(on='name', comparator='fuzzy')),
+    ('street_fuzzy', SbsApplyComparator(on='street', comparator='fuzzy')),
+    ('name_token', SbsApplyComparator(on='name', comparator='token')),
+    ('street_token', SbsApplyComparator(on='street', comparator='token')),
+    ('city_fuzzy', SbsApplyComparator(on='city', comparator='fuzzy')),
+    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='fuzzy')),
+    ('postalcode_contains', SbsApplyComparator(on='postalcode', comparator='contains')),
 ]
 
 n_rows = 500 # Number of rows to compare in each datasets

@@ -1,10 +1,10 @@
 from sklearn.base import TransformerMixin
 
 from suricate.preutils.similarityscores import exact_score, simple_score, token_score, vincenty_score, contains_score
-from suricate.sbsdftransformers.base import BaseSbsComparator
+from suricate.sbstransformers.base import BaseSbsComparator
 
 
-class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
+class SbsApplyComparator(BaseSbsComparator, TransformerMixin):
     """
     Compare two columns of a dataframe with one another using functions from fuzzywuzzy library
     """
@@ -12,7 +12,7 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
     def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target', comparator='fuzzy', *args, **kwargs):
         """
         Args:
-            comparator (str): name of the comparator function: ['exact', 'fuzzy', 'token', 'contains', 'vincenty' ]
+            comparator (str): name of the comparator function: ['exact', 'simple', 'token', 'contains', 'vincenty' ]
             ixname (str): name of the index, default 'ix'
             source_suffix (str): suffix to be added to the left dataframe default 'left', gives --> 'ix_source'
             target_suffix (str): suffix to be added to the left dataframe default 'right', gives --> 'ixright'
@@ -22,7 +22,7 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
         """
         if comparator == 'exact':
             compfunc = exact_score
-        elif comparator == 'fuzzy':
+        elif comparator == 'simple':
             compfunc = simple_score
         elif comparator == 'token':
             compfunc = token_score
@@ -32,7 +32,7 @@ class FuncSbsComparator(BaseSbsComparator, TransformerMixin):
             compfunc = contains_score
         else:
             raise ValueError('compfunc value not understood: {}'.format(comparator),
-                             "must be one of those: ['exact', 'fuzzy', 'token', 'contains', 'vincenty']")
+                             "must be one of those: ['exact', 'simple', 'token', 'contains', 'vincenty']")
         BaseSbsComparator.__init__(
             self,
             compfunc=compfunc,

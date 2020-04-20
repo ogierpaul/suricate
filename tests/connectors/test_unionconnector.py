@@ -18,8 +18,8 @@ def test_makeunion_y_true():
     stages = [
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='name', analyzer='word'),
-        DfApplyComparator(on='name', compfunc='simple'),
-        DfApplyComparator(on='name', compfunc='token')
+        DfApplyComparator(on='name', comparator='simple'),
+        DfApplyComparator(on='name', comparator='token')
     ]
     pipe = make_union(*stages)
     pipe.fit(X=X)

@@ -15,7 +15,7 @@ def getsource():
                 'hello world',
                 'hello big world',
                 'holy grail',
-                'holy moly',
+                'moly is holy',
                 None,
                 'HELLO! world'
             ]

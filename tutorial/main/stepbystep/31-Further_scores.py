@@ -1,6 +1,6 @@
 from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 import pandas as pd
-from suricate.sbsdftransformers import FuncSbsComparator
+from suricate.sbstransformers import SbsApplyComparator
 from sklearn.pipeline import FeatureUnion
 
 engine = create_engine_ready()
@@ -31,13 +31,13 @@ Xsbs = Xsbs.loc[ix_further]
 y_true = y_true.loc[ix_further]
 
 _sbs_score_list = [
-    ('name_fuzzy', FuncSbsComparator(on='name', comparator='fuzzy')),
-    ('street_fuzzy', FuncSbsComparator(on='street', comparator='fuzzy')),
-    ('name_token', FuncSbsComparator(on='name', comparator='token')),
-    ('street_token', FuncSbsComparator(on='street', comparator='token')),
-    ('city_fuzzy', FuncSbsComparator(on='city', comparator='fuzzy')),
-    ('postalcode_fuzzy', FuncSbsComparator(on='postalcode', comparator='fuzzy')),
-    ('postalcode_contains', FuncSbsComparator(on='postalcode', comparator='contains'))
+    ('name_fuzzy', SbsApplyComparator(on='name', comparator='fuzzy')),
+    ('street_fuzzy', SbsApplyComparator(on='street', comparator='fuzzy')),
+    ('name_token', SbsApplyComparator(on='name', comparator='token')),
+    ('street_token', SbsApplyComparator(on='street', comparator='token')),
+    ('city_fuzzy', SbsApplyComparator(on='city', comparator='fuzzy')),
+    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='fuzzy')),
+    ('postalcode_contains', SbsApplyComparator(on='postalcode', comparator='contains'))
 ]
 
 scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)
