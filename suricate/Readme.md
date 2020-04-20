@@ -75,8 +75,13 @@ All sub-modules of suricate:
 |(2,b)|bar|baz|
 
 ##### Note
-* The example above show a full cartesian join between source and target datasets. A full cartesian join does not offer the best performance for scaling.
-* While a LrDfConnector will do a full cartesian join, we built more advanced connectors for scaling (For Example, using Elastic Search as the *right* datasets, we only return the n-best matches from the right_datasets for each row of the left_dataset)
+* The example above show a full cartesian join between source and target datasets.
+    * Each record in the *source* data is compared with each record in the *target* data
+    * it does not offer the best performance for scaling.
+* More advanced connectors could offer better scaling thanks to indexing:
+    * Elastic Search Connector stores the the *right*  data as an index
+    * We profit from Elastic Search Search Capabilities
+    * We return the n-best matches from the right_data for each row of the left_dataset)
 
 ### 2. Explorer phase using non-supervised techniques
 * Cluster the pairs using the similarity matrix
@@ -85,6 +90,7 @@ All sub-modules of suricate:
     * Where we there is no match identified
     * where all the pairs are a match
     * Where some pairs are match, some others, and we need to use more features or more advanced machine learning algorithms to classify
+* This helps provide a representative sample of the similarity matrix for correct labelling
     
 ### 3. Optional: Side-by-Side features
 * For the records from mixed clusters, apply comparison functions on the side-by-side dataframe to extract more features
