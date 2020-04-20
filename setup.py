@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(name='suricate',
-      version='0.60',
+      version='0.61',
       description='MAAAAAAAAAAH',
       url='http://github.com/ogierpaul/suricate',
       author='Flying Circus',
@@ -12,8 +12,7 @@ setup(name='suricate',
           'pandas',
           'numpy',
           'fuzzywuzzy',
-          'pytest',
-          'dask'
+          'elasticsearch'
       ],
       package_data={'suricate': ['data/companydata/*.csv']},
       zip_safe=False
