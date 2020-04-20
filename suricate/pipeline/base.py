@@ -24,7 +24,7 @@ class TranstoPred(BaseEstimator):
         return self
 
     def predict(self, X):
-        return self.transformer.transform(X=X)
+        return self.transformer._transform(X=X)
 
     def fit_predict(self, X, y=None):
         return self.transformer.fit_transform(X=X, y=y)

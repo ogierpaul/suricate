@@ -1,27 +1,46 @@
 import pytest
 import pandas as pd
-from suricate.data.foo import getleft, getright, getXlr, getXsbs, getytrue
+from suricate.data.foo import getsource, gettarget, getXst, getXsbs, getytrue
 
-def test_left():
-    print(getleft())
-    assert isinstance(getleft(), pd.DataFrame)
+def test_source():
+    print(getsource())
+    assert isinstance(getsource(), pd.DataFrame)
+    assert getsource().shape[0] == 3
+    assert getsource().shape[1] == 1
+
     pass
 
-def test_right():
-    print(getright())
-    assert isinstance(getright(), pd.DataFrame)
+def test_target():
+    print(gettarget())
+    assert isinstance(gettarget(), pd.DataFrame)
+    assert gettarget().shape[0] == 3
+    assert gettarget().shape[1] == 1
     pass
 
 def test_X_lr():
-    print(getXlr())
-    assert isinstance(getXlr(), list)
-    assert len(getXlr()) == 2
-    assert isinstance(getXlr()[0], pd.DataFrame)
-    assert isinstance(getXlr()[1], pd.DataFrame)
+    print(getXst())
+    X = getXst()
+    assert isinstance(X, list)
+    assert len(X) == 2
+    assert isinstance(X[0], pd.DataFrame)
+    assert isinstance(X[1], pd.DataFrame)
+    assert X[0].shape[0] == 3
+    assert X[0].shape[1] == 1
+    assert X[1].shape[0] == 3
+    assert X[1].shape[1] == 1
     pass
 
 def test_X_sbs():
     print(getXsbs())
-    assert isinstance(getXsbs(), pd.DataFrame)
-    assert getXsbs().shape[0] == getXlr()[0].shape[0] * getXlr()[1].shape[0]
+    X = getXsbs()
+    assert isinstance(X, pd.DataFrame)
+    assert X.shape[0] == 9
+    assert X.shape[1] == 2
+    pass
+
+def test_ytrue():
+    print(getytrue())
+    X = getytrue()
+    assert isinstance(X, pd.Series)
+    assert X.shape[0] == 9
     pass

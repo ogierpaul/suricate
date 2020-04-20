@@ -2,20 +2,20 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from suricate.lrdftransformers import CartesianLr, ExactConnector, \
-    VectorizerConnector, FuzzyConnector, LrDfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
+from suricate.dftransformers import CartesianSt, ExactConnector, \
+    VectorizerConnector, DfApplyComparator, DfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
 from suricate.data.base import ix_names
-from suricate.data.foo import getleft, getright, getXsbs, getXlr, getytrue
-left = getleft()
-right = getright()
-X_lr = getXlr()
+from suricate.data.foo import getsource, gettarget, getXsbs, getXst, getytrue
+source = getsource()
+target = gettarget()
+X_lr = getXst()
 X_sbs = getXsbs()
 y_true = getytrue()
 
 def test_fixtures_init():
     print('\n', 'starting test_fixtures_init')
     assert isinstance(ix_names, dict)
-    assert isinstance(left, pd.DataFrame)
+    assert isinstance(source, pd.DataFrame)
     assert isinstance(X_sbs, pd.DataFrame)
     print('\n test_fixtures_init successful', '\n\n')
 
@@ -24,12 +24,12 @@ def test_dfconnector():
     print('\n', 'starting test_dfconnector')
     ixname = ix_names['ixname']
     ixnamepairs = ix_names['ixnamepairs']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
-    connector = LrDfTransformerMixin(
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
+    connector = DfTransformerMixin(
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix,
+        source_suffix=source_suffix,
+        target_suffix=target_suffix,
         on='name',
         scoresuffix='levenshtein'
     )
@@ -47,21 +47,21 @@ def test_cartesian_join():
     print('\n', 'starting test_cartesian_join')
     ixname = ix_names['ixname']
     ixnamepairs = ix_names['ixnamepairs']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
-    df = cartesian_join(left=left, right=right, lsuffix=lsuffix, rsuffix=rsuffix)
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
+    df = cartesian_join(source=source, target=target, source_suffix=source_suffix, target_suffix=target_suffix)
     # Output is a DataFrame
     assert isinstance(df, pd.DataFrame)
     # output number of rows is the multiplication of both rows
-    assert df.shape[0] == left.shape[0] * right.shape[0]
+    assert df.shape[0] == source.shape[0] * target.shape[0]
     # output number of columns are left columns + right columns + 2 columns for each indexes
-    assert df.shape[1] == 2 + left.shape[1] + right.shape[1]
-    # every column of left and right, + the index, is found with a suffix in the output dataframe
-    for oldname in left.reset_index(drop=False).columns:
-        newname = '_'.join([oldname, lsuffix])
+    assert df.shape[1] == 2 + source.shape[1] + target.shape[1]
+    # every column of source and target, + the index, is found with a suffix in the output dataframe
+    for oldname in source.reset_index(drop=False).columns:
+        newname = '_'.join([oldname, source_suffix])
         assert newname in df.columns
-    for oldname in right.reset_index(drop=False).columns:
-        newname = '_'.join([oldname, rsuffix])
+    for oldname in target.reset_index(drop=False).columns:
+        newname = '_'.join([oldname, target_suffix])
         assert newname in df.columns
 
     # assert sidebyside == df
@@ -71,12 +71,12 @@ def test_cartesian_join():
 def test_cartesian():
     print('\n', 'starting test_cartesian')
     ixname = ix_names['ixname']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
-    connector = CartesianLr(
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
+    connector = CartesianSt(
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
+        source_suffix=source_suffix,
+        target_suffix=target_suffix
     )
     ## Show side by side
     y = connector.transform(X=X_lr)
@@ -93,13 +93,13 @@ def test_cartesian():
 def test_exact():
     print('\n', 'starting test_exact')
     ixname = ix_names['ixname']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
     connector = ExactConnector(
         on='name',
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
+        source_suffix=source_suffix,
+        target_suffix=target_suffix
     )
     ## Show side by side
     y = connector.transform(X=X_lr)
@@ -109,8 +109,8 @@ def test_exact():
     connector = ExactConnector(
         on='name',
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
+        source_suffix=source_suffix,
+        target_suffix=target_suffix
     )
     score = connector.transform(X=X_lr)
     assert score.shape[0] == X_lr[0].shape[0] * X_lr[1].shape[0]
@@ -120,13 +120,13 @@ def test_exact():
 def test_tfidf():
     print('\n', 'starting test_tfidf')
     ixname = ix_names['ixname']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
     connector = VectorizerConnector(
         on='name',
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix,
+        source_suffix=source_suffix,
+        target_suffix=target_suffix,
         analyzer='char',
         addvocab='add'
     )
@@ -144,9 +144,9 @@ def test_makeunion():
     print('\n', 'starting test_makeunion')
     stages = [
         VectorizerConnector(on='name', analyzer='char',
-                            ixname=ix_names['ixname'], lsuffix=ix_names['lsuffix'], rsuffix=ix_names['rsuffix']),
+                            ixname=ix_names['ixname'], source_suffix=ix_names['source_suffix'], target_suffix=ix_names['target_suffix']),
         ExactConnector(on='name',
-                       ixname=ix_names['ixname'], lsuffix=ix_names['lsuffix'], rsuffix=ix_names['rsuffix'])
+                       ixname=ix_names['ixname'], source_suffix=ix_names['source_suffix'], target_suffix=ix_names['target_suffix'])
 
     ]
     X_score = make_union(*stages).fit_transform(X=X_lr)
@@ -157,13 +157,13 @@ def test_makeunion():
 def test_fuzzy():
     print('\n', 'starting test_fuzzy')
     ixname = ix_names['ixname']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
-    connector = FuzzyConnector(
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
+    connector = DfApplyComparator(
         on='name',
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
+        source_suffix=source_suffix,
+        target_suffix=target_suffix
     )
     pairs = connector.transform(X=X_lr)
     print(pairs)
@@ -173,13 +173,13 @@ def test_fuzzy():
 def test_fuzzy_2():
     print('\n', 'starting test_fuzzy_2')
     ixname = ix_names['ixname']
-    lsuffix = ix_names['lsuffix']
-    rsuffix = ix_names['rsuffix']
-    connector = FuzzyConnector(
+    source_suffix = ix_names['source_suffix']
+    target_suffix = ix_names['target_suffix']
+    connector = DfApplyComparator(
         on='name',
         ixname=ixname,
-        lsuffix=lsuffix,
-        rsuffix=rsuffix
+        source_suffix=source_suffix,
+        target_suffix=target_suffix
     )
     y = y_true
     y = y.loc[y == 1]
@@ -195,22 +195,22 @@ def test_indexer():
     con = Indexer(
         on=None,
         ixname=ix_names['ixname'],
-        lsuffix=ix_names['lsuffix'],
-        rsuffix=ix_names['rsuffix']
+        source_suffix=ix_names['source_suffix'],
+        target_suffix=ix_names['target_suffix']
     )
     y4 = con.fit_transform(X=X_lr)
     assert y4.shape[0] == X_lr[0].shape[0] * X_lr[1].shape[0]
     stages = [
         Indexer(
             ixname=ix_names['ixname'],
-            lsuffix=ix_names['lsuffix'],
-            rsuffix=ix_names['rsuffix']
+            source_suffix=ix_names['source_suffix'],
+            target_suffix=ix_names['target_suffix']
         ),
         VectorizerConnector(
             on='name',
             ixname=ix_names['ixname'],
-            lsuffix=ix_names['lsuffix'],
-            rsuffix=ix_names['rsuffix']
+            source_suffix=ix_names['source_suffix'],
+            target_suffix=ix_names['target_suffix']
         )
     ]
     pipe = make_union(*stages)
@@ -232,7 +232,7 @@ def test_cartdatapasser():
     out = dp.transform(X=X_lr)
     assert out.shape[0] == X_lr[0].shape[0] * X_lr[1].shape[0]
     for c in X_lr[0].columns:
-        assert c + '_left' in out.columns
+        assert c + '_source' in out.columns
     for c in X_lr[1].columns:
-        assert c + '_right' in out.columns
+        assert c + '_target' in out.columns
     print(out)

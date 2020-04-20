@@ -1,47 +1,72 @@
 import pandas as pd
 
-from suricate.lrdftransformers import CartesianDataPasser
+from suricate.dftransformers import CartesianDataPasser
 from suricate.preutils.indextools import createmultiindex
 
-def getleft():
-    left = pd.DataFrame(
+def getsource():
+    """
+
+    Returns:
+        pd.DataFrame: shape (6, 1)
+    """
+    source = pd.DataFrame(
         {
             'name': [
                 'hello world',
                 'hello big world',
                 'holy grail',
-                'holy moly',
+                'moly is holy',
                 None,
                 'HELLO! world'
             ]
         }
     )
-    left.index.name = 'ix'
-    return left
+    source.index.name = 'ix'
+    return source
 
-def getright():
-    right = getleft().copy()
-    right['ix'] = pd.Series(list('abcdef'), index=right.index)
-    right.set_index('ix', drop=True, inplace=True)
-    return right
+def gettarget():
+    """
+    Identical to getsource but index is changed
+    Returns:
+        pd.DataFrame: shape (6, 1)
+    """
+    target = getsource().copy()
+    target['ix'] = pd.Series(list('abcdef'), index=target.index)
+    target.set_index('ix', drop=True, inplace=True)
+    return target
 
-def getXlr():
-    X_lr = [getleft(), getright()]
+def getXst():
+    """
+
+    Returns:
+        list: length2 with 2 dataframes, source and target
+    """
+    X_lr = [getsource(), gettarget()]
     return X_lr
 
 def getXsbs():
+    """
+
+    Returns:
+        pd.DataFrame: pd.DataFrame: cartesian join of source and target dataframes, shape (36, 2)
+    """
     X_sbs = CartesianDataPasser(
-        ixname='ix', lsuffix='left', rsuffix='right', on='name'
+        ixname='ix', source_suffix='source', target_suffix='target', on='name'
     ).transform(
-        X=getXlr()
+        X=getXst()
     ).set_index(
-        ['ix_left', 'ix_right']
+        ['ix_source', 'ix_target']
     )
     return X_sbs
 
 def getytrue():
+    """
+
+    Returns:
+        pd.Series: supervised training data
+    """
     y_true = pd.Series(
-        index=createmultiindex(X=getXlr()),
+        index=createmultiindex(X=getXst()),
         data=[1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1,
            0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1],
         name='y_true'

@@ -13,8 +13,8 @@ def create_path(filename, foldername):
         path to csv file
 
     Examples:
-        create_path(filename='left.csv', foldername='csv_company')
-           suricate_root/suricate/data/csv_company/left.csv
+        create_path(filename='source.csv', foldername='csv_company')
+           suricate_root/suricate/data/csv_company/source.csv
     """
     module_path = dirname(__file__)
     filepath = join(*[module_path, foldername, filename])
@@ -49,28 +49,28 @@ def _init_ixnames():
     """
     {
         'ixname': 'ix,
-        'ixnameleft': 'ix_left'
-        'ixnameright': 'ix_right'
-        'ixnamepairs': ['ix_left', 'ix_right']
-        'lsuffix': 'left'
-        'rsuffix': 'right'
+        'ixnamesource': 'ix_source'
+        'ixnametarget': 'ix_target'
+        'ixnamepairs': ['ix_source', 'ix_target']
+        'source_suffix': 'left'
+        'target_suffix': 'right'
     }
     Returns:
         dict
     """
     ixname = 'ix'
-    lsuffix = 'left'
-    rsuffix = 'right'
-    ixnameleft, ixnameright, ixnamepairs = concatixnames(
-        ixname=ixname, lsuffix=lsuffix, rsuffix=rsuffix
+    source_suffix = 'source'
+    target_suffix = 'target'
+    ixnamesource, ixnametarget, ixnamepairs = concatixnames(
+        ixname=ixname, source_suffix=source_suffix, target_suffix=target_suffix
     )
     names = dict()
     names['ixname'] = ixname
-    names['ixnameleft'] = ixnameleft
-    names['ixnameright'] = ixnameright
+    names['ixnamesource'] = ixnamesource
+    names['ixnametarget'] = ixnametarget
     names['ixnamepairs'] = ixnamepairs
-    names['lsuffix'] = lsuffix
-    names['rsuffix'] = rsuffix
+    names['source_suffix'] = source_suffix
+    names['target_suffix'] = target_suffix
     return names
 
 ix_names = _init_ixnames()

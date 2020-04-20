@@ -1,25 +1,60 @@
 from suricate.data.base import open_csv
-
+from suricate.preutils import createmultiindex
+import pandas as pd
+from numpy import zeros
 nrows = None
 _folder_companydf = 'companydata'
 
 
-def getleft(nrows=nrows):
-    left = open_csv(filename='left.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
-    return left
+def getsource(nrows=nrows):
+    """
 
-def getright(nrows=nrows):
-    right = open_csv(filename='right.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
-    return right
+    Args:
+        nrows (int): number of rows to load
 
-def gettrainingdata(nrows=nrows):
-    training_data = open_csv(filename='trainingdata.csv', foldername=_folder_companydf, index_col=[0,1], nrows=nrows)
-    return training_data
+    Returns:
+        pd.DataFrame
+    """
+    df = open_csv(filename='source.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
+    return df
 
-def getytrue(nrows=nrows):
-    y_true = gettrainingdata(nrows=nrows)['y_true']
+def gettarget(nrows=nrows):
+    """
+
+    Args:
+        nrows(int): number of rows to load
+
+    Returns:
+        pd.DataFrame
+    """
+    df = open_csv(filename='target.csv', foldername=_folder_companydf, index_col=0, nrows=nrows)
+    return df
+
+def getytrue(Xst=None):
+    """
+
+    Args:
+        Xst: source and target dataframe for which to get the labelling
+
+    Returns:
+        pd.Series: supervised training data
+    """
+    if Xst is None:
+        Xst = getXst()
+    ix_all = createmultiindex(X=Xst)
+    y_true = pd.Series(data=zeros(shape=(ix_all.shape[0],)), index=ix_all, name='y_true').fillna(0)
+    y_saved = open_csv(filename='ytrue.csv', foldername=_folder_companydf, index_col=[0, 1])['y_true']
+    y_true.loc[y_saved.index.intersection(ix_all)] = y_saved
     return y_true
 
-def getXlr(nrows=nrows):
-    X_lr = [getleft(nrows=nrows), getright(nrows=nrows)]
-    return X_lr
+def getXst(nrows=nrows):
+    """
+
+    Args:
+        nrows (int): number of rows to load
+
+    Returns:
+        list: length2 with 2 dataframes, source and target
+    """
+    X = [getsource(nrows=nrows), gettarget(nrows=nrows)]
+    return X

@@ -9,8 +9,8 @@ class PipeSbsClf(ClassifierMixin):
                  transformer,
                  classifier,
                  ixname='ix',
-                 lsuffix='left',
-                 rsuffix='right',
+                 source_suffix='source',
+                 target_suffix='target',
                  **kwargs):
         """
 
@@ -18,19 +18,19 @@ class PipeSbsClf(ClassifierMixin):
             transformer (TransformerMixin):
             classifier (ClassifierMixin):
             ixname (str):
-            lsuffix (str):
-            rsuffix (str):
+            source_suffix (str):
+            target_suffix (str):
             n_jobs (int):
             pruning_ths (float): return only the pairs which have a score greater than the store_ths
         """
         ClassifierMixin.__init__(self)
         self.ixname = ixname
-        self.lsuffix = lsuffix
-        self.rsuffix = rsuffix
-        self.ixnameleft, self.ixnameright, self.ixnamepairs = concatixnames(
+        self.source_suffix = source_suffix
+        self.target_suffix = target_suffix
+        self.ixnamesource, self.ixnametarget, self.ixnamepairs = concatixnames(
             ixname=self.ixname,
-            lsuffix=self.lsuffix,
-            rsuffix=self.rsuffix
+            source_suffix=self.source_suffix,
+            target_suffix=self.target_suffix
         )
         self.fitted = False
         self.transformer = transformer
@@ -41,8 +41,8 @@ class PipeSbsClf(ClassifierMixin):
         """
         Fit the transformer
         Args:
-            X (pd.DataFrame): side by side [name_left; name_right, ...]
-            y (pd.Series): pairs {['ix_left', 'ix_right']: y_true}
+            X (pd.DataFrame): side by side [name_source; name_target, ...]
+            y (pd.Series): pairs {['ix_source', 'ix_target']: y_true}
 
         Returns:
             self

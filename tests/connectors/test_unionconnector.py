@@ -1,14 +1,14 @@
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from suricate.lrdftransformers import VectorizerConnector, FuzzyConnector
+from suricate.dftransformers import VectorizerConnector, DfApplyComparator
 from suricate.data.base import ix_names
-from suricate.data.circus import getXlr, getytrue
+from suricate.data.circus import getXst, getytrue
 from suricate.preutils.indextools import createmultiindex
-from suricate.data.foo import getleft, getright, getXsbs, getXlr, getytrue
-left = getleft()
-right = getright()
-X_lr = getXlr()
+from suricate.data.foo import getsource, gettarget, getXsbs, getXst, getytrue
+left = getsource()
+right = gettarget()
+X_lr = getXst()
 X_sbs = getXsbs()
 y_true = getytrue()
 
@@ -18,8 +18,8 @@ def test_makeunion_y_true():
     stages = [
         VectorizerConnector(on='name', analyzer='char'),
         VectorizerConnector(on='name', analyzer='word'),
-        FuzzyConnector(on='name', ratio='simple'),
-        FuzzyConnector(on='name', ratio='token')
+        DfApplyComparator(on='name', comparator='simple'),
+        DfApplyComparator(on='name', comparator='token')
     ]
     pipe = make_union(*stages)
     pipe.fit(X=X)

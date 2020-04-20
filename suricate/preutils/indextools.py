@@ -1,21 +1,21 @@
 import pandas as pd
 
 
-def concatixnames(ixname='ix', lsuffix='left', rsuffix='right'):
+def concatixnames(ixname='ix', source_suffix='source', target_suffix='target'):
     """
 
     Args:
         ixname (str): 'ix'
-        lsuffix (str): 'left'
-        rsuffix (str): 'right'
+        source_suffix (str): 'left'
+        target_suffix (str): 'right'
 
     Returns:
-        str, str, list(): 'ix_left', 'ix_right', ['ix_left', 'ix_right']
+        str, str, list(): 'ix_source', 'ix_target', ['ix_source', 'ix_target']
     """
-    ixnameleft = '_'.join([ixname, lsuffix])
-    ixnameright = '_'.join([ixname, rsuffix])
-    ixnamepairs = [ixnameleft, ixnameright]
-    return ixnameleft, ixnameright, ixnamepairs
+    ixnamesource = '_'.join([ixname, source_suffix])
+    ixnametarget = '_'.join([ixname, target_suffix])
+    ixnamepairs = [ixnamesource, ixnametarget]
+    return ixnamesource, ixnametarget, ixnamepairs
 
 
 def chkixdf(df, ixname='ix'):
@@ -54,7 +54,7 @@ def addsuffix(df, suffix):
 
     Examples:
         df.columns = ['name', 'age']
-        addsuffix(df, 'left').columns = ['name_left', 'age_left']
+        addsuffix(df, 'left').columns = ['name_source', 'age_source']
     """
     df = df.copy().rename(
         columns=dict(
@@ -77,14 +77,14 @@ def rmvsuffix(df, suffix):
     Rmv a suffix to each of the dataframe column
     Args:
         df (pd.DataFrame):
-        suffix (str): 'left' (not _left) for coherency with the rest of the module
+        suffix (str): 'left' (not _source) for coherency with the rest of the module
 
     Returns:
         pd.DataFrame
 
     Examples:
-        df.columns = ['name_left', 'age_left']
-        addsuffix(df, '_left').columns = ['name', 'age']
+        df.columns = ['name_source', 'age_source']
+        addsuffix(df, '_source').columns = ['name', 'age']
     """
     df = df.copy().rename(
         columns=dict(
@@ -102,12 +102,12 @@ def rmvsuffix(df, suffix):
     return df
 
 
-def createmultiindex(X, names=('ix_left', 'ix_right')):
+def createmultiindex(X, names=('ix_source', 'ix_target')):
     """
 
     Args:
-        X(list): [df_left, df_right]
-        names: ('ix_left', 'ix_right'))
+        X(list): [df_source, df_target]
+        names: ('ix_source', 'ix_target'))
 
     Returns:
         pd.MultiIndex
@@ -118,18 +118,18 @@ def createmultiindex(X, names=('ix_left', 'ix_right')):
     )
 
 
-def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='y_true'):
+def separatesides(df, ixname='ix', source_suffix='source', target_suffix='target', y_true_col='y_true'):
     """
     Separate a side by side training table into the left table, the right table, and the list of pairs
     Args:
-        df (pd.DataFrame): side by side dataframe {['ix_left', 'ix_right'] :['name_left', 'name_right']}
-        lsuffix (str): left suffix 'left'
-        rsuffix (str): right suffix 'right'
+        df (pd.DataFrame): side by side dataframe {['ix_source', 'ix_target'] :['name_source', 'name_target']}
+        source_suffix (str): left suffix 'left'
+        target_suffix (str): right suffix 'right'
         y_true_col (str): name of y_true column
         ixname (str): name in index column
 
     Returns:
-        pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_left', 'ix_right']:y_true}
+        pd.DataFrame, pd.DataFrame, pd.Series : {ix:['name'}, {'ix':['name'} {['ix_source', 'ix_target']:y_true}
     """
 
     # noinspection PyShadowingNames,PyShadowingNames
@@ -150,7 +150,7 @@ def separatesides(df, ixname='ix', lsuffix='left', rsuffix='right', y_true_col='
         new.set_index([ixname], inplace=True)
         return new
 
-    xleft = takeside(df=df, suffix=lsuffix, ixname=ixname)
-    xright = takeside(df=df, suffix=rsuffix, ixname=ixname)
+    xsource = takeside(df=df, suffix=source_suffix, ixname=ixname)
+    xright = takeside(df=df, suffix=target_suffix, ixname=ixname)
     pairs = df.loc[:, y_true_col].copy()
-    return xleft, xright, pairs
+    return xsource, xright, pairs
