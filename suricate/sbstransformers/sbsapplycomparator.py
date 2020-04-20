@@ -9,7 +9,7 @@ class SbsApplyComparator(BaseSbsComparator, TransformerMixin):
     Compare two columns of a dataframe with one another using functions from fuzzywuzzy library
     """
 
-    def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target', comparator='fuzzy', *args, **kwargs):
+    def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target', comparator='simple', *args, **kwargs):
         """
         Args:
             comparator (str): name of the comparator function: ['exact', 'simple', 'token', 'contains', 'vincenty' ]

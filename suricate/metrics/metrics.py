@@ -25,7 +25,7 @@ def get_commonscores(y_true, y_pred):
 
 suffixexact = 'exact'
 suffixtoken = 'token'
-suffixfuzzy = 'fuzzy'
+suffixfuzzy = 'simple'
 name_freetext = 'FreeText'
 name_exact = 'Exact'
 name_pruning_threshold = 'threshold'

@@ -37,9 +37,9 @@ def test_sbsmodel():
     df_sbs = DfVisualHelper().fit_transform(X=X_lr)
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
-        SbsApplyComparator(on='name', comparator='fuzzy'),
+        SbsApplyComparator(on='name', comparator='simple'),
         SbsApplyComparator(on='name', comparator='token'),
-        SbsApplyComparator(on='street', comparator='fuzzy')
+        SbsApplyComparator(on='street', comparator='simple')
     ])
     imp = SimpleImputer(strategy='constant', fill_value=0)
     transformer = make_pipeline(*[transformer, imp])
@@ -84,11 +84,11 @@ def test_pipeModel():
         classifier=clf1
     )
     transformer2 = make_union(*[
-        SbsApplyComparator(on='name', comparator='fuzzy'),
+        SbsApplyComparator(on='name', comparator='simple'),
         SbsApplyComparator(on='name', comparator='token'),
-        SbsApplyComparator(on='street', comparator='fuzzy'),
-        SbsApplyComparator(on='city', comparator='fuzzy'),
-        SbsApplyComparator(on='postalcode', comparator='fuzzy'),
+        SbsApplyComparator(on='street', comparator='simple'),
+        SbsApplyComparator(on='city', comparator='simple'),
+        SbsApplyComparator(on='postalcode', comparator='simple'),
 
     ])
     imp2 = SimpleImputer(strategy='constant', fill_value=0)

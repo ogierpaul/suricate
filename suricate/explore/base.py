@@ -12,7 +12,7 @@ class QuestionsMixin(TransformerMixin):
         """
 
         Args:
-            n_questions (int): number of lr_explore to be asked for each cluster
+            n_questions (int): number of explorer to be asked for each cluster
         """
         TransformerMixin.__init__(self)
         self.n_questions = n_questions

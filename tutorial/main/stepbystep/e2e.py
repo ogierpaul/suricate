@@ -194,12 +194,12 @@ print(pd.datetime.now(),' | ', 'Pruning ratio: {}'.format(len(ix_further)/Xst.sh
 print(pd.datetime.now(),' | ', 'Starting further scoring')
 
 _sbs_score_list = [
-    ('name_fuzzy', SbsApplyComparator(on='name', comparator='fuzzy')),
-    ('street_fuzzy', SbsApplyComparator(on='street', comparator='fuzzy')),
+    ('name_fuzzy', SbsApplyComparator(on='name', comparator='simple')),
+    ('street_fuzzy', SbsApplyComparator(on='street', comparator='simple')),
     ('name_token', SbsApplyComparator(on='name', comparator='token')),
     ('street_token', SbsApplyComparator(on='street', comparator='token')),
-    ('city_fuzzy', SbsApplyComparator(on='city', comparator='fuzzy')),
-    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='fuzzy')),
+    ('city_fuzzy', SbsApplyComparator(on='city', comparator='simple')),
+    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='simple')),
     ('postalcode_contains', SbsApplyComparator(on='postalcode', comparator='contains'))
 ]
 

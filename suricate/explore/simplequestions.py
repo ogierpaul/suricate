@@ -14,7 +14,7 @@ class SimpleQuestions(QuestionsMixin):
         """
 
         Args:
-            n_questions (int): number of lr_explore to be asked for each cluster
+            n_questions (int): number of explorer to be asked for each cluster
         """
         QuestionsMixin.__init__(self, n_questions=n_questions)
 

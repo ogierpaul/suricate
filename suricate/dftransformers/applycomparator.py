@@ -6,7 +6,7 @@ from suricate.preutils.similarityscores import exact_score, simple_score, token_
 
 class DfApplyComparator(DfTransformerMixin):
     def __init__(self, on, ixname='ix', source_suffix='source', target_suffix='target',
-                 scoresuffix='fuzzy', comparator='simple', **kwargs):
+                 scoresuffix='simple', comparator='simple', **kwargs):
         """
 
         Args:

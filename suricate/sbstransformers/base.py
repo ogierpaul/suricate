@@ -10,7 +10,7 @@ class BaseSbsComparator(TransformerMixin):
         Args:
             on_source (str): name of suffix
             on_target (str):
-            compfunc (callable): ['fuzzy', 'token', 'exact']
+            compfunc (callable): ['simple', 'token', 'exact']
         """
         TransformerMixin.__init__(self)
         self.left = on_source
