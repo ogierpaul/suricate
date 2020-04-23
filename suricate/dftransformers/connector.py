@@ -34,7 +34,7 @@ class DfConnector(ConnectorMixin):
             pd.DataFrame: with index
         """
         Xt = self.scorer.transform(X=X)
-        Xt = pd.DataFrame(data=Xt, index=self.getindex(X=X))
+        Xt = pd.DataFrame(data=Xt, index=self.getindex(X=X), columns=self.scorer.get_feature_names())
         return Xt
 
     def getindex(self, X):

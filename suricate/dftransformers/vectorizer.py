@@ -103,6 +103,9 @@ class VectorizerConnector(DfTransformerMixin):
         )
         return score
 
+    def get_feature_names(self):
+        return ['_'.join([self.on, self.vecmodel, self.analyzer])]
+
 
 def _update_vocab(source, target, vocab=None, addvocab='add'):
     """

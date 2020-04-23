@@ -11,12 +11,9 @@ import elasticsearch
 
 _sbs_score_list = [
     ('name_fuzzy', SbsApplyComparator(on='name', comparator='simple')),
-    ('street_fuzzy', SbsApplyComparator(on='street', comparator='simple')),
-    ('name_token', SbsApplyComparator(on='name', comparator='token')),
     ('street_token', SbsApplyComparator(on='street', comparator='token')),
     ('city_fuzzy', SbsApplyComparator(on='city', comparator='simple')),
-    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='simple')),
-    ('postalcode_contains', SbsApplyComparator(on='postalcode', comparator='contains'))
+    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='simple'))
 ]
 
 scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)
@@ -104,14 +101,10 @@ def test_pipe_df():
     scorer = FeatureUnion(transformer_list=[
         ('name_char', VectorizerConnector(on='name', analyzer='char')),
          ('street_char', VectorizerConnector(on='street', analyzer='char')),
-          ('countrycode_exact', ExactConnector(on='countrycode')),
-           ('postalcode_exact', ExactConnector(on='postalcode'))
+          ('countrycode_exact', ExactConnector(on='countrycode'))
     ])
     dfcon = DfConnector(scorer=scorer)
     Xsm = dfcon.fit_transform(X=[df_source, df_target])
-    #TODO: Check column names
-    # scorecols = scorer.get_feature_names()
-    # print(scorecols)
 
     ix_con = Xsm.index
     y_true = getytrue(Xst=[df_source, df_target]).loc[ix_con]
