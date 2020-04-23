@@ -1,6 +1,6 @@
 from sklearn.base import TransformerMixin
 from suricate.preutils import createmultiindex
-from suricate.dftransformers import DfVisualHelper, create_sbs
+from suricate.dftransformers import DfVisualSbs, cartesian_join
 import pandas as pd
 from suricate.base import ConnectorMixin
 
@@ -43,7 +43,7 @@ class DfConnector(ConnectorMixin):
     def getsbs(self, X, on_ix=None):
         if on_ix is None:
             on_ix = self.getindex(X=X)
-        Xt = create_sbs(X=X, on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
+        Xt = cartesian_join(source=X[0], target=X[0], on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
         return Xt
 
     def fetch_source(self, X, ix):

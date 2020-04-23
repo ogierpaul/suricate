@@ -4,13 +4,12 @@ from sklearn.linear_model import LogisticRegressionCV as Classifier
 from sklearn.pipeline import make_union, make_pipeline
 
 from suricate.preutils.functionclassifier import FunctionClassifier
-from suricate.dftransformers import VectorizerConnector, ExactConnector, CartesianDataPasser, DfVisualHelper
+from suricate.dftransformers import VectorizerConnector, ExactConnector, DfVisualSbs
 from suricate.pipeline import PipeDfClf, PipeSbsClf, PruningDfSbsClf
 from suricate.sbstransformers import SbsApplyComparator
 
 from suricate.data.companies import getXst, getytrue
 
-# from ..data.dataframes import X_lr, y_true, df_source, df_target
 
 def test_lrmodel():
     X_lr = getXst(nrows=100)
@@ -34,7 +33,7 @@ def test_lrmodel():
 def test_sbsmodel():
     X_lr = getXst(nrows=100)
     y_true = getytrue(Xst=X_lr)
-    df_sbs = DfVisualHelper().fit_transform(X=X_lr)
+    df_sbs = DfVisualSbs().fit_transform(X=X_lr)
     df_sbs = df_sbs.loc[y_true.index]
     transformer = make_union(*[
         SbsApplyComparator(on='name', comparator='simple'),

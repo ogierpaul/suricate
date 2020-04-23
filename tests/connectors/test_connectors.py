@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import make_union
 
-from suricate.dftransformers import CartesianSt, ExactConnector, \
-    VectorizerConnector, DfApplyComparator, DfTransformerMixin, cartesian_join, Indexer, CartesianDataPasser
+from suricate.dftransformers import ExactConnector, \
+    VectorizerConnector, DfApplyComparator, DfTransformerMixin, cartesian_join, Indexer, DfVisualSbs
 from suricate.data.base import ix_names
 from suricate.data.foo import getsource, gettarget, getXsbs, getXst, getytrue
 source = getsource()
@@ -49,45 +49,23 @@ def test_cartesian_join():
     ixnamepairs = ix_names['ixnamepairs']
     source_suffix = ix_names['source_suffix']
     target_suffix = ix_names['target_suffix']
+    usecols = source.columns.intersection(target.columns)
     df = cartesian_join(source=source, target=target, source_suffix=source_suffix, target_suffix=target_suffix)
     # Output is a DataFrame
     assert isinstance(df, pd.DataFrame)
     # output number of rows is the multiplication of both rows
     assert df.shape[0] == source.shape[0] * target.shape[0]
     # output number of columns are left columns + right columns + 2 columns for each indexes
-    assert df.shape[1] == 2 + source.shape[1] + target.shape[1]
-    # every column of source and target, + the index, is found with a suffix in the output dataframe
-    for oldname in source.reset_index(drop=False).columns:
-        newname = '_'.join([oldname, source_suffix])
-        assert newname in df.columns
-    for oldname in target.reset_index(drop=False).columns:
-        newname = '_'.join([oldname, target_suffix])
-        assert newname in df.columns
+    assert df.shape[1] == source.shape[1] + target.shape[1]
+    # every column of source and target,  found with a suffix in the output dataframe
+    for oldname in usecols:
+        sname = '_'.join([oldname, source_suffix])
+        assert sname in df.columns
+        tname = '_'.join([oldname, target_suffix])
+        assert tname in df.columns
 
     # assert sidebyside == df
     print('\n test_cartesian_join successful', '\n\n')
-
-
-def test_cartesian():
-    print('\n', 'starting test_cartesian')
-    ixname = ix_names['ixname']
-    source_suffix = ix_names['source_suffix']
-    target_suffix = ix_names['target_suffix']
-    connector = CartesianSt(
-        ixname=ixname,
-        source_suffix=source_suffix,
-        target_suffix=target_suffix
-    )
-    ## Show side by side
-    y = connector.transform(X=X_lr)
-    left = X_lr[0]
-    right = X_lr[1]
-    assert y.shape[0] == left.shape[0] * right.shape[0]
-    assert y.sum() == left.shape[0] * right.shape[0]
-    sbs = connector.show_pairs(X=X_lr)
-    assert sbs.shape[0] == left.shape[0] * right.shape[0]
-    print(sbs)
-    print('\n test_cartesian successful', '\n\n')
 
 
 def test_exact():
@@ -226,13 +204,3 @@ def test_indexer():
     assert out[4][1] == 1.0
     pass
 
-
-def test_cartdatapasser():
-    dp = CartesianDataPasser()
-    out = dp.transform(X=X_lr)
-    assert out.shape[0] == X_lr[0].shape[0] * X_lr[1].shape[0]
-    for c in X_lr[0].columns:
-        assert c + '_source' in out.columns
-    for c in X_lr[1].columns:
-        assert c + '_target' in out.columns
-    print(out)

@@ -2,7 +2,7 @@ from copy import deepcopy
 import elasticsearch
 import pandas as pd
 from suricate.base import ConnectorMixin
-from suricate.dftransformers.cartesian import create_sbs
+from suricate.dftransformers.cartesian import cartesian_join
 import numpy as np
 import time
 
@@ -113,7 +113,8 @@ class EsConnector(ConnectorMixin):
         ix_target = np.unique(on_ix.get_level_values(self.ixnametarget))
         source = self.fetch_source(X=X, ix=ix_source)
         target = self.fetch_target(ix=ix_target)
-        df = create_sbs(X=[source, target], on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
+        df = cartesian_join(source=source, target=target, on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
+
         return df
 
     def fit(self, X=None, y=None):
