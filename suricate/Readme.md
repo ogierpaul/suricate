@@ -15,14 +15,14 @@ All sub-modules of suricate:
 
 |Module|Comments|Features|Tests|Tutorial|Docs|
 |---|---|---|---|---|---|
-|base|explanation of |Ok|Ok (none)|None|Ok|
+|base|explanation of |Ok|Ok (none)|Ok|Ok|
 |data|Done|Ok|Ok|No|Ok|
-|dbconnectors|More details|in progress|Ok|in progress|in progress|
+|dbconnectors|Ok|Ok|Ok|Ok|
 |explore|Ok|Ok|Ok|Todo|Ok|
-|lrdftransformers|important features ok, some cleaning to do|ok|ok|to review|core is ok|
+|dftransformers|Ok|ok|ok|Ok|Ok|
 |pipeline|
 |preutils|to be done later|
-|sbsdftransformers|
+|sbstransformers|
 |grouping|to be done later|
 
 ## Usage Guide

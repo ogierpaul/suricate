@@ -6,7 +6,7 @@ from suricate.base import ConnectorMixin
 
 class DfConnector(ConnectorMixin):
     """
-    This connector (see the base class for connectors) will connect two dataframes, (one 'left' and one 'right').
+    This connector (see the base class for connectors) will connect two dataframes, (one 'source' and one 'target').
     """
     def __init__(self, scorer, ixname='ix', source_suffix='source', target_suffix='target'):
         """
