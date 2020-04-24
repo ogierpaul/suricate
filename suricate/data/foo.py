@@ -58,8 +58,6 @@ def getXsbs():
         target=getXst()[1],
         source_suffix=ix_names['source_suffix'],
         target_suffix=ix_names['target_suffix'],
-    ).set_index(
-        ix_names['ixnamepairs']
     )
     return X_sbs
 

@@ -18,13 +18,30 @@
 * fit the scorer to the data (example: init tf-idf matrix...)
 ### Transform
 * transform the source and target inputs into a similarity matrix
+* The similarity matrix is a Pandas DataFrame (in order to make use of the index)
 * to each row corresponds pair of records (one from source data, the other from target data).
 * The multiindex from the similarity matrix contains the source and target index values of each of the pairs
-* The associated numeric values are the similarity scores
+* The associated numeric values are the similarity scores (One column = one type of score)
+
+|Multiindex (ix_source, ix_target)|exact_score|fuzzy_score|
+|---|---|---|
+|(1,a)|1|1|
+|(1,b)|0|0|
+|(2,a)|0|0|
+|(2,b)|0|0.7|
 
 ## Visualization
 ### GetSbs
 * Returns a side-by-side view of the data
+
+|Multiindex (ix_source, ix_target)|name_source|name_target|
+|---|---|---|
+|(1,a)|foo|foo|
+|(1,b)|foo|baz|
+|(2,a)|bar|foo|
+|(2,b)|bar|baz|
+
+
 ### Fetch (fetch source, fetch target)
 * Returns the data from the source and target data sources according to the index values specified
 

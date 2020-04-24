@@ -6,16 +6,14 @@ from suricate.sbstransformers import SbsApplyComparator
 from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import cross_validate
 from suricate.dbconnectors import EsConnector
+from suricate.dftransformers import ExactConnector, VectorizerConnector, DfConnector
 import elasticsearch
 
 _sbs_score_list = [
     ('name_fuzzy', SbsApplyComparator(on='name', comparator='simple')),
-    ('street_fuzzy', SbsApplyComparator(on='street', comparator='simple')),
-    ('name_token', SbsApplyComparator(on='name', comparator='token')),
     ('street_token', SbsApplyComparator(on='street', comparator='token')),
     ('city_fuzzy', SbsApplyComparator(on='city', comparator='simple')),
-    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='simple')),
-    ('postalcode_contains', SbsApplyComparator(on='postalcode', comparator='contains'))
+    ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='simple'))
 ]
 
 scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)
@@ -71,13 +69,14 @@ def test_pipe_es():
         explain=False,
         size=10
     )
-    Xst = escon.fit_transform(X=df_source)
-    ix_con = Xst.index
+    #Xsm is the similarity matrix
+    Xsm = escon.fit_transform(X=df_source)
+    ix_con = Xsm.index
     y_true = getytrue(Xst=[df_source, df_target]).loc[ix_con]
     Xsbs = escon.getsbs(X=df_source, on_ix=ix_con)
     scores_further = scorer_sbs.fit_transform(X=Xsbs)
     scores_further = pd.DataFrame(data=scores_further, index=ix_con, columns=[c[0] for c in _sbs_score_list])
-    scores_further = pd.concat([Xst[['es_score']], scores_further], axis=1, ignore_index=False)
+    scores_further = pd.concat([Xsm[['es_score']], scores_further], axis=1, ignore_index=False)
     X = scores_further
     scoring = ['precision', 'recall', 'accuracy']
     print(pd.datetime.now(), ' | starting score')
@@ -94,6 +93,37 @@ def test_pipe_es():
 
 
 def test_pipe_df():
-    #TODO
-    assert True
+    df_source = getsource(nrows=100)
+    df_target = gettarget(nrows=100)
+    assert df_source.columns.equals(df_target.columns)
+    print(pd.datetime.now(),' | ', 'number of rows on left:{}'.format(df_source.shape[0]))
+    print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_target.shape[0]))
+    scorer = FeatureUnion(transformer_list=[
+        ('name_char', VectorizerConnector(on='name', analyzer='char')),
+         ('street_char', VectorizerConnector(on='street', analyzer='char')),
+          ('countrycode_exact', ExactConnector(on='countrycode'))
+    ])
+    dfcon = DfConnector(scorer=scorer)
+    Xsm = dfcon.fit_transform(X=[df_source, df_target])
+
+    ix_con = Xsm.index
+    y_true = getytrue(Xst=[df_source, df_target]).loc[ix_con]
+    Xsbs = dfcon.getsbs(X=[df_source, df_target], on_ix=ix_con)
+    scores_further = scorer_sbs.fit_transform(X=Xsbs)
+    scores_further = pd.DataFrame(data=scores_further, index=ix_con, columns=[c[0] for c in _sbs_score_list])
+    scores_further = pd.concat([Xsm, scores_further], axis=1, ignore_index=False)
+    X = scores_further
+    scoring = ['precision', 'recall', 'accuracy']
+    print(pd.datetime.now(), ' | starting score')
+    pipe = Pipeline(steps=[
+        ('Impute', SimpleImputer(strategy='constant', fill_value=0)),
+        ('Scaler', Normalizer()),
+        ('PCA', PCA(n_components=4)),
+        ('Predictor', GradientBoostingClassifier(n_estimators=1000, max_depth=5))
+    ])
+    scores = cross_validate(estimator=pipe, X=X, y=y_true, scoring=scoring, cv=5)
+    for c in scoring:
+        print(pd.datetime.now(), ' | {} score1: {}'.format(c, np.average(scores['test_'+c])))
+
+
 

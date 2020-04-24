@@ -38,3 +38,11 @@ class ExactConnector(DfTransformerMixin):
         Xcomp = np.transpose([np.repeat(ysource, len(ytarget)), np.tile(ytarget, len(ysource))])
         ynp = np.equal(Xcomp[:, 0], Xcomp[:, 1]).astype(int).reshape(-1, 1)
         return ynp
+
+    def get_feature_names(self):
+        """
+
+        Returns:
+            list: list of length 1
+        """
+        return ['_'.join([self.on, 'exact'])]

@@ -12,4 +12,5 @@
     * es_rank: rank of the match in Elastic Search
 * Side-by-Side view of the source and target data for each potential match
 
-
+### Usage
+See suricate/tests/dbconnectors/test_esconnector.py

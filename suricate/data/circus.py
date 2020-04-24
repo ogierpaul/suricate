@@ -1,6 +1,6 @@
 import pandas as pd
 
-from suricate.dftransformers import CartesianDataPasser
+from suricate.dftransformers import cartesian_join
 from suricate.preutils.indextools import createmultiindex
 
 def getsource():
@@ -50,13 +50,8 @@ def getXsbs():
     Returns:
         pd.DataFrame: pd.DataFrame: cartesian join of source and target dataframes, shape (36, 2)
     """
-    X_sbs = CartesianDataPasser(
-        ixname='ix', source_suffix='source', target_suffix='target', on='name'
-    ).transform(
-        X=getXst()
-    ).set_index(
-        ['ix_source', 'ix_target']
-    )
+    X_st = getXst()
+    X_sbs = cartesian_join(source=X_st[0], target=X_st[1])
     return X_sbs
 
 def getytrue():

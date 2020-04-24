@@ -22,6 +22,7 @@ class DfApplyComparator(DfTransformerMixin):
                                     scoresuffix=scoresuffix + '_' + comparator, **kwargs)
         self.on = on
         assert comparator in ['exact', 'simple', 'token', 'vincenty', 'contain']
+        self.comparator = comparator
         if comparator == 'simple':
             self.func = simple_score
         elif comparator == 'token':
@@ -67,3 +68,6 @@ class DfApplyComparator(DfTransformerMixin):
         )
         score = sbs[self.outcol]
         return score.values.reshape(-1, 1)
+
+    def get_feature_names(self):
+        return [self.on + '_' + self.comparator]

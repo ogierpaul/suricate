@@ -19,7 +19,6 @@ _score_list = [
 ]
 _score_cols = [c[0] for c in _score_list]
 
-
 def test_explorer():
     print(pd.datetime.now())
     n_rows = 200
