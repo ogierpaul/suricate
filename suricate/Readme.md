@@ -20,9 +20,9 @@ All sub-modules of suricate:
 |dbconnectors|Ok|Ok|Ok|Ok|
 |explore|Ok|Ok|Ok|Todo|Ok|
 |dftransformers|Ok|ok|ok|Ok|Ok|
-|pipeline|
+|pipeline|Ok|ok|ok|Ok|Ok|
 |preutils|to be done later|
-|sbstransformers|
+|sbstransformers|Ok|ok|ok|Ok|Ok|
 |grouping|to be done later|
 
 ## Usage Guide
@@ -114,5 +114,6 @@ All sub-modules of suricate:
 |(1,b)|foo|baz|0|0|0|No|
 |(2,a)|bar|foo|0|0|0|No|
 |(2,b)|bar|baz|0|0.7|1|Match|
+
 
 
