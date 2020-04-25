@@ -19,15 +19,6 @@
 * Side-by-Side Comparator functions
 * Classifier
 
-#### 2.1.3. PruningDfSbsClf:
-##### Steps
-* Source-Target DataFrame Connector
-* Side-by-side Comparator
-* Classifier
-##### Comments:
-* Not maintained
-* Could be obsolete --> Relevance / Interest to check
-
 ### 2.2. With Connectors in general
 #### 2.2.1 Pruning Pipe
 ##### Steps
@@ -43,3 +34,9 @@
 * Final output:
     * 0 if it is not a match
     * 1 if it is a match
+    
+#### 2.2.2. PartialClf
+* Wrap Around a classifier
+* Allows to fit the classifier where the X input data and the y target data are not aligned
+* Do a re-index
+* Useful when the n_samples of X are not aligned with the saved data y (case of EsConnector, pruning, partial labelling...)
