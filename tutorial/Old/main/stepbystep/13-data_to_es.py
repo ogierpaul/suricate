@@ -1,7 +1,7 @@
 import elasticsearch
 import pandas as pd
 from suricate.dbconnectors.esconnector import index_with_es
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 engine = create_engine_ready()
 import time
 

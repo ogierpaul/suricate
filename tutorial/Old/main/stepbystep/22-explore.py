@@ -1,7 +1,6 @@
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 import pandas as pd
 from suricate.explore import Explorer
-from suricate.base import multiindex21column
 
 engine = create_engine_ready()
 

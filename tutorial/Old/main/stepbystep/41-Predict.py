@@ -1,11 +1,10 @@
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 import pandas as pd
 from suricate.pipeline import PartialClf
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import Normalizer
 from sklearn.decomposition import PCA
-from sklearn.linear_model import LogisticRegressionCV
 from sklearn.ensemble import GradientBoostingClassifier
 
 engine = create_engine_ready()

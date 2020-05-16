@@ -1,7 +1,7 @@
 # End to End Dedupe
 ## Pruning pipeline using Elastic search
 
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 from suricate.data.companies import getsource, gettarget
 import pandas as pd
 import  numpy as np
@@ -109,7 +109,7 @@ print(pd.datetime.now(),' | ', 'number of docs: {}'.format(catcount))
 
 
 ## Connect the data
-from tutorial.main.stepbystep.stepbysteputils.esconnector import getesconnector
+from tutorial.Old.main.stepbystep.stepbysteputils.esconnector import getesconnector
 
 print(pd.datetime.now(),' | ', 'Starting connection')
 escon = getesconnector()

@@ -1,4 +1,4 @@
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 from suricate.data.companies import getsource, gettarget
 import pandas as pd
 import  numpy as np
@@ -13,8 +13,6 @@ engine = create_engine_ready()
 df_source_raw = getsource(nrows=None)
 df_target_raw = gettarget(nrows=None)
 
-
-from sklearn.model_selection import train_test_split
 
 def rebuild_ytrue(ix):
     y_true_saved = pd.read_sql(sql="SELECT * FROM y_true WHERE y_true.y_true = 1", con=engine).set_index(
@@ -61,7 +59,7 @@ print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_target.sha
 
 import pandas as pd
 
-from tutorial.main.stepbystep.stepbysteputils.esconnector import getesconnector
+from tutorial.Old.main.stepbystep.stepbysteputils.esconnector import getesconnector
 
 escon = getesconnector()
 
@@ -82,14 +80,11 @@ _sbs_score_list = [
 
 scorer_sbs = FeatureUnion(transformer_list=_sbs_score_list)
 
-from suricate.pipeline import PartialClf
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import Normalizer
 from sklearn.decomposition import PCA
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.metrics import precision_score, recall_score, accuracy_score
-
 
 Xst = escon.fit_transform(X=df_source)
 ix_con = Xst.index

@@ -1,7 +1,7 @@
 import json
 from sqlalchemy import create_engine
 import pandas as pd
-with open('/Users/paulogier/81-GithubPackages/suricate/tutorial/main/stepbystep/stepbysteputils/config.json') as dbconfig:
+with open('/tutorial/Old/main/stepbystep/stepbysteputils/config.json') as dbconfig:
     jdb = json.load(dbconfig)
 
 def create_engine_ready():

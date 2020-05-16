@@ -1,5 +1,4 @@
-import pandas as pd
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 
 engine = create_engine_ready()
 # filefolder = '~/'

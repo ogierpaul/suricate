@@ -1,5 +1,5 @@
-from tutorial.main.stepbystep.stepbysteputils.esconnector import getesconnector
-from tutorial.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
+from tutorial.Old.main.stepbystep.stepbysteputils.esconnector import getesconnector
+from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 import pandas as pd
 
 escon = getesconnector()
