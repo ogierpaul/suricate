@@ -1,6 +1,7 @@
 import pytest
 from suricate.data.companies import getsource, gettarget
-from suricate.dbconnectors.esconnector import EsConnector, unpack_allhits,  index_with_es
+from suricate.dbconnectors.esconnector import EsConnector, unpack_allhits
+from suricate.dbconnectors import  es_index, es_create
 import elasticsearch
 import pandas as pd
 
@@ -70,10 +71,8 @@ def test_empty_create_index():
                 }
             }
         }
-        esclient.indices.create(index="right", body=request_body)
-        index_with_es(client=esclient, df=right, index="right", ixname="ix", reset_index=True, doc_type='_doc')
-        import time
-        time.sleep(5)
+        es_create(client=esclient, index='right', mapping=request_body)
+        es_index(client=esclient, df=right.reset_index(drop=False), index='right', id='ix', sleep=5, doc_type="_doc")
     pass
     catcount = esclient.count(index="right")['count']
     assert catcount == nrows
@@ -81,7 +80,7 @@ def test_empty_create_index():
 def test_index_all():
     esclient = elasticsearch.Elasticsearch()
     right = gettarget(nrows=None)
-    index_with_es(client=esclient, df=right, index="right", ixname="ix", reset_index=True, doc_type='_doc')
+    es_index(client=esclient, df=right.reset_index(drop=False), index='right', id='ix', doc_type='_doc')
     pass
 
 def test_create_query(esconnectornew):

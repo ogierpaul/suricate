@@ -1,9 +1,8 @@
 import elasticsearch
 import pandas as pd
-from suricate.dbconnectors.esconnector import index_with_es
+from suricate.dbconnectors import es_index, es_create
 from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 engine = create_engine_ready()
-import time
 
 
 ## Load the Right data from sql to put it to ES
@@ -39,9 +38,8 @@ if True:
             }
         }
     }
-    esclient.indices.create(index=es_indice, body=request_body)
-    index_with_es(client=esclient, df=df_target, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
-    time.sleep(5)
+    es_create(client=esclient, index='right', mapping=request_body)
+    es_index(client=esclient, df=df_target.reset_index(drop=False), index='right', id='ix', sleep=5, doc_type="_doc")
 pass
 catcount = esclient.count(index=es_indice)['count']
 assert catcount == df_target.shape[0]

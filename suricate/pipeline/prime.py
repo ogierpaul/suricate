@@ -188,6 +188,10 @@ def fit_pipeline(pipe, X, ix_prime, y_true):
     pipe.fit(X=X_prime, y=y_prime)
     return pipe
 
+def push_to_es(es_client, index_name, doc_type, mapping):
+    #TODO
+    pass
+
 
 def prime_model(new_source, new_target, es_client, index_name, usecols, n_rows_prime=None, scoreplan=None, n_hits_max=10,
                 sbs_score_list=None):

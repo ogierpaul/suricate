@@ -3,6 +3,7 @@
 
 from tutorial.Old.main.stepbystep.stepbysteputils.pgconnector import create_engine_ready
 from suricate.data.companies import getsource, gettarget
+from suricate.dbconnectors import es_create, es_index, es_create_load
 import pandas as pd
 import  numpy as np
 
@@ -64,8 +65,6 @@ print(pd.datetime.now(),' | ', 'number of rows on right:{}'.format(df_target.sha
 
 import elasticsearch
 import pandas as pd
-from suricate.dbconnectors.esconnector import index_with_es
-import time
 
 
 ## Put the data to ES, drop the index first and then re create
@@ -98,9 +97,8 @@ if True:
             }
         }
     }
-    esclient.indices.create(index=es_indice, body=request_body)
-    index_with_es(client=esclient, df=df_target, index=es_indice, ixname="ix", reset_index=True, doc_type='_doc')
-    time.sleep(5)
+    es_create(client=esclient, index='right', mapping=request_body)
+    es_index(client=esclient, df=df_target.reset_index(drop=False), index='right', id='ix', sleep=5, doc_type="_doc")
 pass
 catcount = esclient.count(index=es_indice)['count']
 assert catcount == df_target.shape[0]
