@@ -3,6 +3,7 @@ from suricate.preutils import createmultiindex
 from suricate.dftransformers import DfVisualSbs, cartesian_join
 import pandas as pd
 from suricate.base import ConnectorMixin
+from sklearn.pipeline import Pipeline
 
 class DfConnector(ConnectorMixin):
     """
@@ -34,7 +35,14 @@ class DfConnector(ConnectorMixin):
             pd.DataFrame: with index
         """
         Xt = self.scorer.transform(X=X)
-        Xt = pd.DataFrame(data=Xt, index=self.getindex(X=X), columns=self.scorer.get_feature_names())
+        if isinstance(self.scorer, Pipeline):
+            mycols = range(Xt.shape[1])
+        else:
+            try:
+                mycols = self.scorer.get_feature_names()
+            except AttributeError:
+                mycols = range(Xt.shape[1])
+        Xt = pd.DataFrame(data=Xt, index=self.getindex(X=X), columns=mycols)
         return Xt
 
     def getindex(self, X):
