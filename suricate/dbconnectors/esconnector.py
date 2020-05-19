@@ -103,7 +103,7 @@ class EsConnector(ConnectorMixin):
     def getsbs(self, X, on_ix=None):
         """
         Args:
-            X (pd.DataFrame): input data (source)
+            X (pd.DataFrame): input data (source). Index should be deduplicated.
             on_ix (pd.MultiIndex):
 
         Returns:
