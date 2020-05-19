@@ -55,7 +55,8 @@ scoreplan = {
 usecols = ['name', 'street', 'city', 'postalcode', 'countrycode']
 
 
-def get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new, ixnamesource='ix_source', ixnametarget='ix_target'):
+def get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new,
+                        ixnamesource='ix_source', ixnametarget='ix_target'):
     """
     Select the pairs from ix_con where both the source and target index belongs only to the prime  and new datasets respectively
     Args:
@@ -96,7 +97,9 @@ def get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime,
     ).index
     return ix_prime, ix_new
 
+
 esclient = elasticsearch.Elasticsearch()
+
 
 def check_index_no_overlap(prime_source, new_source, prime_target, primet_target):
     """
@@ -121,6 +124,7 @@ def check_index_no_overlap(prime_source, new_source, prime_target, primet_target
                 new_source.index.intersection(prime_source.index))
         )
     return True
+
 
 def score_es(df, esclient, index_name, n_hits_max, scoreplan):
     if scoreplan is None:
@@ -156,6 +160,7 @@ def score_es(df, esclient, index_name, n_hits_max, scoreplan):
     Xsbs = escon.getsbs(X=df, on_ix=Xsm.index)
     return Xsm, Xsbs
 
+
 def score_sbs(df, sbs_score_list):
     if sbs_score_list is None:
         sbs_score_list = [
@@ -168,6 +173,7 @@ def score_sbs(df, sbs_score_list):
     scores_further = scorer_sbs.fit_transform(X=df)
     scores_further = pd.DataFrame(data=scores_further, index=df.index, columns=[c[0] for c in sbs_score_list])
     return scores_further
+
 
 def fit_pipeline(pipe, X, ix_prime, y_true):
     if pipe is None:
@@ -183,10 +189,14 @@ def fit_pipeline(pipe, X, ix_prime, y_true):
     return pipe
 
 
-def main(new_source, new_target, n_rows_prime, es_client, scoreplan, index_name, n_hits_max, sbs_score_list):
+def prime_model(new_source, new_target, es_client, index_name, usecols, n_rows_prime=None, scoreplan=None, n_hits_max=10,
+                sbs_score_list=None):
+    # Get Priming Data
     prime_source = getsource(nrows=n_rows_prime)
     prime_target = gettarget(nrows=n_rows_prime)
     y_true = getytrue(Xst=[prime_source, prime_target])
+
+    # Concat the two datasets, source and prime
     mix_source = pd.concat([new_source[usecols], prime_source[usecols]], axis=0, ignore_index=False)
     ix_source_prime = prime_source.index
     ix_source_new = new_source.index
@@ -194,16 +204,23 @@ def main(new_source, new_target, n_rows_prime, es_client, scoreplan, index_name,
     ix_target_new = new_target.index
     check_index_no_overlap(prime_source, new_source, prime_target, new_target)
 
-    Xsm, Xsbs = score_es(df=mix_source, esclient=es_client, scoreplan=scoreplan, index_name=index_name, n_hits_max=n_hits_max)
+    #TODO: Push data to ES
+
+    # Obtain the score from ES (assume both data are in ES)
+    Xsm, Xsbs = score_es(df=mix_source, esclient=es_client, scoreplan=scoreplan, index_name=index_name,
+                         n_hits_max=n_hits_max)
     ix_con = Xsm.index
+
+    # Obtain the pairs that are from prime datasets and the pairs from new dataset
     ix_prime, ix_new = get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new,
                                            ixnamesource='ix_source', ixnametarget='ix_target')
-    scores_further = score_sbs(df=Xsbs, sbs_score_list=sbs_score_list)
-    scores_further = pd.concat([Xsm[['es_score']], scores_further], axis=1, ignore_index=False)
-    X = scores_further
+    # Score furthers
+    X = score_sbs(df=Xsbs, sbs_score_list=sbs_score_list)
+    X = pd.concat([Xsm[['es_score']], X], axis=1, ignore_index=False)
+
+    # Fit the pipeline using prime dataset
     pipe = fit_pipeline(X, ix_prime, y_true)
 
+    # Calculate the probability
     y_proba = pipe.predict_proba(X=X.loc[ix_new])
     return y_proba
-
-
