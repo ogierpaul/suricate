@@ -21,7 +21,7 @@ def _df_to_dump(df, pkey):
         if pkey is None:
             allrecs.append({'body': js})
         else:
-            allrecs.append({'body': js, 'pkey': s[pkey]})
+            allrecs.append({'body': js, 'id': s[pkey]})
     return allrecs
 
 
@@ -44,18 +44,17 @@ def es_index(client, df, index, doc_type, id=None, sleep=1):
             client.index(index=index, body=d['body'], doc_type=doc_type)
     else:
         for d in dump:
-            client.index(index=index, body=d['body'], id=d['pkey'], doc_type=doc_type)
+            client.index(index=index, body=d['body'], id=d['id'], doc_type=doc_type)
     time.sleep(sleep)
     return None
 
 
-def es_create(es_client, indexname, doc_type, mapping):
+def es_create(client, index, mapping):
     """
     Create the index according to the mapping
     Args:
-        es_client (elasticsearch.Elasticsearch): elastic search client
-        indexname (str): Name of index in ElasticSearch. (also called indice).
-        doc_type (str): Name of document type in ElasticSearch. If None, uses the same name as the indexname
+        client (elasticsearch.Elasticsearch): elastic search client
+        index (str): Name of index in ElasticSearch. (also called indice).
         mapping (dict): Mapping
 
     Returns:
@@ -81,31 +80,31 @@ def es_create(es_client, indexname, doc_type, mapping):
             }
         }
     """
-    es_client.indices.create(index=indexname, doc_type=doc_type, body=mapping, ignore=400)
+    client.indices.create(index=index, body=mapping, ignore=400)
     return None
 
 
-def es_create_load(df, es_client, drop, create, indexname, doc_type, pkey, mapping):
+def es_create_load(df, client, drop, create, index, doc_type, id, mapping):
     """
     Create the index & load the data into the index
     Args:
         df(pd.DataFrame):
-        es_client (elasticsearch.Elasticsearch): elastic search client
+        client (elasticsearch.Elasticsearch): elastic search client
         drop (bool): If True, proceed first to drop the index
         create (bool): If True, proceed then to create the index
-        indexname (str): Name of index in ElasticSearch. (also called indice).
+        index (str): Name of index in ElasticSearch. (also called indice).
         doc_type (str): Name of document type in ElasticSearch. If None, uses the same name as the indexname
         mapping (dict): Mapping of the index
-        pkey (str): String
+        id (str): String, name of column to be used as id for the indexation
 
     Returns:
         None
     """
     if doc_type is None:
-        doc_type = indexname
+        doc_type = index
     if drop is True:
-        es_client.indices.delete(index=indexname, ignore=404)
+        client.indices.delete(index=index, ignore=404)
     if create is True:
-        es_client.indices.create(index=indexname, body=mapping, doc_type=doc_type, ignore=400)
-    es_index(client=es_client, df=df, index=indexname, doc_type=doc_type, id=pkey, sleep=2)
+        es_create(client=client, index=index, mapping=mapping)
+    es_index(client=client, df=df, index=index, doc_type=doc_type, id=id, sleep=2)
     return None
