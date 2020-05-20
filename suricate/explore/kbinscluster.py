@@ -9,9 +9,9 @@ class KBinsCluster(ClusterMixin):
     It then sums the score along the n_features axis, and discretize (i.e. Cluster) the scores using the KBinsDiscretizer
     From sklearn
     """
-    def __init__(self, n_clusters):
+    def __init__(self, n_clusters, strategy='uniform', encode='ordinal'):
         self.n_clusters = n_clusters
-        self.kb = KBinsDiscretizer(n_bins=n_clusters, strategy='uniform', encode='ordinal')
+        self.kb = KBinsDiscretizer(n_bins=n_clusters, strategy=strategy, encode=encode)
         self.fitted = False
 
     def fit(self, X, y=None):
