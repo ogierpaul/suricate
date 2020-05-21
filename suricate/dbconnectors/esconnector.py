@@ -82,6 +82,8 @@ class EsConnector(ConnectorMixin):
             ixl = ix
         elif isinstance(ix, pd.Index):
             ixl = ix.values
+        elif isinstance(ix, list):
+            ixl = ix
         for i in ixl:
             assert isinstance(self.client, elasticsearch.client.Elasticsearch)
             res = self.client.get(index=self.index, id=i, doc_type=self.doc_type)
@@ -109,8 +111,9 @@ class EsConnector(ConnectorMixin):
         Returns:
             pd.DataFrame
         """
-        ix_source = np.unique(on_ix.get_level_values(self.ixnamesource))
-        ix_target = np.unique(on_ix.get_level_values(self.ixnametarget))
+        # Select unique values
+        ix_source = list(set(on_ix.get_level_values(self.ixnamesource)))
+        ix_target = list(set(on_ix.get_level_values(self.ixnametarget)))
         source = self.fetch_source(X=X, ix=ix_source)
         target = self.fetch_target(ix=ix_target)
         df = cartesian_join(source=source, target=target, on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
@@ -295,46 +298,6 @@ def unpack_allhits(res, explain=False, es_id='es_id', es_score='es_score', suffi
     return results
 
 
-def df_to_dump(df, reset_index=True, ixname='ix'):
-    """
-    Return each row of the dataframe as a json dump
-    Args:
-        df (pd.DataFrame):
-        reset_index (bool):
-        ixname (str): index name of the data frame
 
-    Returns:
-        dict: json dump
-    """
-    import json
-    allrecs = list()
-    if reset_index:
-        X = df.copy().reset_index(drop=False)
-    else:
-        X = df.copy()
-    for i in range(df.shape[0]):
-        s = X.iloc[i].dropna().to_dict()
-        js = json.dumps(s, default=str)
-        allrecs.append({ixname: s[ixname], 'body': js})
-    return allrecs
-
-def index_with_es(client, df, index, doc_type="_doc", ixname='ix', reset_index=True):
-    """
-
-    Args:
-        client (elasticsearch.Elasticsearch): elastic search client
-        df (pd.DataFrame): pd.DataFrame
-        index (str): name of es index
-        ixname (str): name of pd.DataFrame index
-        reset_index (bool): Reset index of dataframe to index the df_index as well
-
-    Returns:
-
-    """
-    dump = df_to_dump(df=df, reset_index=reset_index, ixname=ixname)
-    for d in dump:
-        client.index(index=index, body=d['body'], id=d[ixname], doc_type=doc_type)
-    time.sleep(5)
-    pass
 
 
