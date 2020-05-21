@@ -1,15 +1,9 @@
 import pandas as pd
 import elasticsearch
 # Suricate Model Building
-from suricate.companiesmodel.standardmodel import prime_model
+from suricate.companiesmodel.standardmodel import companies_fit_predict
 from suricate.data.companies import getsource, gettarget, getytrue
-# Sci-kit-learn Model Building
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import Normalizer
-from sklearn.decomposition import PCA
-from sklearn.ensemble import GradientBoostingClassifier
-from suricate.sbstransformers import SbsApplyComparator
+
 
 
 def get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new,
@@ -105,87 +99,51 @@ def merge_prime_new(new_source, new_target, usecols, n_rows_prime):
     check_index_no_overlap(prime_source, new_source, prime_target, new_target)
     return mix_source, mix_target, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new, y_true
 
+
+def separe_prime_new(df, ix_new_source, ix_new_target):
+    ixnamepairs = list(df.columns)[:2]
+    df.set_index(ixnamepairs, inplace=True)
+    ix= df.index
+    dfix = pd.DataFrame(index=ix)
+    ixnamepairs = ix.names
+    dfix.reset_index(drop=False,inplace=True)
+    dfix = dfix.loc[
+        (dfix[ixnamepairs[0]].isin(ix_new_source)) & (
+            dfix[ixnamepairs[1]].isin(ix_new_target)
+        )
+        ]
+    ix_new = dfix.set_index(ixnamepairs).index
+    return df.loc[ix_new]
+
+def prepare_new(d, usecols, marker_col):
+    d = d.reset_index(drop=True)
+    d.index.name = 'ix'
+    d[marker_col] = 'new'
+    d[usecols[0]] = d.index
+    d = d[usecols]
+    return d
+
+
 def main():
-    n_rows = 650
-    n_estimators = 500
-    n_hits_max = 10
+    n_rows = 100
     index_name = 'prime'
     doc_type = index_name
     marker_col = 'origin'
     usecols = ['ix', 'name', 'street', 'city', 'postalcode', 'countrycode']
-    new_source = getsource(nrows=None).tail(n=n_rows)
-    new_source[marker_col] = 'new'
-    new_target = gettarget(nrows=None).tail(n=n_rows)
-    new_target[marker_col] = 'new'
-    new_source[usecols[0]] = new_source.index
-    new_target[usecols[0]] = new_target.index
+    new_source = getsource(nrows=n_rows)
+    new_target = gettarget(nrows=None)
+    new_source = prepare_new(new_source, usecols, marker_col)
+    new_target = prepare_new(new_target, usecols, marker_col)
+    mix_source, mix_target, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new, y_true = merge_prime_new(new_source=new_source, new_target=new_target, usecols=usecols, n_rows_prime=None)
+    es_client = elasticsearch.Elasticsearch()
+    res = companies_fit_predict(df_source=mix_source, df_target=mix_target, y_true=y_true, es_client=es_client, doc_type=doc_type, index_name=index_name)
+    res = separe_prime_new(res, ix_source_new, ix_target_new)
+    return res
 
-    sbs_score_list = [
-        ('name_fuzzy', SbsApplyComparator(on='name', comparator='simple')),
-        ('street_fuzzy', SbsApplyComparator(on='street', comparator='simple')),
-        ('city_fuzzy', SbsApplyComparator(on='city', comparator='simple')),
-        ('postalcode_fuzzy', SbsApplyComparator(on='postalcode', comparator='simple'))
-    ]
-
-    scoreplan = {
-        'name': {
-            'type': 'FreeText'
-        },
-        'street': {
-            'type': 'FreeText'
-        },
-        'city': {
-            'type': 'FreeText'
-        },
-        'duns': {
-            'type': 'Exact'
-        },
-        'postalcode': {
-            'type': 'FreeText'
-        },
-        'countrycode': {
-            'type': 'Exact'
-        }
-    }
+if __name__ == '__main__':
+    res = main()
+    res.to_csv('../../project/data_dir/extract_dir/matches.csv')
 
 
-
-    mapping = {
-        "mappings": {
-            doc_type: {
-                "properties": {
-                    "ix": {"type": "keyword"},
-                    "name": {"type": "text"},
-                    "street": {"type": "text"},
-                    "city": {"type": "text"},
-                    "postalcode": {"type": "text"},
-                    "countrycode": {"type": "keyword"}
-                }
-            }
-        }
-    }
-    pipemodel = Pipeline(steps=[
-        ('Impute', SimpleImputer(strategy='constant', fill_value=0)),
-        ('Scaler', Normalizer()),
-        ('PCA', PCA(n_components=3)),
-        ('Predictor', GradientBoostingClassifier(n_estimators=n_estimators, max_depth=7))
-    ])
-
-    esclient = elasticsearch.Elasticsearch()
-
-    y = prime_model(new_source=new_source,
-                    new_target=new_target,
-                    es_client=esclient,
-                    index_name=index_name,
-                    doc_type=doc_type,
-                    mapping=mapping,
-                    usecols=usecols,
-                    n_rows_prime=n_rows,
-                    scoreplan=scoreplan,
-                    n_hits_max=n_hits_max,
-                    sbs_score_list=sbs_score_list,
-                    pipemodel=pipemodel
-                    )
-    return y
 
 

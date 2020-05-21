@@ -1,5 +1,5 @@
-from paco.utils import sanitize_js, sanitize_csv, convertnone, clean_inputs
-from paco.utils.cleanutils import validate_cols
+from pacoetl.utils import sanitize_js, sanitize_csv, convertnone, clean_inputs
+from pacoetl.utils.cleanutils import validate_cols
 import pytest
 import pandas as pd
 import datetime
@@ -91,7 +91,7 @@ def test_validate_cols():
 
 @pytest.fixture()
 def raw_data():
-    raw_path = 'extract_dir/arp.csv'
+    raw_path = '../../project/data_dir/extract_dir/arp.csv'
     nrows = 100
     df = pd.read_csv(raw_path, sep=',', nrows=nrows)
     df['ts'] = datetime.datetime.now().strftime('%Y-%m-%d')

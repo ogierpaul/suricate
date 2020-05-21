@@ -1,10 +1,10 @@
 import pandas as pd
-from paco.utils import clean_inputs, pg_conn, copy_from
+from pacoetl.utils import clean_inputs, pg_conn, pg_copy_from
 import elasticsearch
 from psycopg2 import sql
 import datetime
 
-from paco.utils import es_create_load
+from pacoetl.utils import es_create_load
 
 tablename = 'arp'
 pkey = tablename
@@ -124,7 +124,7 @@ def pg_create_load(df, conn, drop, create, tablename, staging_dir, pkey):
         cur.close()
     if create is True:
         pg_create_table(conn=conn, tablename=tablename)
-    copy_from(df=df, conn=conn, tablename=tablename, staging_dir=staging_dir, pkey=pkey)
+    pg_copy_from(df=df, conn=conn, tablename=tablename, staging_dir=staging_dir, pkey=pkey)
     return None
 
 

@@ -1,11 +1,11 @@
 import pytest
-from paco import Arp, clean_inputs
+from project.etl import Arp, clean_inputs
 import pandas as pd
 import datetime
 
-raw_path = 'extract_dir/arp.csv'
+raw_path = '../../project/data_dir/extract_dir/arp.csv'
 nrows = 100
-staging_pg = 'staging'
+staging_pg = '../../project/data_dir/staging'
 filename_pg = 'df_pg.csv'
 filename_es = 'df_es.csv'
 usecols = pd.Series(
@@ -72,7 +72,7 @@ class TestArpTransform:
 class TestInFlow():
     def test_main(self, raw_data):
         df2 = clean_inputs(df=raw_data, pkey='arp', usecols=usecols, sep_csv = '|', coltypes=coltypes, colzeroes=colzeroes,
-                           transform_func=arp_filter)
+                           transform_func=None)
         assert isinstance(df2, pd.DataFrame)
 
         # df_pg = a.transform_pg(df=df2)

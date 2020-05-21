@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 import psycopg2
 import datetime
-from paco.utils import insert, copy_from
+from pacoetl.utils import pg_insert, pg_copy_from
 
 @pytest.fixture
 def pg_conn():
@@ -79,7 +79,7 @@ def test_insert(raw_data, pg_conn):
 
     df = raw_data
     cur = pg_conn.cursor()
-    insert(df=df, query=upsert_sql, conn=pg_conn)
+    pg_insert(df=df, query=upsert_sql, conn=pg_conn)
     pg_conn.commit()
     assert _select_test(conn=pg_conn, expected=3)
     cur.execute("""DROP TABLE test_foo;""")
@@ -92,7 +92,8 @@ def test_copy_from(raw_data, pg_conn):
     _create_table(conn=pg_conn)
     df = raw_data
     cur = pg_conn.cursor()
-    copy_from(df=df, conn=pg_conn, tablename='test_foo', staging_dir='staging', pkey='id')
+    staging_dir = '../../project/data_dir/staging'
+    pg_copy_from(df=df, conn=pg_conn, tablename='test_foo', staging_dir=staging_dir, pkey='id')
     pg_conn.commit()
     assert _select_test(conn=pg_conn, expected=3)
     cur.execute("""DROP TABLE test_foo;""")

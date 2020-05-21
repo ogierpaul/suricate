@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 from elasticsearch import Elasticsearch
 import datetime
-from paco.utils.esutils import es_index
+from pacoetl.utils.esutils import es_index
 
 
 
