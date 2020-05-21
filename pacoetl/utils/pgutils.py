@@ -118,7 +118,7 @@ def copy_withpkey(tablename, filepath, cur, sep, pkey):
     cur.execute(query_drop)
     return None
 
-def copy_from(df, conn, tablename, staging_dir, pkey=None, filename=None, sep='|'):
+def pg_copy_from(df, conn, tablename, staging_dir, pkey=None, filename=None, sep='|'):
     """
     Bulk import into PostgreSql
     - Write the data as a csv file into the staging directory. (without the index)\
@@ -157,7 +157,7 @@ def copy_from(df, conn, tablename, staging_dir, pkey=None, filename=None, sep='|
     os.remove(filepath)
     return None
 
-def insert(df, query, conn):
+def pg_insert(df, query, conn):
     """
     Insert data into
     Args:
