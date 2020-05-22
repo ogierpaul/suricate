@@ -3,7 +3,8 @@ import elasticsearch
 # Suricate Model Building
 from suricate.companiesmodel.standardmodel import companies_fit_predict
 from suricate.data.companies import getsource, gettarget, getytrue
-
+import psycopg2
+from sqlalchemy import create_engine
 
 
 def get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new,
@@ -49,8 +50,6 @@ def get_prime_new_index(ix_con, ix_source_prime, ix_source_new, ix_target_prime,
     return ix_prime, ix_new
 
 
-
-
 def check_index_no_overlap(prime_source, new_source, prime_target, new_target):
     """
     Checkes that the indexes of the prime and new datasets do not have duplicate values
@@ -77,6 +76,15 @@ def check_index_no_overlap(prime_source, new_source, prime_target, new_target):
 
 
 def get_prime_data(usecols, nrows):
+    """
+    Obtain the source, target and y_true dataframe
+    Args:
+        usecols (list): columns to use ['ix', 'name', 'street', 'city', 'postalcode', 'countrycode', 'duns']
+        nrows (int): number of rows to read
+
+    Returns:
+        pd.DataFrame, pd.DataFrame, pd.Series
+    """
     prime_source = getsource(nrows=nrows)
     prime_target = gettarget(nrows=nrows)
     y_true = getytrue(Xst=[prime_source, prime_target])
@@ -85,28 +93,43 @@ def get_prime_data(usecols, nrows):
     return prime_source, prime_target, y_true
 
 
-def merge_prime_new(new_source, new_target, usecols, n_rows_prime):
-    # Get Priming Data
-    prime_source, prime_target, y_true = get_prime_data(usecols=usecols, nrows=n_rows_prime)
+def concat_prime_new(prime_source, prime_target, new_source, new_target, usecols):
+    """
+    Concatenate the prime and new datasets
+    Args:
+        prime_source (pd.DataFrame):
+        prime_target (pd.DataFrame):
+        new_source (pd.DataFrame):
+        new_target (pd.DataFrame):
+        usecols (list):
 
+    Returns:
+        pd.DataFrame, pd.DataFrame
+    """
     # Concat the two datasets, source and prime
     mix_source = pd.concat([new_source[usecols], prime_source[usecols]], axis=0, ignore_index=False)
     mix_target = pd.concat([new_target[usecols], prime_target[usecols]], axis=0, ignore_index=False)
-    ix_source_prime = prime_source.index
-    ix_source_new = new_source.index
-    ix_target_prime = prime_target.index
-    ix_target_new = new_target.index
     check_index_no_overlap(prime_source, new_source, prime_target, new_target)
-    return mix_source, mix_target, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new, y_true
+    return mix_source, mix_target
 
 
 def separe_prime_new(df, ix_new_source, ix_new_target):
+    """
+    From the results datasets, separate the pairs that contain exclusively elements from new datasets
+    Args:
+        df (pd.DataFrame):
+        ix_new_source (pd.Index):
+        ix_new_target (pd.Index):
+
+    Returns:
+        pd.DataFrame: Results with only new pairs
+    """
     ixnamepairs = list(df.columns)[:2]
     df.set_index(ixnamepairs, inplace=True)
-    ix= df.index
+    ix = df.index
     dfix = pd.DataFrame(index=ix)
     ixnamepairs = ix.names
-    dfix.reset_index(drop=False,inplace=True)
+    dfix.reset_index(drop=False, inplace=True)
     dfix = dfix.loc[
         (dfix[ixnamepairs[0]].isin(ix_new_source)) & (
             dfix[ixnamepairs[1]].isin(ix_new_target)
@@ -115,7 +138,18 @@ def separe_prime_new(df, ix_new_source, ix_new_target):
     ix_new = dfix.set_index(ixnamepairs).index
     return df.loc[ix_new]
 
+
 def prepare_new(d, usecols, marker_col):
+    """
+
+    Args:
+        d:
+        usecols:
+        marker_col:
+
+    Returns:
+        pd.DataFrame
+    """
     d = d.reset_index(drop=True)
     d.index.name = 'ix'
     d[marker_col] = 'new'
@@ -124,26 +158,32 @@ def prepare_new(d, usecols, marker_col):
     return d
 
 
-def main():
-    n_rows = 100
+if __name__ == '__main__':
+    n_rows = None
     index_name = 'prime'
     doc_type = index_name
     marker_col = 'origin'
     usecols = ['ix', 'name', 'street', 'city', 'postalcode', 'countrycode']
-    new_source = getsource(nrows=n_rows)
-    new_target = gettarget(nrows=None)
+    all_data = pd.concat([getsource(nrows=None), gettarget(nrows=None)], axis=0, ignore_index=False)
+    new_source = all_data
+    new_target = all_data
     new_source = prepare_new(new_source, usecols, marker_col)
     new_target = prepare_new(new_target, usecols, marker_col)
-    mix_source, mix_target, ix_source_prime, ix_source_new, ix_target_prime, ix_target_new, y_true = merge_prime_new(new_source=new_source, new_target=new_target, usecols=usecols, n_rows_prime=None)
+    prime_source, prime_target, y_true = get_prime_data(usecols=usecols, nrows=n_rows)
+    ix_source_prime = prime_source.index
+    ix_target_prime = prime_target.index
+    mix_source, mix_target, = concat_prime_new(
+        new_source=new_source, new_target=new_target, usecols=usecols)
     es_client = elasticsearch.Elasticsearch()
-    res = companies_fit_predict(df_source=mix_source, df_target=mix_target, y_true=y_true, es_client=es_client, doc_type=doc_type, index_name=index_name)
-    res = separe_prime_new(res, ix_source_new, ix_target_new)
-    return res
+    res = companies_fit_predict(df_source=mix_source, df_target=mix_target, y_true=y_true, es_client=es_client,
+                                doc_type=doc_type, index_name=index_name)
+    res = separe_prime_new(res, new_source.index, new_target.index)
+    engine = create_engine('postgresql://suricateeditor:66*$%HWqx*@localhost:5432/suricate')
+    res.to_sql(name='results', con=engine, if_exists='replace', index=True)
+    new_source[usecols].to_sql(name='df_source', con=engine, if_exists='replace', index=False)
+    new_target[usecols].to_sql(name='df_target', con=engine, if_exists='replace', index=False)
+    R2 = res.reset_index(drop=False)
 
-if __name__ == '__main__':
-    res = main()
-    res.to_csv('../../project/data_dir/extract_dir/matches.csv')
-
-
-
-
+    # R2 = res.reset_index(drop=False)
+    # sample = R2.loc[R2['ix_source'].isin(id_cluster_points)]
+    # res.to_csv('../../project/data_dir/extract_dir/matches.csv')
