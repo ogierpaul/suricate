@@ -1,9 +1,9 @@
 import pytest
-from project.etl import Arp, clean_inputs
+# from project.arp import Arp, clean_inputs
 import pandas as pd
 import datetime
 
-raw_path = '../../project/data_dir/extract_dir/arp.csv'
+raw_path = '../../project/data_dir/extract_dir/arp_mockaroo.csv'
 nrows = 100
 staging_pg = '../../project/data_dir/staging'
 filename_pg = 'df_pg.csv'

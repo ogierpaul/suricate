@@ -72,7 +72,7 @@ def test_empty_create_index():
             }
         }
         es_create(client=esclient, index='right', mapping=request_body)
-        es_index(client=esclient, df=right.reset_index(drop=False), index='right', id='ix', sleep=5, doc_type="_doc")
+        es_index(client=esclient, df=right.reset_index(drop=False), index='right', index_id='ix', sleep=5, doc_type="_doc")
     pass
     catcount = esclient.count(index="right")['count']
     assert catcount == nrows
@@ -80,7 +80,7 @@ def test_empty_create_index():
 def test_index_all():
     esclient = elasticsearch.Elasticsearch()
     right = gettarget(nrows=None)
-    es_index(client=esclient, df=right.reset_index(drop=False), index='right', id='ix', doc_type='_doc')
+    es_index(client=esclient, df=right.reset_index(drop=False), index='right', index_id='ix', doc_type='_doc')
     pass
 
 def test_create_query(esconnectornew):

@@ -1,0 +1,46 @@
+SELECT ixp,
+       es_score,
+       name_fuzzy,
+       name_token,
+       street_fuzzy,
+       street_token,
+       city_fuzzy,
+       postalcode_fuzzy,
+       state_fuzzy,
+       countrycode_exact,
+       eu_vat_exact,
+       concatenatedids,
+       tax1_contains,
+       cage_exact,
+       duns_exact,
+       name_score,
+       pos_score,
+       id_score,
+       name_es,
+       street_es
+FROM (SELECT ixp, ariba_source, arp_target FROM eprocarp.eprocarp_ixp) z
+         LEFT JOIN (SELECT ixp,
+                           es_score,
+                           name_fuzzy,
+                           name_token,
+                           street_fuzzy,
+                           street_token,
+                           city_fuzzy,
+                           postalcode_fuzzy,
+                           state_fuzzy,
+                           countrycode_exact,
+                           eu_vat_exact,
+                           concatenatedids,
+                           tax1_contains,
+                           cage_exact,
+                           duns_exact
+                    FROM eprocarp.eprocarp_scores) a USING (ixp)
+         LEFT JOIN (SELECT ixp,
+                           name_score,
+                           pos_score,
+                           id_score
+                    FROM eprocarp.eprocarp_binned) b USING (ixp)
+         LEFT JOIN (SELECT ixp,
+                           name_es,
+                           street_es
+                    FROM eprocarp.eprocarp_namestreet_es) c USING (ixp);

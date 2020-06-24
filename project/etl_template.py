@@ -11,7 +11,7 @@ pkey = tablename
 indexname = tablename
 doc_type = tablename
 
-extract_path = '../tests/extract_dir/arp.csv'
+extract_path = '../tests/extract_dir/arp_mockaroo.csv'
 staging_dir = '../tests/staging'
 usecols = pd.Series(
     index=['id', 'name', 'street', 'city', 'postalcode', 'state', 'country', 'iban', 'duns', 'ssn'],
@@ -124,7 +124,7 @@ def pg_create_load(df, conn, drop, create, tablename, staging_dir, pkey):
         cur.close()
     if create is True:
         pg_create_table(conn=conn, tablename=tablename)
-    pg_copy_from(df=df, conn=conn, tablename=tablename, staging_dir=staging_dir, pkey=pkey)
+    pg_copy_from(df=df, con=conn, tablename=tablename, staging_dir=staging_dir, pkey=pkey)
     return None
 
 
@@ -175,3 +175,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

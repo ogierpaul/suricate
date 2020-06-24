@@ -64,14 +64,14 @@ def test_insert_document_wo_id(es_client, data_raw, index_name, doc_type):
 
 def test_insert_document_with_id(es_client, data_raw, index_name, doc_type):
     reset_index(es_client, index_name=index_name, doc_type=doc_type)
-    es_index(client=es_client, df=data_raw, index=index_name, doc_type=doc_type, id='pkey')
+    es_index(client=es_client, df=data_raw, index=index_name, doc_type=doc_type, index_id='pkey')
     assert es_client.count(index='test-index')['count'] == 4
 
 def test_upsert_document_with_id(es_client, data_raw, index_name, doc_type):
     reset_index(es_client, index_name=index_name, doc_type=doc_type)
     df = data_raw.copy()
     df.loc[df['pkey'] == 4, 'pkey'] = 1
-    es_index(client=es_client, df=df, index=index_name, doc_type=doc_type, id='pkey')
+    es_index(client=es_client, df=df, index=index_name, doc_type=doc_type, index_id='pkey')
     assert es_client.count(index='test-index')['count'] == 3
 
 

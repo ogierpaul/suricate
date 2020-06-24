@@ -3,7 +3,7 @@ from pacoetl import Arp, clean_inputs
 import pandas as pd
 import datetime
 
-raw_path = 'extract_dir/arp.csv'
+raw_path = 'extract_dir/arp_mockaroo.csv'
 nrows = 100
 staging_pg = 'staging'
 filename_pg = 'df_pg.csv'

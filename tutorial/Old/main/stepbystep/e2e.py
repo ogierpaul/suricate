@@ -98,7 +98,7 @@ if True:
         }
     }
     es_create(client=esclient, index='right', mapping=request_body)
-    es_index(client=esclient, df=df_target.reset_index(drop=False), index='right', id='ix', sleep=5, doc_type="_doc")
+    es_index(client=esclient, df=df_target.reset_index(drop=False), index='right', index_id='ix', sleep=5, doc_type="_doc")
 pass
 catcount = esclient.count(index=es_indice)['count']
 assert catcount == df_target.shape[0]

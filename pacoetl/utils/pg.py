@@ -1,8 +1,10 @@
-import datetime
 import os
-
+from sqlalchemy import create_engine
 import psycopg2
 from psycopg2 import sql
+
+from pacoetl.utils.others import write_csv
+
 
 def _format_pkey(pkey):
     """
@@ -19,27 +21,10 @@ def _format_pkey(pkey):
         pkey_s = ', '.join(pkey)
     return pkey_s
 
-def write_csv(df, staging_dir, filename, tablename):
-    """
-
-    Args:
-        df (pd.DataFrame)
-        staging_dir (str):
-        filename (str):
-        tablename (str):
-
-    Returns:
-        str: filepath of the csv written
-    """
-    if filename is None:
-        filename = tablename + '_' + datetime.datetime.now().strftime("%Y-%b-%d-%H-%M-%S") + '.csv'
-    filepath = staging_dir + '/' + filename
-    df.to_csv(path_or_buf=filepath, encoding='utf-8', sep='|', index=False)
-    return filepath
 
 def copy_wopkey(tablename, filepath, cur, sep='|'):
     """
-    copy from filepath to tablename with delimiter sep
+    copy_wopkey
     Args:
         tablename (str):
         filepath (str):
@@ -57,6 +42,8 @@ def copy_wopkey(tablename, filepath, cur, sep='|'):
         cur.copy_expert(query, f)
     return None
 
+
+# noinspection SyntaxError
 def copy_withpkey(tablename, filepath, cur, sep, pkey):
     """
     copy from filepath to tablename with delimiter sep
@@ -86,6 +73,7 @@ def copy_withpkey(tablename, filepath, cur, sep, pkey):
     )
     cur.execute(query_create)
     # Delete rows from temp_tablename
+    # noinspection SyntaxError
     query_delete = sql.SQL("""DELETE FROM {temp_tablename};""").format(temp_tablename=sql.Identifier(temp_tablename))
     cur.execute(query_delete)
     # Copy from CSV to temp_tablename
@@ -118,7 +106,7 @@ def copy_withpkey(tablename, filepath, cur, sep, pkey):
     cur.execute(query_drop)
     return None
 
-def pg_copy_from(df, conn, tablename, staging_dir, pkey=None, filename=None, sep='|'):
+def pg_copy_from(df, con, tablename, staging_dir, pkey=None,  sep='|'):
     """
     Bulk import into PostgreSql
     - Write the data as a csv file into the staging directory. (without the index)\
@@ -131,11 +119,10 @@ def pg_copy_from(df, conn, tablename, staging_dir, pkey=None, filename=None, sep
         - INSERT / ON CONFLICT DO NOTHING between temp_tablename and tablename
         - DROP temp_tablename
     Args:
-        df (pd.DataFrame): Data to import. All the columns must be in the same order. Index will not be copied.
-        conn (psycopg2.connection): connection object
+        df (pd.DataFrame): Data to import. All the columns must be in the same order. Index will be copied.
+        con (psycopg2.connection): connection object
         staging_dir (str); path of staging_dir
         tablename (str): table name to import
-        filename (str): name of the file. If none, will use timestamp of the time when the function is called
         pkey(str/list): primary key or list. If provided, will allow upsert.
         sep (str): Delimiter
 
@@ -143,16 +130,16 @@ def pg_copy_from(df, conn, tablename, staging_dir, pkey=None, filename=None, sep
         None
     """
     ###
-    filepath = write_csv(df=df, staging_dir=staging_dir, tablename=tablename, filename=filename)
+    filepath = write_csv(df=df, staging_dir=staging_dir, fileprefix=tablename)
 
-    cur = conn.cursor()
+    cur = con.cursor()
 
     if pkey is None:
         copy_wopkey(tablename=tablename, filepath=filepath, cur=cur, sep=sep)
 
     else:
         copy_withpkey(tablename=tablename, filepath=filepath, cur=cur, sep=sep, pkey=pkey)
-    conn.commit()
+    con.commit()
     cur.close()
     os.remove(filepath)
     return None
@@ -176,11 +163,30 @@ def pg_insert(df, query, conn):
     return None
 
 
-def pg_conn():
+def pg_conn(host, dbname, user, password):
     """
+    Args:
+        host (str):
+        dbname (str):
+        user (str):
+        password (str):
     Returns:
         psycopg2.connection
     """
-    conn = psycopg2.connect("host=127.0.0.1 dbname=pacoetl user=cedar password=abc123")
+    conn = psycopg2.connect("host={} dbname={} user={} password={}".format(host, dbname, user, password))
     conn.autocommit = True
     return conn
+
+def pg_engine(host, port, dbname, user, password):
+    """
+    Args:
+        host (str):
+        port (str):
+        dbname (str):
+        user (str):
+        password (str):
+    Returns:
+        psycopg2.connection
+    """
+    engine = create_engine("postgresql://{}:{}@{}:{}/{}".format(user, password, host, port, dbname))
+    return engine

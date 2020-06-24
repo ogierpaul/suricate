@@ -4,6 +4,12 @@ import unicodedata
 import bleach
 
 
+global_navalues = [
+    '#', None, np.nan, 'None', '-', 'nan', 'n.a.', 'na',
+    ' ', '', '#REF!', '#N/A', '#NAME?', '#DIV/0!', 'none'
+    '#NUM!', 'NaT', 'NULL', 'NOTAPPLICABLE'
+]
+
 def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     """
     Format an id to a str, removing separators like [, . / - ], leading zeros
@@ -76,11 +82,33 @@ def idtostr(var1, zfill=None, rmvlzeroes=True, rmvchars=None, rmvwords=None):
     return s
 
 
-navalues = [
-    '#', None, np.nan, 'None', '-', 'nan', 'n.a.',
-    ' ', '', '#REF!', '#N/A', '#NAME?', '#DIV/0!',
-    '#NUM!', 'NaT', 'NULL'
-]
+
+
+def country_prefix(r, countrycode):
+    """
+    Prefix a string (r) by a country code:
+    with country code = 'FR'
+    r has no prefix: add prefix
+    '1234567' --> 'FR_1234567'
+    r has already a prefix
+    'FR1234567' --> 'FR1234567' (Unchanged)
+    r is None --> return None
+    countrycode is None --> Return r
+    Args:
+        r (str): string to prefix
+        countrycode (str): country code
+
+    Returns:
+        str
+    """
+    if countrycode is None:
+        return r
+    elif r is None:
+        return None
+    elif r[:len(countrycode)] == countrycode:
+        return r
+    else:
+        return countrycode + '_' + r
 
 
 def lowerascii(s, lower=True):
@@ -92,7 +120,7 @@ def lowerascii(s, lower=True):
     Returns:
         str
     """
-    if s in navalues:
+    if s in global_navalues:
         return None
     else:
         s = str(s)
@@ -107,6 +135,7 @@ def castcols(df, cols):
     """
     For each (key, value) pair (k, v); cast the columns k as the data type v
     v should be one of those int, float, str, bool, ts
+    if converting to int, column should not have nulls
     Args:
         df (pd.DataFrame):
         cols (dict):
@@ -131,10 +160,10 @@ def castcols(df, cols):
 
 def zeropadding(df, cols):
     """
-    for
+
     Args:
         df (pd.DataFrame):
-        cols (dict)
+        cols (dict): dictionary of columns to fill with 0
 
     Returns:
         pd.DataFrame
@@ -144,8 +173,8 @@ def zeropadding(df, cols):
     return df
 
 
-def convertnone(s, navalues=navalues):
-    if not s in navalues:
+def convertnone(s):
+    if not s in global_navalues:
         return s
     else:
         return None
@@ -165,7 +194,7 @@ def sanitize_js(i):
 
 def sanitize_csv(i, sep=','):
     """
-    Sanitize the inputs to prevent csv encoding errors: will remove carriage return, new lines, separator
+    Sanitize the inputs to prevent csv decoding errors: will remove carriage return, new lines, separator
     Args:
         i:
         sep (str): separator to avoid for csv output
@@ -237,6 +266,7 @@ def _format_pkey(pkey):
         pkey_s = ', '.join(pkey)
     return pkey_s
 
+
 def drop_na_dupes(df, subset):
     """
     Will drop null values or duplicates values for the subset provided
@@ -252,6 +282,7 @@ def drop_na_dupes(df, subset):
     else:
         cols = subset
     return df.dropna(subset=cols).drop_duplicates(subset=cols)
+
 
 def validate_cols(cols, usecols=None, colzeroes=None, coltypes=None, pkey=None):
     """
@@ -287,6 +318,7 @@ def validate_cols(cols, usecols=None, colzeroes=None, coltypes=None, pkey=None):
                 ValueError(missing_labels, "Cols from colzeroes or coltypes not found in renamed DataFrame")
     if pkey is not None:
         if isinstance(pkey, str):
+            # noinspection PySetFunctionToLiteral
             pkey_s = set([pkey])
         else:
             pkey_s = set(pkey)
@@ -295,6 +327,7 @@ def validate_cols(cols, usecols=None, colzeroes=None, coltypes=None, pkey=None):
             ValueError(missing_labels, "Cols from Pkey not found in renamed DataFrame")
 
     return True
+
 
 def clean_inputs(df, clean_js=True, clean_csv=True, coltypes=None, colzeroes=None,
                  pkey=None, transform_func=None, removena=True, usecols=None, sep_csv=',',
@@ -313,7 +346,8 @@ def clean_inputs(df, clean_js=True, clean_csv=True, coltypes=None, colzeroes=Non
         df (pd.DataFrame):
         clean_js (bool): if True, call sanitize_js to prevent JavaScript injection Attacks
         clean_csv (bool): if True, call sanitize_csv to prevent confusing csv output
-        coltypes (dict): if not None,call castcols to cast the columns to the right data type
+        coltypes (dict): if not None,call castcols to cast the columns to the right data type\
+            int, float, str, bool, ts
         colzeroes (dict): if not None, call zeropadding to padd certain columns to a right number of digies
         pkey (str/list): if not None, call drop_na_duptes to drop null and duplicate values for the primary key
         transform_func (func): if not None, will be called to do further transformation on the DF. \
@@ -338,7 +372,7 @@ def clean_inputs(df, clean_js=True, clean_csv=True, coltypes=None, colzeroes=Non
     if clean_js is True:
         df2 = df2.applymap(sanitize_js)
     if clean_csv is True:
-        df2 = df2.applymap(sanitize_csv)
+        df2 = df2.applymap(lambda r:sanitize_csv(r, sep=sep_csv))
     if removena is True:
         df2 = df2.applymap(convertnone)
     if pkey is not None:
@@ -346,3 +380,144 @@ def clean_inputs(df, clean_js=True, clean_csv=True, coltypes=None, colzeroes=Non
     if transform_func is not None:
         df2 = transform_func(df2)
     return df2
+
+
+def rmv_arp_leading_zeroes(df, usecol='Airbus Vendor'):
+    """
+    Remove the leading zeroes from the ARP
+    Args:
+     df (pd.DataFrame): dataframe
+     usecol(string): name of the column to use (for the ARP Id) --> This column must be formatted as string
+
+    Returns:
+     pd.DataFrame
+    """
+    df[usecol] = df[usecol].str.lstrip('0')
+    return df
+
+
+def concat_cols(df, colname, cols, sep=' '):
+    """
+    Concat the cols into a single one, with the ouput replacing the first column.
+    The concatenation does not take into account null values.
+    The concatenation using the space ' ' as a joining character
+    Args:
+        df (pd.DataFrame):
+        colname (str): column name
+        cols (list):
+        sep (str)
+
+    Returns:
+        pd.DataFrame
+    """
+    if isinstance(cols, str):
+        raise ValueError('list expected, got str')
+    df[colname] = df[cols].apply(lambda r: sep.join(r.dropna()), axis=1)
+    return df
+
+
+def concat_prefix(prefix, col):
+    if pd.isnull(col):
+        return None
+    else:
+        return prefix + '_' + str(col)
+
+
+def format_duns(df, col='duns'):
+    """
+    Format the duns numbers to make it correct: fill with 9 digits and put DNB_ before
+    remove incorrect values like 'NDM999999', 'NOH999999', '000000000', '000999999'
+    Args:
+        df (pd.DataFrame):
+        col (str): name of the duns col
+
+    Returns:
+        pd.DataFrame
+    """
+    y = df[col].copy()
+    # replace '-' in number by null
+    y = y.apply(idtostr)
+    # Remove non numeric values
+    y.loc[y.str.isdigit() == False] = None
+    # Remove known null values
+    y.loc[y.isin(['000999999', '999999', '000000000', '0', 'NDM999999', 'NOH999999'])] = None
+    y.loc[y.isin([999999, 0, 999999999])] = None
+    # Identify correct values
+    correct_ix = y.loc[pd.isnull(y) == False].index
+    # Fill with 9 digits
+    y.loc[correct_ix] = y.loc[correct_ix].str.zfill(9)
+    y = y.apply(lambda r: concat_prefix('DNB', r))
+    df[col] = y
+    return df
+
+
+def format_arp(df, col='arp'):
+    """
+    Format the arp numbers to make it correct: fill with 6 digits and put ARP_ before
+    remove incorrect values like '000000'
+    Args:
+        df (pd.DataFrame):
+        col (str): name of the arp col
+
+    Returns:
+        pd.DataFrame
+    """
+    y = df[col].copy()
+    # Convert to string
+    y = y.apply(idtostr)
+    # Remove non numeric values
+    y.loc[y.str.isdigit() == False] = None
+    # Remove known null values
+    y.loc[y.isin(['000000000', '000000'])] = None
+    # Identify correct values
+    correct_ix = y.loc[pd.isnull(y) == False].index
+    # Fill with 9 digits
+    y.loc[correct_ix] = y.loc[correct_ix].str.zfill(6)
+    y = y.apply(lambda r: concat_prefix('ARP', r))
+    df[col] = y
+    return df
+
+
+def format_tax(df, col, countrycol='countrycode'):
+    """
+    Format a column containing tax id attributes for proper ingestion.
+    - Convert all content to a clean string
+    - Remove incorrect values like CN_1110e+13
+    - Remova na values and replace with None
+    - Add a prefix like 'FR_'  to the tax number to make it unique per country
+    Args:
+        df (pd.DataFrame):
+        col (str): name of tax column to format
+        countrycol (str): name of column with country code
+
+    Returns:
+        pd.DataFrame: the column values have been cleaned
+
+    Examples:
+        Will transform '1234567' to 'FR_1234567'
+        Will transform na to None
+        'FR1234567' --> 'FR1234567'
+    """
+    df[col] = df[col].apply(idtostr)
+    # Remove incorrect values like CN_1110e+13
+    df[col] = df[col].where(cond=~(df[col].fillna('na').str.contains('+', regex=False)), other=None)
+    # Add a prefix like 'FR_'  to the tax number to make it unique per country
+    df[col] = df.apply(lambda r: country_prefix(r[col], r[countrycol]), axis=1)
+    return df
+
+
+def rmv_blank_values(df):
+    """
+
+    Args:
+        df (pd.DataFrame):
+
+    Returns:
+        pd.DataFrame
+    """
+    for c in df.columns:
+        # df[c] = df[c].replace(r'^\s*$', None, regex=True)
+        df[c] = df[c].replace({' ': None})
+    return df
+
+

@@ -4,12 +4,6 @@ import pandas as pd
 from suricate.base import ConnectorMixin
 from suricate.dftransformers.cartesian import cartesian_join
 import numpy as np
-import time
-
-ixname = 'ix'
-ixnamesource = 'ix_source'
-ixnametarget = 'ix_target'
-ixname_pairs = [ixnamesource, ixnametarget]
 
 
 class EsConnector(ConnectorMixin):
@@ -20,7 +14,8 @@ class EsConnector(ConnectorMixin):
         ixname (str): this is the name of the index column in output dataframes. The unique identifier is taken from the id in elastic search
         source_suffix:
     """
-    def __init__(self, client, index, scoreplan,   doc_type='_doc', size=30, explain=True,
+
+    def __init__(self, client, index, scoreplan, doc_type='_doc', size=30, explain=True,
                  ixname='ix', source_suffix='source', target_suffix='target',
                  es_id='es_id', es_score='es_score', suffix_score='es', es_rank='es_rank'):
         """
@@ -77,7 +72,8 @@ class EsConnector(ConnectorMixin):
         Returns:
             pd.DataFrame: formatted records ['ix': '....']
         """
-        results={}
+        results = {}
+        ixl = list()
         if isinstance(ix, np.ndarray):
             ixl = ix
         elif isinstance(ix, pd.Index):
@@ -101,7 +97,6 @@ class EsConnector(ConnectorMixin):
             X.drop(labels=[self.ixname], axis=1, inplace=True)
         return X
 
-
     def getsbs(self, X, on_ix=None):
         """
         Args:
@@ -116,8 +111,14 @@ class EsConnector(ConnectorMixin):
         ix_target = list(set(on_ix.get_level_values(self.ixnametarget)))
         source = self.fetch_source(X=X, ix=ix_source)
         target = self.fetch_target(ix=ix_target)
-        df = cartesian_join(source=source, target=target, on_ix=on_ix, ixname=self.ixname, source_suffix=self.source_suffix, target_suffix=self.target_suffix)
-
+        df = cartesian_join(source=source, target=target, on_ix=on_ix, ixname=self.ixname,
+                            source_suffix=self.source_suffix, target_suffix=self.target_suffix)
+        # add the missing columns (if any)
+        for c in source.columns:
+            for s in [self.source_suffix, self.target_suffix]:
+                colname = c + '_' + s
+                if colname not in df.columns:
+                    df[colname] = None
         return df
 
     def fit(self, X=None, y=None):
@@ -147,14 +148,16 @@ class EsConnector(ConnectorMixin):
             score = unpack_allhits(res)
             df = pd.DataFrame.from_dict(score, orient='columns').rename(
                 columns={
-                    'ix': self.ixnametarget
+                    self.ixname: self.ixnametarget
                 })
             df[self.ixnamesource] = lix
-            df = df[alldata.columns]
-            alldata = pd.concat([alldata, df], axis=0, ignore_index=True)
+            if alldata.columns.difference(df.columns).shape[0] > 0:
+                pass
+            else:
+                df = df[alldata.columns]
+                alldata = pd.concat([alldata, df], axis=0, ignore_index=True)
         Xt = alldata.set_index(self.ixnamepairs)
         return Xt
-
 
     def fit_transform(self, X, y=None, **fit_params):
         self.fit(X=X, y=y)
@@ -202,7 +205,6 @@ class EsConnector(ConnectorMixin):
             body=mquery
         )
         return res
-
 
 
 def unpack_allhits(res, explain=False, es_id='es_id', es_score='es_score', suffix_score='es', es_rank='es_rank'):
@@ -296,8 +298,3 @@ def unpack_allhits(res, explain=False, es_id='es_id', es_score='es_score', suffi
         sd[es_rank] = i
         results.append(sd)
     return results
-
-
-
-
-

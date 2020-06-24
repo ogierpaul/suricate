@@ -88,8 +88,8 @@ def get_prime_data(usecols, nrows):
     prime_source = getsource(nrows=nrows)
     prime_target = gettarget(nrows=nrows)
     y_true = getytrue(Xst=[prime_source, prime_target])
-    prime_source[usecols[0]] = prime_source.index
-    prime_target[usecols[0]] = prime_target.index
+    # prime_source[usecols[0]] = prime_source.index
+    # prime_target[usecols[0]] = prime_target.index
     return prime_source, prime_target, y_true
 
 
@@ -124,11 +124,12 @@ def separe_prime_new(df, ix_new_source, ix_new_target):
     Returns:
         pd.DataFrame: Results with only new pairs
     """
-    ixnamepairs = list(df.columns)[:2]
-    df.set_index(ixnamepairs, inplace=True)
+    #ixnamepairs = list(df.columns)[:2]
+
+    # df.set_index(ixnamepairs, inplace=True)
+    ixnamepairs = df.index.names
     ix = df.index
     dfix = pd.DataFrame(index=ix)
-    ixnamepairs = ix.names
     dfix.reset_index(drop=False, inplace=True)
     dfix = dfix.loc[
         (dfix[ixnamepairs[0]].isin(ix_new_source)) & (
@@ -139,39 +140,60 @@ def separe_prime_new(df, ix_new_source, ix_new_target):
     return df.loc[ix_new]
 
 
-def prepare_new(d, usecols, marker_col):
+def prepare_new(d, usecols):
     """
 
     Args:
-        d:
+        d (pd.DataFrame): dataframe with index
         usecols:
-        marker_col:
 
     Returns:
-        pd.DataFrame
+        pd.DataFrame: dataframe with a copy of the index as column, and the index name 'ix'
     """
-    d = d.reset_index(drop=True)
+    # d = d.reset_index(drop=True)
     d.index.name = 'ix'
-    d[marker_col] = 'new'
-    d[usecols[0]] = d.index
+    # d[usecols[0]] = d.index
     d = d[usecols]
     return d
 
 
-if __name__ == '__main__':
+def prime_possible_matches(new_source, new_target, nrows=None, n_estimators=500):
+    """
+    the list of possible pairs using priming dataset
+    Args:
+        new_source (pd.DataFrame):
+        new_target (pd.DataFrame):
+        nrows (int)
+    Returns
+        pd.DataFrame
+    """
+    index_name = 'prime'
+    doc_type = index_name
+    usecols = ['name', 'street', 'city', 'postalcode', 'countrycode']
+    new_source = prepare_new(new_source, usecols)
+    new_target = prepare_new(new_target, usecols)
+    prime_source, prime_target, y_true = get_prime_data(usecols=usecols, nrows=nrows)
+    mix_source, mix_target, = concat_prime_new(
+        new_source=new_source, new_target=new_target, prime_source=prime_source, prime_target=prime_target,usecols=usecols)
+    es_client = elasticsearch.Elasticsearch()
+    print('data concatenated')
+    res = companies_fit_predict(df_source=mix_source, df_target=mix_target, y_true=y_true, es_client=es_client,
+                                doc_type=doc_type, index_name=index_name, n_estimators=n_estimators)
+    res = separe_prime_new(res, new_source.index, new_target.index)
+    return res
+
+
+def _test():
     n_rows = None
     index_name = 'prime'
     doc_type = index_name
-    marker_col = 'origin'
     usecols = ['ix', 'name', 'street', 'city', 'postalcode', 'countrycode']
     all_data = pd.concat([getsource(nrows=None), gettarget(nrows=None)], axis=0, ignore_index=False)
     new_source = all_data
     new_target = all_data
-    new_source = prepare_new(new_source, usecols, marker_col)
-    new_target = prepare_new(new_target, usecols, marker_col)
+    new_source = prepare_new(new_source, usecols)
+    new_target = prepare_new(new_target, usecols)
     prime_source, prime_target, y_true = get_prime_data(usecols=usecols, nrows=n_rows)
-    ix_source_prime = prime_source.index
-    ix_target_prime = prime_target.index
     mix_source, mix_target, = concat_prime_new(
         new_source=new_source, new_target=new_target, usecols=usecols)
     es_client = elasticsearch.Elasticsearch()

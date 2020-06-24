@@ -6,15 +6,38 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import Normalizer
 import elasticsearch
-from suricate.dbconnectors import es_create_load, EsConnector
+from suricate.dbconnectors import EsConnector
+from pacoetl.utils import es_create_load
 from suricate.explore import KBinsCluster
 from suricate.sbstransformers import SbsApplyComparator
 
-def companies_fit_predict(df_source, df_target, y_true, es_client, index_name, doc_type=None, mapping=None, usecols=None,
+
+
+def companies_fit_predict(df_source, df_target, y_true, es_client, index_name, n_estimators=500, doc_type=None, mapping=None, usecols=None,
                           scoreplan=None, pipemodel=None, n_hits_max=10,
-                          sbs_score_list=None):
+                          sbs_score_list=None, pkey='ix'):
+    """
+
+    Args:
+        df_source:
+        df_target:
+        y_true:
+        es_client:
+        index_name:
+        doc_type:
+        mapping:
+        usecols:
+        scoreplan:
+        pipemodel:
+        n_hits_max:
+        sbs_score_list:
+        pkey:
+
+    Returns:
+        pd.DataFrame: with index (ixnamesource, ixnametarget)
+    """
     if usecols is None:
-        usecols = ['ix', 'name', 'street', 'city', 'postalcode', 'countrycode']
+        usecols = ['name', 'street', 'city', 'postalcode', 'countrycode']
     if doc_type is None:
         doc_type = index_name
     if scoreplan is None:
@@ -40,7 +63,7 @@ def companies_fit_predict(df_source, df_target, y_true, es_client, index_name, d
         "mappings": {
             doc_type: {
                 "properties": {
-                    "ix": {"type": "keyword"},
+                    pkey: {"type": "keyword"},
                     "name": {"type": "text"},
                     "street": {"type": "text"},
                     "city": {"type": "text"},
@@ -62,29 +85,29 @@ def companies_fit_predict(df_source, df_target, y_true, es_client, index_name, d
             ('Impute', SimpleImputer(strategy='constant', fill_value=0)),
             ('Scaler', Normalizer()),
             ('PCA', PCA(n_components=3)),
-            ('Predictor', GradientBoostingClassifier(n_estimators=500, max_depth=7))
+            ('Predictor', GradientBoostingClassifier(n_estimators=n_estimators, max_depth=7))
         ])
     if es_client is None:
         es_client = elasticsearch.Elasticsearch()
-
-    es_create_load(df=df_target, client=es_client, index=index_name, mapping=mapping, doc_type=doc_type, id=usecols[0],
+    print(pd.datetime.now(), 'start data loading')
+    es_create_load(df=df_target, client=es_client, index=index_name, mapping=mapping, doc_type=doc_type, index_id=pkey,
                    drop=True, create=True)
-
-    Xsm, Xsbs = score_es(df=df_source, esclient=es_client, scoreplan=scoreplan, index_name=index_name,
+    print(pd.datetime.now(), 'data loaded in es')
+    Xsm, Xsbs = score_es(df=df_source, client=es_client, scoreplan=scoreplan, index=index_name,
                          doc_type=doc_type,
-                         n_hits_max=n_hits_max)
-
+                         n_hits_max=n_hits_max, id=pkey)
+    print(pd.datetime.now(), 'data scored from es')
     # Score furthers
     X = score_sbs(df=Xsbs, sbs_score_list=sbs_score_list)
     X = pd.concat([Xsm[['es_score']], X], axis=1, ignore_index=False)
-
+    print(pd.datetime.now(), 'data scored further')
     # Fit the classifier
     pipe = fit_pipeline(pipemodel=pipemodel, X=X, y_true=y_true)
-
+    print(pd.datetime.now(), 'pipe fitted')
     # Calculate the prediction
     y_pred = pipe.predict(X=X)
     y_proba = pipe.predict_proba(X=X)
-
+    print(pd.datetime.now(), 'pipe predicted')
     df_res = enrich_output(y_pred=y_pred, y_proba=y_proba, Xscores=X,  Xsbs=Xsbs)
     return df_res
 
@@ -121,10 +144,10 @@ def enrich_output(y_pred, y_proba, Xscores, Xsbs, on_ix=None):
     #Re-order the columns and remove index
     ix_cols = df_res.index.names
     sbscols = list(Xsbs.columns)
-    ordercols = ix_cols + sbscols + ['y_pred', 'y_proba', 'cluster_kmeans', 'cluster_kbins']
+    ordercols = sbscols + ['y_pred', 'y_proba', 'cluster_kmeans', 'cluster_kbins']
     missingcols = df_res.columns.difference(set(ordercols))
     ordercols = ordercols + list(missingcols)
-    df_res = df_res.reset_index(drop=False)[ordercols]
+    df_res = df_res[ordercols]
     return df_res
 
 
@@ -143,14 +166,15 @@ def score_sbs(df, sbs_score_list):
     return scores_further
 
 
-def score_es(df, esclient, index_name, doc_type, n_hits_max, scoreplan):
+def score_es(df, client, index, doc_type, n_hits_max, scoreplan, id='ix'):
     escon = EsConnector(
-        client=esclient,
+        client=client,
         scoreplan=scoreplan,
-        index=index_name,
+        index=index,
         explain=False,
         size=n_hits_max,
-        doc_type=doc_type
+        doc_type=doc_type,
+        ixname=id
     )
     # Xsm is the similarity matrix
     Xsm = escon.fit_transform(X=df)

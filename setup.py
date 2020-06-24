@@ -12,9 +12,10 @@ setup(name='suricate',
           'pandas',
           'numpy',
           'fuzzywuzzy',
-          'elasticsearch'
+          'elasticsearch', 'bleach', 'py2neo', 'sqlalchemy'
       ],
-      package_data={'suricate': ['data/companydata/*.csv']},
+      package_data={'suricate': ['data/companydata/*.csv'],
+                    'pacoetl': ['utils/countrydata/*.csv']},
       zip_safe=False
 )
 

@@ -22,3 +22,7 @@ The aim is to compare a dataframe (target) with another (right)
     * test library for the suricate package (in progress)
 * tutorial:
     * Jupyter Notebooks to guide how to use the suricate package
+    
+## Citations:
+- An Efficient Domain-Independent Algorithm for Detecting Approximately Duplicate Database Records (1997) : http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.28.8405
+- 

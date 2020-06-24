@@ -93,7 +93,7 @@ def test_copy_from(raw_data, pg_conn):
     df = raw_data
     cur = pg_conn.cursor()
     staging_dir = '../../project/data_dir/staging'
-    pg_copy_from(df=df, conn=pg_conn, tablename='test_foo', staging_dir=staging_dir, pkey='id')
+    pg_copy_from(df=df, con=pg_conn, tablename='test_foo', staging_dir=staging_dir, pkey='id')
     pg_conn.commit()
     assert _select_test(conn=pg_conn, expected=3)
     cur.execute("""DROP TABLE test_foo;""")

@@ -1,5 +1,5 @@
-from pacoetl.utils import sanitize_js, sanitize_csv, convertnone, clean_inputs
-from pacoetl.utils.cleanutils import validate_cols
+from pacoetl.utils import sanitize_js, sanitize_csv, convertnone, clean_inputs, castcols
+from pacoetl.utils.clean import validate_cols
 import pytest
 import pandas as pd
 import datetime
@@ -89,9 +89,16 @@ def test_validate_cols():
     except ValueError:
         assert True
 
+def test_castcols():
+    y = pd.Series(data=['1', 1, 2.0, 3.5], name='test')
+    df = pd.DataFrame(y)
+    y1 = castcols(df, cols={'test':'int'})
+    y2 = castcols(df, cols={'test':'str'})
+
+
 @pytest.fixture()
 def raw_data():
-    raw_path = '../../project/data_dir/extract_dir/arp.csv'
+    raw_path = '../../project/data_dir/extract_dir/arp_mockaroo.csv'
     nrows = 100
     df = pd.read_csv(raw_path, sep=',', nrows=nrows)
     df['ts'] = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -118,7 +125,7 @@ def test_clean_inputs(raw_data):
         'extract_ts': 'ts',
         'countrycode': 'str',
         'duns': 'str',
-        'arp': 'str'
+        'arp': 'int'
     }
     colzeroes = {
         'arp': 6
